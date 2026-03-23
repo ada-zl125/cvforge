@@ -64,7 +64,7 @@ middleware.ts               # Route protection
 
 Table: `resumes` (id, user_id, title, template, content jsonb, created_at, updated_at)
 RLS enabled — users can only access their own resumes.
-Supabase project ref: `tzpgsfaxorayraazbosm` (Frankfurt region)
+Supabase project ref: `tcivruueyqbgpwlniawz` (eu-west-1)
 
 ## Environment Variables
 
