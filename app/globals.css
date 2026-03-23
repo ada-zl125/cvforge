@@ -1,26 +1,73 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* ============================================================
+   EasyCV Design System — Apple Style
+   Tailwind CSS v4 @theme tokens
+   ============================================================ */
+
+@theme {
+  /* --- Fonts --- */
+  --font-sans: var(--font-geist-sans), ui-sans-serif, -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", monospace;
+
+  /* --- Colors --- */
+  /* Apple's signature near-black (not pure #000) */
+  --color-foreground: #1d1d1f;
+  --color-background: #ffffff;
+
+  /* Apple Blue */
+  --color-primary: #007aff;
+  --color-primary-hover: #0066d6;
+  --color-primary-foreground: #ffffff;
+
+  /* Surface & muted (Apple's light gray ecosystem) */
+  --color-muted: #f5f5f7;
+  --color-muted-foreground: #6e6e73;
+
+  /* Card */
+  --color-card: #ffffff;
+  --color-card-foreground: #1d1d1f;
+
+  /* Border */
+  --color-border: #d2d2d7;
+
+  /* Destructive (Apple Red) */
+  --color-destructive: #ff3b30;
+  --color-destructive-foreground: #ffffff;
+
+  /* Success (Apple Green) */
+  --color-success: #34c759;
+  --color-success-foreground: #ffffff;
+
+  /* --- Border Radius --- */
+  --radius-xs: 0.375rem;  /* 6px  — inputs, badges */
+  --radius-sm: 0.5rem;    /* 8px  — buttons */
+  --radius-md: 0.75rem;   /* 12px — cards (Apple default) */
+  --radius-lg: 1rem;      /* 16px — modals, panels */
+  --radius-xl: 1.25rem;   /* 20px — large cards */
+  --radius-full: 9999px;  /* pills */
+
+  /* --- Shadows (Apple: soft, barely-there) --- */
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.04);
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.04);
+  --shadow-md: 0 4px 12px 0 rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.04);
+  --shadow-lg: 0 8px 24px 0 rgb(0 0 0 / 0.10), 0 4px 8px -4px rgb(0 0 0 / 0.06);
+  --shadow-xl: 0 20px 48px 0 rgb(0 0 0 / 0.12), 0 8px 16px -8px rgb(0 0 0 / 0.08);
+
+  /* --- Transitions --- */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/* ============================================================
+   Base styles
+   ============================================================ */
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
