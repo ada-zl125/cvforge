@@ -57,7 +57,7 @@ lib/
     server.ts               # Server client (createServerClient + cookies)
   types/resume.ts           # ResumeContent TypeScript types
 supabase/migrations/        # SQL migrations (never edit manually)
-middleware.ts               # Route protection
+proxy.ts                    # Route protection (Next.js 16 proxy, replaces middleware.ts)
 ```
 
 ## Database
