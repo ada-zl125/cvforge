@@ -13,8 +13,8 @@ Online resume generation tool for job seekers and academics. Users fill in conte
 | Framework | Next.js 16 (App Router, Turbopack default) |
 | Language | TypeScript (strict) |
 | Styling | Tailwind CSS v4 (`@import "tailwindcss"` syntax) |
-| Components | shadcn/ui |
-| Design | Apple Style (clean, generous whitespace) |
+| Components | shadcn/ui (primary UI library) |
+| Design | shadcn/ui-based, clean & modern, light mode only |
 | Database | Supabase (PostgreSQL) |
 | Auth | Supabase Auth (email/password + Google OAuth) |
 | Deployment | Vercel |
