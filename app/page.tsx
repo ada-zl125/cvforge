@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { PenLine, Eye, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { AuthModal } from "@/components/auth/AuthModal";
 
 const features = [
   {
@@ -213,8 +214,18 @@ function FeaturesBackground() {
 }
 
 export default function Home() {
+  const [authOpen, setAuthOpen] = useState(false);
+  const [authTab, setAuthTab] = useState<"sign-in" | "sign-up">("sign-in");
+
+  function openAuth(tab: "sign-in" | "sign-up") {
+    setAuthTab(tab);
+    setAuthOpen(true);
+  }
+
   return (
     <main className="relative flex min-h-screen flex-col overflow-hidden">
+      <AuthModal open={authOpen} onOpenChange={setAuthOpen} defaultTab={authTab} />
+
       {/* Navbar */}
       <nav className="group/nav flex h-18 items-center justify-between px-20 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-all duration-500 hover:bg-primary/[0.03] hover:shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
         <span className="text-xl font-bold tracking-tight">
@@ -224,10 +235,14 @@ export default function Home() {
           <Button
             variant="secondary"
             className="cursor-pointer rounded-full px-4 transition-colors duration-200 hover:bg-primary/10 hover:text-primary"
+            onClick={() => openAuth("sign-in")}
           >
             Sign In
           </Button>
-          <Button className="cursor-pointer rounded-full px-4 transition-all duration-200 hover:brightness-110">
+          <Button
+            className="cursor-pointer rounded-full px-4 transition-all duration-200 hover:brightness-110"
+            onClick={() => openAuth("sign-up")}
+          >
             Get Started
           </Button>
         </div>
@@ -259,6 +274,7 @@ export default function Home() {
           <Button
             size="lg"
             className="group/btn h-12 cursor-pointer rounded-full px-6 text-base transition-all duration-200 hover:brightness-110 hover:shadow-lg hover:shadow-primary/25"
+            onClick={() => openAuth("sign-up")}
           >
             Start Building <span className="ml-1 inline-block transition-transform duration-200 group-hover/btn:translate-x-1">→</span>
           </Button>
