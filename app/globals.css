@@ -5,8 +5,8 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-sans: "Geist", "Geist Fallback", ui-sans-serif, system-ui, sans-serif, ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", "Geist Mono Fallback", ui-monospace, monospace, ui-monospace, monospace;
 }
 
 /* ============================================================
@@ -54,7 +54,7 @@
 
 @theme inline {
   --font-heading: var(--font-sans);
-  --font-sans: var(--font-sans);
+  --font-sans: "Geist", "Geist Fallback", ui-sans-serif, system-ui, sans-serif;
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -108,4 +108,23 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+}
+
+/* Hover effects — outside @layer to beat the base `* { border-color }` rule */
+.resume-card:hover {
+  border-color: var(--card-accent) !important;
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--card-accent) 12%, transparent);
+}
+
+.sidebar-hover,
+.btn-hover-border,
+.btn-hover-destructive,
+.sidebar-inner-border {
+  transition: border-color 200ms ease-out, background-color 200ms ease-out;
+}
+
+.sidebar-hover:hover,
+.btn-hover-border:hover,
+.sidebar-hover:hover .sidebar-inner-border {
+  border-color: var(--foreground) !important;
 }

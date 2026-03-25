@@ -44,9 +44,11 @@ export function CreateResumeModal({ open, onOpenChange }: CreateResumeModalProps
   const [template, setTemplate] = useState<ResumeTemplate>("classic");
   const [loading, setLoading] = useState(false);
 
+  const tooLong = title.length > 50;
+
   async function handleCreate() {
     const trimmed = title.trim();
-    if (!trimmed) return;
+    if (!trimmed || tooLong) return;
 
     setLoading(true);
     try {
@@ -90,16 +92,25 @@ export function CreateResumeModal({ open, onOpenChange }: CreateResumeModalProps
 
         <div className="grid gap-4 py-2">
           {/* Title input */}
-          <div className="grid gap-2">
-            <Label htmlFor="resume-title">Title</Label>
+          <div className="grid gap-1.5">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="resume-title">Title</Label>
+              <span className={`text-xs ${tooLong ? "text-destructive" : "text-muted-foreground"}`}>
+                {title.length}/50
+              </span>
+            </div>
             <Input
               id="resume-title"
               placeholder="e.g. Software Engineer Resume"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") handleCreate(); }}
+              className={tooLong ? "border-destructive focus:border-destructive" : ""}
               autoFocus
             />
+            {tooLong && (
+              <p className="text-xs text-destructive">Title must be 50 characters or fewer.</p>
+            )}
           </div>
 
           {/* Template picker */}
@@ -128,7 +139,7 @@ export function CreateResumeModal({ open, onOpenChange }: CreateResumeModalProps
         <DialogFooter>
           <Button
             onClick={handleCreate}
-            disabled={!title.trim() || loading}
+            disabled={!title.trim() || tooLong || loading}
             className="cursor-pointer"
           >
             {loading ? "Creating..." : "Create"}
