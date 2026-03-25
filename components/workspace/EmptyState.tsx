@@ -20,7 +20,7 @@ export function EmptyState({ onNewResume }: EmptyStateProps) {
         </p>
       </div>
 
-      <Button variant="outline" className="cursor-pointer gap-2" onClick={onNewResume}>
+      <Button variant="outline" className="btn-hover-border cursor-pointer gap-2" onClick={onNewResume}>
         <Plus className="size-4" />
         Create Your First Resume
       </Button>
