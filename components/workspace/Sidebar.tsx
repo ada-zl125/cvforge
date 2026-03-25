@@ -27,7 +27,7 @@ export function Sidebar({ userEmail, onNewResume }: SidebarProps) {
   }
 
   return (
-    <aside className="flex w-[260px] shrink-0 flex-col border-r bg-card">
+    <aside className="sidebar-hover flex w-[260px] shrink-0 flex-col border-r border-border bg-card">
       {/* Logo */}
       <div className="px-5 pt-6 pb-2">
         <span className="text-xl font-bold tracking-tight">
@@ -39,7 +39,7 @@ export function Sidebar({ userEmail, onNewResume }: SidebarProps) {
       <div className="px-4 py-4">
         <Button
           variant="outline"
-          className="w-full cursor-pointer justify-center gap-2"
+          className="btn-hover-border w-full cursor-pointer justify-center gap-2"
           onClick={onNewResume}
         >
           <Plus className="size-4" />
@@ -51,7 +51,7 @@ export function Sidebar({ userEmail, onNewResume }: SidebarProps) {
       <div className="flex-1" />
 
       {/* User section */}
-      <div className="flex items-center gap-3 border-t px-4 py-4">
+      <div className="sidebar-inner-border flex items-center gap-3 border-t px-4 py-4">
         <Avatar size="sm">
           <AvatarFallback>{initials}</AvatarFallback>
         </Avatar>
