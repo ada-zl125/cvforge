@@ -59,3 +59,25 @@ export interface ResumeContent {
   skills: SkillGroup[];
   projects: ProjectItem[];
 }
+
+/* ------------------------------------------------------------------ */
+/*  Database row type – matches the `resumes` table schema             */
+/* ------------------------------------------------------------------ */
+
+export type ResumeTemplate =
+  | "classic"
+  | "modern"
+  | "minimal"
+  | "creative"
+  | "professional"
+  | "academic";
+
+export interface ResumeRow {
+  id: string;
+  user_id: string;
+  title: string;
+  template: ResumeTemplate;
+  content: ResumeContent;
+  created_at: string;
+  updated_at: string;
+}
