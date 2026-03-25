@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import type { ResumeRow } from "@/lib/types/resume";
 import { Sidebar } from "./Sidebar";
 import { ResumeCard } from "./ResumeCard";
 import { EmptyState } from "./EmptyState";
+import { CreateResumeModal } from "./CreateResumeModal";
 
 interface WorkspaceContentProps {
   resumes: ResumeRow[];
@@ -11,14 +13,11 @@ interface WorkspaceContentProps {
 }
 
 export function WorkspaceContent({ resumes, userEmail }: WorkspaceContentProps) {
-  function handleNewResume() {
-    // TODO: open create-resume modal (issue #14+)
-    alert("Create resume — coming soon!");
-  }
+  const [createOpen, setCreateOpen] = useState(false);
 
   return (
     <div className="flex h-screen overflow-hidden bg-muted/30">
-      <Sidebar userEmail={userEmail} onNewResume={handleNewResume} />
+      <Sidebar userEmail={userEmail} onNewResume={() => setCreateOpen(true)} />
 
       <main className="flex flex-1 flex-col overflow-y-auto">
         <div className="flex min-h-full flex-col px-10 py-9">
@@ -32,7 +31,7 @@ export function WorkspaceContent({ resumes, userEmail }: WorkspaceContentProps) 
 
           {/* Content */}
           {resumes.length === 0 ? (
-            <EmptyState onNewResume={handleNewResume} />
+            <EmptyState onNewResume={() => setCreateOpen(true)} />
           ) : (
             <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4">
               {resumes.map((resume) => (
@@ -42,6 +41,8 @@ export function WorkspaceContent({ resumes, userEmail }: WorkspaceContentProps) 
           )}
         </div>
       </main>
+
+      <CreateResumeModal open={createOpen} onOpenChange={setCreateOpen} />
     </div>
   );
 }
