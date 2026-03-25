@@ -2,23 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Copy, Trash2, MoreVertical, Type } from "lucide-react";
+import { Pencil, Copy, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { ResumeRow, ResumeTemplate } from "@/lib/types/resume";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardAction,
-} from "@/components/ui/card";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -40,18 +26,19 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 
 /* ------------------------------------------------------------------ */
 /*  Template colour mapping                                            */
 /* ------------------------------------------------------------------ */
 
-const TEMPLATE_COLORS: Record<ResumeTemplate, { bar: string; bg: string; text: string }> = {
-  classic:      { bar: "bg-blue-500",   bg: "bg-blue-50",   text: "text-blue-600" },
-  modern:       { bar: "bg-violet-500", bg: "bg-violet-50", text: "text-violet-600" },
-  minimal:      { bar: "bg-emerald-500",bg: "bg-emerald-50",text: "text-emerald-600" },
-  creative:     { bar: "bg-amber-500",  bg: "bg-amber-50",  text: "text-amber-600" },
-  professional: { bar: "bg-indigo-500", bg: "bg-indigo-50", text: "text-indigo-600" },
-  academic:     { bar: "bg-teal-500",   bg: "bg-teal-50",   text: "text-teal-600" },
+const TEMPLATE_COLORS: Record<ResumeTemplate, { bar: string; bg: string; text: string; hex: string }> = {
+  classic:      { bar: "bg-blue-500",    bg: "bg-blue-50",    text: "text-blue-600",    hex: "#3b82f6" },
+  modern:       { bar: "bg-violet-500",  bg: "bg-violet-50",  text: "text-violet-600",  hex: "#8b5cf6" },
+  minimal:      { bar: "bg-emerald-500", bg: "bg-emerald-50", text: "text-emerald-600", hex: "#10b981" },
+  creative:     { bar: "bg-amber-500",   bg: "bg-amber-50",   text: "text-amber-600",   hex: "#f59e0b" },
+  professional: { bar: "bg-indigo-500",  bg: "bg-indigo-50",  text: "text-indigo-600",  hex: "#6366f1" },
+  academic:     { bar: "bg-teal-500",    bg: "bg-teal-50",    text: "text-teal-600",    hex: "#14b8a6" },
 };
 
 const TEMPLATE_LABELS: Record<ResumeTemplate, string> = {
@@ -62,6 +49,8 @@ const TEMPLATE_LABELS: Record<ResumeTemplate, string> = {
   professional: "Professional",
   academic: "Academic",
 };
+
+const TITLE_MAX_LENGTH = 50;
 
 /* ------------------------------------------------------------------ */
 /*  Relative time helper                                               */
@@ -78,6 +67,11 @@ function timeAgo(dateStr: string): string {
   if (days < 30) return `${days}d ago`;
   const months = Math.floor(days / 30);
   return `${months}mo ago`;
+}
+
+function truncateTitle(title: string): string {
+  if (title.length <= TITLE_MAX_LENGTH) return title;
+  return title.slice(0, TITLE_MAX_LENGTH) + "…";
 }
 
 /* ------------------------------------------------------------------ */
@@ -148,82 +142,71 @@ export function ResumeCard({ resume }: ResumeCardProps) {
 
   return (
     <>
-      <Card
-        className="group relative cursor-pointer overflow-hidden p-0 transition-shadow hover:shadow-md"
+      {/* Card — matches workspace-page.pen design */}
+      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
+      <div
+        className="resume-card group cursor-pointer overflow-hidden rounded-[10px] border border-border bg-card transition-all duration-200 ease-out"
+        style={{ "--card-accent": colors.hex } as React.CSSProperties}
         onClick={() => router.push(`/editor/${resume.id}`)}
       >
-        {/* Coloured top bar */}
+        {/* Colour bar (4px) */}
         <div className={`h-1 w-full ${colors.bar}`} />
 
-        <CardHeader className="px-4 pt-3 pb-3">
-          {/* Template badge */}
-          <CardDescription>
+        {/* Card body */}
+        <div className="flex flex-col gap-3 px-4 py-3.5">
+          {/* Top section: badge → title → date */}
+          <div className="flex flex-col gap-2">
             <span
-              className={`inline-flex items-center rounded px-1.5 py-0.5 text-[11px] font-medium ${colors.bg} ${colors.text}`}
+              className={`inline-flex w-fit items-center rounded px-1.5 py-0.5 text-[11px] font-medium ${colors.bg} ${colors.text}`}
             >
               {label}
             </span>
-          </CardDescription>
+            <p
+              className="text-sm font-semibold text-foreground"
+              title={resume.title.length > TITLE_MAX_LENGTH ? resume.title : undefined}
+            >
+              {truncateTitle(resume.title)}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Edited {timeAgo(resume.updated_at)}
+            </p>
+          </div>
 
-          <CardTitle className="truncate">{resume.title}</CardTitle>
+          {/* Action buttons row */}
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              className="flex cursor-pointer items-center gap-1 rounded-[5px] px-2 py-1 text-xs font-medium text-foreground hover:bg-muted"
+              onClick={(e) => { e.stopPropagation(); router.push(`/editor/${resume.id}`); }}
+            >
+              <Pencil className="size-3.5" />
+              Edit
+            </button>
 
-          <CardDescription>Edited {timeAgo(resume.updated_at)}</CardDescription>
+            <Separator orientation="vertical" className="!h-3.5" />
 
-          {/* Actions dropdown */}
-          <CardAction>
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button
-                    variant="ghost"
-                    size="icon-xs"
-                    className="cursor-pointer opacity-0 transition-opacity group-hover:opacity-100"
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                }
-              >
-                <MoreVertical className="size-4" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent side="bottom" align="end" sideOffset={4}>
-                <DropdownMenuItem
-                  className="cursor-pointer"
-                  onClick={(e) => { e.stopPropagation(); router.push(`/editor/${resume.id}`); }}
-                >
-                  <Pencil className="size-4" />
-                  Edit
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="cursor-pointer"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setRenameValue(resume.title);
-                    setRenameOpen(true);
-                  }}
-                >
-                  <Type className="size-4" />
-                  Rename
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="cursor-pointer"
-                  onClick={(e) => { e.stopPropagation(); handleDuplicate(); }}
-                >
-                  <Copy className="size-4" />
-                  Duplicate
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="cursor-pointer"
-                  variant="destructive"
-                  onClick={(e) => { e.stopPropagation(); setDeleteOpen(true); }}
-                >
-                  <Trash2 className="size-4" />
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </CardAction>
-        </CardHeader>
-      </Card>
+            <button
+              type="button"
+              className="flex cursor-pointer items-center gap-1 rounded-[5px] px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+              onClick={(e) => { e.stopPropagation(); handleDuplicate(); }}
+            >
+              <Copy className="size-3.5" />
+              Duplicate
+            </button>
+
+            <Separator orientation="vertical" className="!h-3.5" />
+
+            <button
+              type="button"
+              className="flex cursor-pointer items-center gap-1 rounded-[5px] px-2 py-1 text-xs font-medium text-destructive hover:bg-destructive/10"
+              onClick={(e) => { e.stopPropagation(); setDeleteOpen(true); }}
+            >
+              <Trash2 className="size-3.5" />
+              Delete
+            </button>
+          </div>
+        </div>
+      </div>
 
       {/* Rename dialog */}
       <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
@@ -264,9 +247,10 @@ export function ResumeCard({ resume }: ResumeCardProps) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="cursor-pointer">Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="btn-hover-border cursor-pointer">Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className="cursor-pointer bg-destructive text-white hover:bg-destructive/90"
+              variant="outline"
+              className="btn-hover-destructive cursor-pointer border-destructive/40 text-destructive hover:border-destructive hover:bg-destructive/10 hover:text-destructive"
               onClick={handleDelete}
               disabled={deleteLoading}
             >
