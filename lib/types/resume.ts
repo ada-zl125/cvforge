@@ -3,15 +3,28 @@
 /*  Matches the `content` JSONB column in the `resumes` table         */
 /* ------------------------------------------------------------------ */
 
+/* ---- Contact field (dynamic, user-addable/removable) ---- */
+
+export type ContactFieldType = "email" | "phone" | "location" | "website";
+
+export interface ContactField {
+  id: string;
+  type: ContactFieldType;
+  value: string;
+  /** Phone country code, e.g. "+44" */
+  countryCode?: string;
+  /** Website display name (clickable label) */
+  label?: string;
+}
+
 export interface PersonalInfo {
   fullName: string;
-  email: string;
-  phone: string;
-  location: string;
-  website: string;
-  linkedin: string;
-  summary: string;
+  contacts: ContactField[];
 }
+
+/* ---- Section ordering ---- */
+
+export type SectionType = "education" | "projects" | "experience" | "skills";
 
 export interface ExperienceItem {
   id: string;
@@ -24,6 +37,16 @@ export interface ExperienceItem {
   description: string;
 }
 
+export type EducationExtraFieldType = "grade" | "awards" | "custom";
+
+export interface EducationExtraField {
+  id: string;
+  type: EducationExtraFieldType;
+  /** Display label — auto-set for grade/awards, user-defined for custom */
+  label: string;
+  value: string;
+}
+
 export interface EducationItem {
   id: string;
   institution: string;
@@ -32,8 +55,7 @@ export interface EducationItem {
   location: string;
   startDate: string;
   endDate: string;
-  gpa: string;
-  description: string;
+  extraFields: EducationExtraField[];
 }
 
 export interface SkillGroup {
@@ -54,6 +76,8 @@ export interface ProjectItem {
 
 export interface ResumeContent {
   personal: PersonalInfo;
+  /** Ordered list of active sections (user-addable/removable) */
+  sections: SectionType[];
   experience: ExperienceItem[];
   education: EducationItem[];
   skills: SkillGroup[];
