@@ -61,7 +61,8 @@ export function CreateResumeModal({ open, onOpenChange }: CreateResumeModalProps
         title: trimmed,
         template,
         content: {
-          personal: { fullName: "", email: "", phone: "", location: "", website: "", linkedin: "", summary: "" },
+          personal: { fullName: "", contacts: [] },
+          sections: [],
           experience: [],
           education: [],
           skills: [],
