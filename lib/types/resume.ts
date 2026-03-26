@@ -26,6 +26,11 @@ export interface PersonalInfo {
 
 export type SectionType = "education" | "projects" | "experience" | "skills";
 
+export interface DescriptionField {
+  id: string;
+  value: string;
+}
+
 export interface ExperienceItem {
   id: string;
   company: string;
@@ -33,8 +38,7 @@ export interface ExperienceItem {
   location: string;
   startDate: string;
   endDate: string;
-  current: boolean;
-  description: string;
+  descriptions: DescriptionField[];
 }
 
 export type EducationExtraFieldType = "grade" | "awards" | "custom";
