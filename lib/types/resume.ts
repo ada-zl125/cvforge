@@ -71,11 +71,11 @@ export interface SkillGroup {
 export interface ProjectItem {
   id: string;
   name: string;
-  url: string;
+  websiteLabel: string;
+  websiteUrl: string;
   startDate: string;
   endDate: string;
-  description: string;
-  technologies: string[];
+  descriptions: DescriptionField[];
 }
 
 export interface ResumeContent {
