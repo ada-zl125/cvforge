@@ -222,15 +222,33 @@ function ProjectsBlock({ items }: { items: ProjectItem[] }) {
     <section className="mb-2">
       <SectionTitle>Projects</SectionTitle>
       <div className="space-y-1.5">
-        {items.map((proj) => (
-          <div key={proj.id}>
-            <div className="flex items-baseline justify-between gap-2" style={LINE_STYLE}>
-              <span className="font-bold">{proj.name}</span>
-              <DateRange start={proj.startDate} end={proj.endDate} />
+        {items.map((proj) => {
+          const descriptions = proj.descriptions ?? [];
+          const dateText = [proj.startDate, proj.endDate].filter(Boolean).join(" – ");
+          const hasWebsite = proj.websiteLabel && proj.websiteUrl;
+
+          return (
+            <div key={proj.id}>
+              {/* Row 1: Project Name [| Website] (left, bold) | date range (right) — flush left */}
+              <div className="flex items-baseline justify-between gap-2" style={{ ...LINE_STYLE, paddingLeft: 0 }}>
+                <span>
+                  <span className="font-bold">{proj.name}</span>
+                  {hasWebsite && (
+                    <>
+                      {" | "}
+                      <a href={proj.websiteUrl} style={{ color: "#1a4dc2" }}>{proj.websiteLabel}</a>
+                    </>
+                  )}
+                </span>
+                {dateText && <span className="shrink-0">{dateText}</span>}
+              </div>
+              {/* Description bullet items */}
+              {descriptions.map((desc) =>
+                desc.value ? <BulletItem key={desc.id}>{desc.value}</BulletItem> : null
+              )}
             </div>
-            <BulletList text={proj.description} />
-          </div>
-        ))}
+          );
+        })}
       </div>
     </section>
   );
