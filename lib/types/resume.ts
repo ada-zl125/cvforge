@@ -65,7 +65,8 @@ export interface EducationItem {
 export interface SkillGroup {
   id: string;
   category: string;
-  items: string[];
+  /** Raw comma-separated skills string — stored as-is, split only for preview rendering */
+  items: string;
 }
 
 export interface ProjectItem {
