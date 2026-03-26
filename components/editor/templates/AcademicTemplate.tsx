@@ -261,9 +261,9 @@ function SkillsBlock({ items }: { items: SkillGroup[] }) {
       <SectionTitle>Technical Skills</SectionTitle>
       <div>
         {items.map((group) => (
-          <div key={group.id} style={LINE_STYLE}>
+          <div key={group.id} style={{ ...LINE_STYLE, paddingLeft: 0 }}>
             <span className="font-bold">{group.category}:</span>{" "}
-            {group.items.join(", ")}
+            {group.items}
           </div>
         ))}
       </div>
