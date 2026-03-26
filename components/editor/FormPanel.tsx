@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, Plus, Trash2, GraduationCap, FolderOpen, Briefcase, Wrench } from "lucide-react";
+import { ChevronDown, ChevronUp, Plus, Trash2, GraduationCap, FolderOpen, Briefcase, Wrench } from "lucide-react";
 import type { ResumeContent, SectionType } from "@/lib/types/resume";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,7 +20,7 @@ const SECTION_META: Record<SectionType, { icon: typeof GraduationCap; label: str
   education:  { icon: GraduationCap, label: "Education" },
   projects:   { icon: FolderOpen,    label: "Projects" },
   experience: { icon: Briefcase,     label: "Experience" },
-  skills:     { icon: Wrench,        label: "Technical Skills" },
+  skills:     { icon: Wrench,        label: "Skills" },
 };
 
 interface FormPanelProps {
@@ -42,6 +42,14 @@ export function FormPanel({ content, onChange }: FormPanelProps) {
     onChange({ ...content, sections: activeSections.filter((s) => s !== type) });
   }
 
+  function moveSection(index: number, direction: -1 | 1) {
+    const target = index + direction;
+    if (target < 0 || target >= activeSections.length) return;
+    const next = [...activeSections];
+    [next[index], next[target]] = [next[target], next[index]];
+    onChange({ ...content, sections: next });
+  }
+
   return (
     <div className="flex flex-col gap-4 p-5">
       {/* Personal Information — fixed, cannot be removed */}
@@ -51,13 +59,17 @@ export function FormPanel({ content, onChange }: FormPanelProps) {
       />
 
       {/* Dynamic sections */}
-      {activeSections.map((type) => (
+      {activeSections.map((type, i) => (
         <CollapsibleSection
           key={type}
           type={type}
           content={content}
           onChange={onChange}
           onRemove={() => removeSection(type)}
+          isFirst={i === 0}
+          isLast={i === activeSections.length - 1}
+          onMoveUp={() => moveSection(i, -1)}
+          onMoveDown={() => moveSection(i, 1)}
         />
       ))}
 
@@ -98,11 +110,19 @@ function CollapsibleSection({
   content,
   onChange,
   onRemove,
+  isFirst,
+  isLast,
+  onMoveUp,
+  onMoveDown,
 }: {
   type: SectionType;
   content: ResumeContent;
   onChange: (content: ResumeContent) => void;
   onRemove: () => void;
+  isFirst: boolean;
+  isLast: boolean;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const meta = SECTION_META[type];
@@ -119,15 +139,31 @@ function CollapsibleSection({
           {meta.label}
           <ChevronDown className={`size-4 text-muted-foreground transition-transform ${collapsed ? "-rotate-90" : ""}`} />
         </button>
-        <Button
-          variant="ghost"
-          size="icon-xs"
-          className="cursor-pointer text-muted-foreground hover:text-destructive"
-          onClick={onRemove}
-          aria-label={`Remove ${meta.label}`}
-        >
-          <Trash2 className="size-3.5" />
-        </Button>
+        <div className="flex items-center gap-0.5">
+          <Button
+            variant="ghost" size="icon-xs"
+            className="cursor-pointer text-muted-foreground hover:text-foreground disabled:opacity-30"
+            disabled={isFirst} onClick={onMoveUp}
+          >
+            <ChevronUp className="size-3.5" />
+          </Button>
+          <Button
+            variant="ghost" size="icon-xs"
+            className="cursor-pointer text-muted-foreground hover:text-foreground disabled:opacity-30"
+            disabled={isLast} onClick={onMoveDown}
+          >
+            <ChevronDown className="size-3.5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            className="cursor-pointer text-muted-foreground hover:text-destructive"
+            onClick={onRemove}
+            aria-label={`Remove ${meta.label}`}
+          >
+            <Trash2 className="size-3.5" />
+          </Button>
+        </div>
       </div>
 
       {/* Content */}
