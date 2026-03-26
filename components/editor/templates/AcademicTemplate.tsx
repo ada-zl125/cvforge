@@ -258,7 +258,7 @@ function SkillsBlock({ items }: { items: SkillGroup[] }) {
   if (items.length === 0) return null;
   return (
     <section className="mb-2">
-      <SectionTitle>Technical Skills</SectionTitle>
+      <SectionTitle>Skills</SectionTitle>
       <div>
         {items.map((group) => (
           <div key={group.id} style={{ ...LINE_STYLE, paddingLeft: 0 }}>
