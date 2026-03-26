@@ -186,19 +186,31 @@ function ExperienceBlock({ items }: { items: ExperienceItem[] }) {
     <section className="mb-2">
       <SectionTitle>Experience</SectionTitle>
       <div className="space-y-1.5">
-        {items.map((exp) => (
-          <div key={exp.id}>
-            <div className="flex items-baseline justify-between gap-2" style={LINE_STYLE}>
-              <span className="font-bold">{exp.company}</span>
-              <span className="shrink-0">{exp.location}</span>
+        {items.map((exp) => {
+          const descriptions = exp.descriptions ?? [];
+          const dateText = [exp.startDate, exp.endDate].filter(Boolean).join(" – ");
+
+          return (
+            <div key={exp.id}>
+              {/* Row 1: Company (left, bold) | Location (right, bold) — flush left */}
+              <div className="flex items-baseline justify-between gap-2" style={{ ...LINE_STYLE, paddingLeft: 0 }}>
+                <span className="font-bold">{exp.company}</span>
+                <span className="shrink-0 font-bold">{exp.location}</span>
+              </div>
+              {/* Row 2: Position (left) | date range (right) — flush left */}
+              {exp.position && (
+                <div className="flex items-baseline justify-between gap-2" style={{ ...LINE_STYLE, paddingLeft: 0 }}>
+                  <span>{exp.position}</span>
+                  {dateText && <span className="shrink-0">{dateText}</span>}
+                </div>
+              )}
+              {/* Description bullet items */}
+              {descriptions.map((desc) =>
+                desc.value ? <BulletItem key={desc.id}>{desc.value}</BulletItem> : null
+              )}
             </div>
-            <div className="flex items-baseline justify-between gap-2" style={LINE_STYLE}>
-              <span className="italic">{exp.position}</span>
-              <DateRange start={exp.startDate} end={exp.endDate} />
-            </div>
-            <BulletList text={exp.description} />
-          </div>
-        ))}
+          );
+        })}
       </div>
     </section>
   );
