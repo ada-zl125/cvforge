@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check, Loader2, FileDown, FileText, FileType } from "lucide-react";
+import { ArrowLeft, Check, Loader2, FileDown, FileText, Image } from "lucide-react";
 import type { ResumeTemplate, ResumeContent } from "@/lib/types/resume";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,7 +42,7 @@ interface ToolbarProps {
 }
 
 export function Toolbar({ title, template, content, saveStatus, onTitleChange }: ToolbarProps) {
-  const [exporting, setExporting] = useState(false);
+  const [exportingFormat, setExportingFormat] = useState<"pdf" | "png" | null>(null);
   const colors = TEMPLATE_COLORS[template] ?? TEMPLATE_COLORS.classic;
   const label = TEMPLATE_LABELS[template] ?? "Classic";
   const router = useRouter();
@@ -58,26 +58,26 @@ export function Toolbar({ title, template, content, saveStatus, onTitleChange }:
     if (editing) inputRef.current?.select();
   }, [editing]);
 
-  async function handleExportPDF() {
-    setExporting(true);
+  async function handleExport(format: "pdf" | "png") {
+    setExportingFormat(format);
     try {
-      const res = await fetch("/api/export/pdf", {
+      const res = await fetch(`/api/export/${format}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content, title }),
       });
-      if (!res.ok) throw new Error("Export failed");
+      if (!res.ok) throw new Error(`${format.toUpperCase()} export failed`);
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${title || "resume"}.pdf`;
+      a.download = `${title || "resume"}.${format}`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
-      console.error("PDF export error:", err);
+      console.error(`${format.toUpperCase()} export error:`, err);
     } finally {
-      setExporting(false);
+      setExportingFormat(null);
     }
   }
 
@@ -165,14 +165,14 @@ export function Toolbar({ title, template, content, saveStatus, onTitleChange }:
           <FileDown className="size-4" />
           Export
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" sideOffset={4}>
-          <DropdownMenuItem className="cursor-pointer gap-2" onClick={handleExportPDF} disabled={exporting}>
-            {exporting ? <Loader2 className="size-4 animate-spin" /> : <FileText className="size-4" />}
-            {exporting ? "Exporting..." : "Download PDF"}
+        <DropdownMenuContent align="end" sideOffset={4} className="min-w-[160px]">
+          <DropdownMenuItem className="cursor-pointer gap-2 whitespace-nowrap" onClick={() => handleExport("pdf")} disabled={exportingFormat !== null}>
+            {exportingFormat === "pdf" ? <Loader2 className="size-4 animate-spin" /> : <FileText className="size-4" />}
+            {exportingFormat === "pdf" ? "Exporting..." : "Download PDF"}
           </DropdownMenuItem>
-          <DropdownMenuItem className="cursor-pointer gap-2">
-            <FileType className="size-4" />
-            Download DOCX
+          <DropdownMenuItem className="cursor-pointer gap-2 whitespace-nowrap" onClick={() => handleExport("png")} disabled={exportingFormat !== null}>
+            {exportingFormat === "png" ? <Loader2 className="size-4 animate-spin" /> : <Image className="size-4" />}
+            {exportingFormat === "png" ? "Exporting..." : "Download PNG"}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
