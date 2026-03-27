@@ -128,3 +128,64 @@
 .sidebar-hover:hover .sidebar-inner-border {
   border-color: var(--foreground) !important;
 }
+
+/* Editor form panel — section card hover: border → black, subtle lift */
+.section-card {
+  transition: border-color 200ms ease-out, box-shadow 200ms ease-out;
+}
+
+.section-card:hover {
+  border-color: var(--foreground) !important;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--foreground) 8%, transparent);
+}
+
+/* Entry card hover: border → black */
+.entry-card {
+  transition: border-color 200ms ease-out, box-shadow 200ms ease-out;
+}
+
+.entry-card:hover {
+  border-color: var(--foreground) !important;
+  box-shadow: 0 1px 4px color-mix(in srgb, var(--foreground) 6%, transparent);
+}
+
+/* Section & entry header row: visible hover background */
+.section-header,
+.entry-header {
+  transition: background-color 150ms ease-out;
+  border-radius: 0.5rem;
+}
+
+.section-header:hover,
+.entry-header:hover {
+  background-color: var(--muted);
+}
+
+/* Skill row hover */
+.skill-row {
+  transition: background-color 150ms ease-out;
+  border-radius: 0.375rem;
+}
+
+.skill-row:hover {
+  background-color: var(--muted);
+}
+
+/* Add-entry / add-field button hover: lift + bg */
+.add-btn {
+  transition: background-color 150ms ease-out, color 150ms ease-out, transform 150ms ease-out;
+}
+
+.add-btn:hover {
+  transform: translateY(-1px);
+}
+
+/* Add Section dashed button: bold hover */
+.add-section-btn {
+  transition: border-color 200ms ease-out, background-color 200ms ease-out, color 200ms ease-out, box-shadow 200ms ease-out;
+}
+
+.add-section-btn:hover {
+  border-color: var(--foreground) !important;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--foreground) 8%, transparent);
+}

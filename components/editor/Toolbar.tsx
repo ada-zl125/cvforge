@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Check, Loader2, FileDown, FileText, FileType } from "lucide-react";
+import type { ResumeTemplate } from "@/lib/types/resume";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -14,13 +15,34 @@ import {
 
 type SaveStatus = "saved" | "saving" | "unsaved";
 
+const TEMPLATE_COLORS: Record<ResumeTemplate, { bg: string; text: string }> = {
+  classic:      { bg: "bg-blue-50",    text: "text-blue-600" },
+  modern:       { bg: "bg-violet-50",  text: "text-violet-600" },
+  minimal:      { bg: "bg-emerald-50", text: "text-emerald-600" },
+  creative:     { bg: "bg-amber-50",   text: "text-amber-600" },
+  professional: { bg: "bg-indigo-50",  text: "text-indigo-600" },
+  academic:     { bg: "bg-teal-50",    text: "text-teal-600" },
+};
+
+const TEMPLATE_LABELS: Record<ResumeTemplate, string> = {
+  classic: "Classic",
+  modern: "Modern",
+  minimal: "Minimal",
+  creative: "Creative",
+  professional: "Professional",
+  academic: "Academic",
+};
+
 interface ToolbarProps {
   title: string;
+  template: ResumeTemplate;
   saveStatus: SaveStatus;
   onTitleChange: (title: string) => void;
 }
 
-export function Toolbar({ title, saveStatus, onTitleChange }: ToolbarProps) {
+export function Toolbar({ title, template, saveStatus, onTitleChange }: ToolbarProps) {
+  const colors = TEMPLATE_COLORS[template] ?? TEMPLATE_COLORS.classic;
+  const label = TEMPLATE_LABELS[template] ?? "Classic";
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(title);
@@ -56,6 +78,11 @@ export function Toolbar({ title, saveStatus, onTitleChange }: ToolbarProps) {
       >
         <ArrowLeft className="size-4" />
       </Button>
+
+      {/* Template badge */}
+      <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[11px] font-medium ${colors.bg} ${colors.text}`}>
+        {label}
+      </span>
 
       {/* Title — click to rename */}
       {editing ? (
@@ -108,7 +135,7 @@ export function Toolbar({ title, saveStatus, onTitleChange }: ToolbarProps) {
       {/* Export dropdown */}
       <DropdownMenu>
         <DropdownMenuTrigger
-          className="btn-hover-border inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 text-sm font-medium transition-colors hover:bg-muted"
+          className="btn-hover-border inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 text-sm font-medium hover:bg-muted"
         >
           <FileDown className="size-4" />
           Export
