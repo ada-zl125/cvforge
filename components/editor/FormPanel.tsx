@@ -130,10 +130,10 @@ function CollapsibleSection({
   return (
     <section className="section-card rounded-lg border border-border">
       {/* Header */}
-      <div className="section-header flex items-center justify-between px-4 py-3">
+      <div className="section-header flex items-stretch justify-between px-4">
         <button
           type="button"
-          className="flex flex-1 cursor-pointer items-center gap-2 text-sm font-semibold tracking-tight transition-colors hover:text-foreground"
+          className="flex flex-1 cursor-pointer items-center gap-2 py-3 text-sm font-semibold tracking-tight transition-colors hover:text-foreground"
           onClick={() => setCollapsed(!collapsed)}
         >
           {meta.label}
