@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { ResumeRow, ResumeContent } from "@/lib/types/resume";
+import type { ResumeTemplate } from "@/lib/types/resume";
 import { Toolbar } from "./Toolbar";
 import { FormPanel } from "./FormPanel";
 import { PreviewPanel } from "./PreviewPanel";
@@ -14,6 +15,7 @@ interface EditorContentProps {
 }
 
 export function EditorContent({ resume }: EditorContentProps) {
+  const template: ResumeTemplate = resume.template;
   const [title, setTitle] = useState(resume.title);
   const [content, setContent] = useState<ResumeContent>(resume.content);
   const [saveStatus, setSaveStatus] = useState<"saved" | "saving" | "unsaved">("saved");
@@ -55,6 +57,7 @@ export function EditorContent({ resume }: EditorContentProps) {
     <div className="flex h-screen flex-col">
       <Toolbar
         title={title}
+        template={template}
         saveStatus={saveStatus}
         onTitleChange={handleTitleChange}
       />
