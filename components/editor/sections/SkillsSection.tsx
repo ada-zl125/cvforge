@@ -40,11 +40,11 @@ export function SkillsSection({ items, onChange }: SkillsSectionProps) {
   return (
     <div>
       <div className="space-y-3">
-        <Button variant="ghost" size="xs" className="cursor-pointer gap-1 text-xs" onClick={add}>
+        <Button variant="ghost" size="xs" className="add-btn cursor-pointer gap-1 text-xs" onClick={add}>
           <Plus className="size-3" /> Add Entry
         </Button>
         {items.map((group, i) => (
-          <div key={group.id} className="flex items-end gap-2">
+          <div key={group.id} className="skill-row flex items-end gap-2 px-1 py-0.5">
             {/* Move up/down */}
             <div className="mb-0.5 flex flex-col">
               <Button

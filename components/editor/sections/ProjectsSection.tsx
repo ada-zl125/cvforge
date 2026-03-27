@@ -64,7 +64,7 @@ export function ProjectsSection({ items, onChange }: ProjectsSectionProps) {
   return (
     <div>
       <div className="space-y-4">
-        <Button variant="ghost" size="xs" className="cursor-pointer gap-1 text-xs" onClick={add}>
+        <Button variant="ghost" size="xs" className="add-btn cursor-pointer gap-1 text-xs" onClick={add}>
           <Plus className="size-3" /> Add Entry
         </Button>
         {items.map((proj, i) => (
@@ -134,15 +134,15 @@ function ProjectBlock({
   }
 
   return (
-    <div className="rounded-lg border border-border">
+    <div className="entry-card rounded-lg border border-border">
       {/* Block header — clickable to collapse */}
-      <div className="flex items-center justify-between px-3 py-2">
+      <div className="entry-header flex items-center justify-between px-3 py-2">
         <button
           type="button"
           className="flex flex-1 cursor-pointer items-center gap-1 text-left"
           onClick={() => setCollapsed(!collapsed)}
         >
-          <ChevronRight className={`size-3 text-muted-foreground transition-transform ${collapsed ? "" : "rotate-90"}`} />
+          <ChevronRight className={`size-3 text-muted-foreground transition-transform duration-200 ${collapsed ? "" : "rotate-90"}`} />
           <span className="text-xs font-medium">{proj.name || `Entry #${index + 1}`}</span>
         </button>
         <div className="flex items-center gap-0.5">
@@ -218,7 +218,7 @@ function ProjectBlock({
           {/* Description fields */}
           {descriptions.length > 0 && (
             <div className="mt-3 space-y-2">
-              <Label className="text-xs text-muted-foreground">Descriptions (one bullet point each)</Label>
+              <Label className="text-xs text-muted-foreground">Descriptions</Label>
               {descriptions.map((desc) => (
                 <div key={desc.id} className="flex items-center gap-2">
                   <Input
@@ -242,7 +242,7 @@ function ProjectBlock({
           {/* Add field dropdown */}
           <div className="mt-2">
             <DropdownMenu>
-              <DropdownMenuTrigger className="inline-flex h-7 cursor-pointer items-center gap-1 rounded-md px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+              <DropdownMenuTrigger className="add-btn inline-flex h-7 cursor-pointer items-center gap-1 rounded-md px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
                 <Plus className="size-3" />
                 Add field
               </DropdownMenuTrigger>
