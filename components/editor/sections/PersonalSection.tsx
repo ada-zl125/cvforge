@@ -71,15 +71,15 @@ export function PersonalSection({ data: rawData, onChange }: PersonalSectionProp
   });
 
   return (
-    <section className="rounded-lg border border-border">
+    <section className="section-card rounded-lg border border-border">
       {/* Section header — always visible */}
       <button
         type="button"
-        className="flex w-full cursor-pointer items-center justify-between px-4 py-3 text-sm font-semibold tracking-tight transition-colors hover:bg-muted/50"
+        className="section-header flex w-full cursor-pointer items-center justify-between px-4 py-3 text-sm font-semibold tracking-tight"
         onClick={() => setCollapsed(!collapsed)}
       >
         Personal Information
-        <ChevronDown className={`size-4 text-muted-foreground transition-transform ${collapsed ? "-rotate-90" : ""}`} />
+        <ChevronDown className={`size-4 text-muted-foreground transition-transform duration-200 ${collapsed ? "-rotate-90" : ""}`} />
       </button>
 
       {/* Collapsible content */}
@@ -116,7 +116,7 @@ export function PersonalSection({ data: rawData, onChange }: PersonalSectionProp
 
           {/* Add contact field dropdown */}
           <DropdownMenu>
-            <DropdownMenuTrigger className="inline-flex h-7 cursor-pointer items-center gap-1 rounded-md px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+            <DropdownMenuTrigger className="add-btn inline-flex h-7 cursor-pointer items-center gap-1 rounded-md px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
               <Plus className="size-3" />
               Add field
             </DropdownMenuTrigger>

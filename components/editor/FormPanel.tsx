@@ -76,7 +76,7 @@ export function FormPanel({ content, onChange }: FormPanelProps) {
       {/* Add section button */}
       {availableSections.length > 0 && (
         <DropdownMenu>
-          <DropdownMenuTrigger className="btn-hover-border flex h-9 w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-dashed border-border text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+          <DropdownMenuTrigger className="add-section-btn flex h-9 w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-dashed border-border text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground">
             <Plus className="size-4" />
             Add Section
           </DropdownMenuTrigger>
@@ -128,16 +128,16 @@ function CollapsibleSection({
   const meta = SECTION_META[type];
 
   return (
-    <section className="rounded-lg border border-border">
+    <section className="section-card rounded-lg border border-border">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3">
+      <div className="section-header flex items-center justify-between px-4 py-3">
         <button
           type="button"
           className="flex flex-1 cursor-pointer items-center gap-2 text-sm font-semibold tracking-tight transition-colors hover:text-foreground"
           onClick={() => setCollapsed(!collapsed)}
         >
           {meta.label}
-          <ChevronDown className={`size-4 text-muted-foreground transition-transform ${collapsed ? "-rotate-90" : ""}`} />
+          <ChevronDown className={`size-4 text-muted-foreground transition-transform duration-200 ${collapsed ? "-rotate-90" : ""}`} />
         </button>
         <div className="flex items-center gap-0.5">
           <Button
