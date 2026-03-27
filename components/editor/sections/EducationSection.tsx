@@ -146,10 +146,10 @@ function EducationBlock({
   return (
     <div className="entry-card rounded-lg border border-border">
       {/* Block header — clickable to collapse, always visible */}
-      <div className="entry-header flex items-center justify-between px-3 py-2">
+      <div className="entry-header flex items-stretch justify-between px-3">
         <button
           type="button"
-          className="flex flex-1 cursor-pointer items-center gap-1 text-left"
+          className="flex flex-1 cursor-pointer items-center gap-1 py-2 text-left"
           onClick={() => setCollapsed(!collapsed)}
         >
           <ChevronRight className={`size-3 text-muted-foreground transition-transform duration-200 ${collapsed ? "" : "rotate-90"}`} />
