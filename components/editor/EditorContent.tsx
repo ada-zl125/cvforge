@@ -58,6 +58,7 @@ export function EditorContent({ resume }: EditorContentProps) {
       <Toolbar
         title={title}
         template={template}
+        content={content}
         saveStatus={saveStatus}
         onTitleChange={handleTitleChange}
       />
