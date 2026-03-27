@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Check, Loader2, FileDown, FileText, FileType } from "lucide-react";
-import type { ResumeTemplate } from "@/lib/types/resume";
+import type { ResumeTemplate, ResumeContent } from "@/lib/types/resume";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -36,11 +36,13 @@ const TEMPLATE_LABELS: Record<ResumeTemplate, string> = {
 interface ToolbarProps {
   title: string;
   template: ResumeTemplate;
+  content: ResumeContent;
   saveStatus: SaveStatus;
   onTitleChange: (title: string) => void;
 }
 
-export function Toolbar({ title, template, saveStatus, onTitleChange }: ToolbarProps) {
+export function Toolbar({ title, template, content, saveStatus, onTitleChange }: ToolbarProps) {
+  const [exporting, setExporting] = useState(false);
   const colors = TEMPLATE_COLORS[template] ?? TEMPLATE_COLORS.classic;
   const label = TEMPLATE_LABELS[template] ?? "Classic";
   const router = useRouter();
@@ -55,6 +57,29 @@ export function Toolbar({ title, template, saveStatus, onTitleChange }: ToolbarP
   useEffect(() => {
     if (editing) inputRef.current?.select();
   }, [editing]);
+
+  async function handleExportPDF() {
+    setExporting(true);
+    try {
+      const res = await fetch("/api/export/pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content, title }),
+      });
+      if (!res.ok) throw new Error("Export failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${title || "resume"}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("PDF export error:", err);
+    } finally {
+      setExporting(false);
+    }
+  }
 
   function commitTitle() {
     const trimmed = editValue.trim();
@@ -141,9 +166,9 @@ export function Toolbar({ title, template, saveStatus, onTitleChange }: ToolbarP
           Export
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" sideOffset={4}>
-          <DropdownMenuItem className="cursor-pointer gap-2">
-            <FileText className="size-4" />
-            Download PDF
+          <DropdownMenuItem className="cursor-pointer gap-2" onClick={handleExportPDF} disabled={exporting}>
+            {exporting ? <Loader2 className="size-4 animate-spin" /> : <FileText className="size-4" />}
+            {exporting ? "Exporting..." : "Download PDF"}
           </DropdownMenuItem>
           <DropdownMenuItem className="cursor-pointer gap-2">
             <FileType className="size-4" />
