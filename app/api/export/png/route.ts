@@ -5,6 +5,8 @@ import { renderResumeHTML } from "@/lib/pdf/resume-html";
 async function launchBrowser() {
   const puppeteer = (await import("puppeteer-core")).default;
 
+  // On Vercel: use @sparticuz/chromium (serverless-compatible)
+  // Locally: use system Chrome installation
   if (process.env.VERCEL) {
     const chromium = (await import("@sparticuz/chromium")).default;
     return puppeteer.launch({
@@ -15,11 +17,12 @@ async function launchBrowser() {
     });
   }
 
+  // Local dev — try common Chrome paths
   const paths = [
-    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-    "/usr/bin/google-chrome",
-    "/usr/bin/chromium-browser",
-    "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", // macOS
+    "/usr/bin/google-chrome",        // Linux
+    "/usr/bin/chromium-browser",     // Linux
+    "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", // Windows
   ];
 
   const { existsSync } = await import("fs");
@@ -50,7 +53,10 @@ export async function POST(request: Request) {
     await page.setViewport({ width: 794, height: 1123, deviceScaleFactor: 3 });
     await page.setContent(html, { waitUntil: "networkidle0" });
 
-    const screenshot = await page.screenshot({ type: "png", fullPage: true });
+    const screenshot = await page.screenshot({
+      type: "png",
+      fullPage: true,
+    });
 
     await browser.close();
 

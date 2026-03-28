@@ -53,7 +53,7 @@ export function Toolbar({ title, template, content, saveStatus, onTitleChange, o
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content, title }),
       });
-      if (!res.ok) throw new Error("Export failed");
+      if (!res.ok) throw new Error(`${format.toUpperCase()} export failed`);
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
