@@ -1,9 +1,19 @@
 "use client";
 
-import { useState } from "react";
-import { ChevronDown, ChevronUp, Plus, Trash2, GraduationCap, FolderOpen, Briefcase, Wrench } from "lucide-react";
+import { useState, useCallback } from "react";
+import { ChevronDown, ChevronUp, Plus, Trash2, GraduationCap, FolderOpen, Briefcase, Wrench, ChevronsUpDown, ChevronsDownUp, RotateCcw } from "lucide-react";
 import type { ResumeContent, SectionType } from "@/lib/types/resume";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -23,6 +33,15 @@ const SECTION_META: Record<SectionType, { icon: typeof GraduationCap; label: str
   skills:     { icon: Wrench,        label: "Skills" },
 };
 
+const EMPTY_CONTENT: ResumeContent = {
+  personal: { fullName: "", contacts: [] },
+  sections: [],
+  experience: [],
+  education: [],
+  skills: [],
+  projects: [],
+};
+
 interface FormPanelProps {
   content: ResumeContent;
   onChange: (content: ResumeContent) => void;
@@ -34,8 +53,34 @@ export function FormPanel({ content, onChange }: FormPanelProps) {
     (s) => !activeSections.includes(s),
   );
 
+  // Collapse state: personal + each dynamic section. Default all to collapsed.
+  const [personalCollapsed, setPersonalCollapsed] = useState(true);
+  const [sectionCollapsed, setSectionCollapsed] = useState<Record<string, boolean>>(() => {
+    const map: Record<string, boolean> = {};
+    for (const s of activeSections) map[s] = true;
+    return map;
+  });
+  const [resetOpen, setResetOpen] = useState(false);
+
+  const allCollapsed = personalCollapsed && activeSections.every((s) => sectionCollapsed[s] !== false);
+
+  const toggleAll = useCallback(() => {
+    const target = !allCollapsed;
+    setPersonalCollapsed(target);
+    setSectionCollapsed((prev) => {
+      const next = { ...prev };
+      for (const s of activeSections) next[s] = target;
+      return next;
+    });
+  }, [allCollapsed, activeSections]);
+
+  function setSectionCollapse(type: SectionType, collapsed: boolean) {
+    setSectionCollapsed((prev) => ({ ...prev, [type]: collapsed }));
+  }
+
   function addSection(type: SectionType) {
     onChange({ ...content, sections: [...activeSections, type] });
+    setSectionCollapsed((prev) => ({ ...prev, [type]: false }));
   }
 
   function removeSection(type: SectionType) {
@@ -50,12 +95,44 @@ export function FormPanel({ content, onChange }: FormPanelProps) {
     onChange({ ...content, sections: next });
   }
 
+  function handleReset() {
+    onChange(EMPTY_CONTENT);
+    setPersonalCollapsed(true);
+    setSectionCollapsed({});
+    setResetOpen(false);
+  }
+
   return (
     <div className="flex flex-col gap-4 p-5">
+      {/* Form toolbar: Collapse All / Reset */}
+      <div className="flex items-center gap-1.5">
+        <Button
+          variant="outline"
+          size="sm"
+          className="btn-hover-border cursor-pointer gap-1.5 text-xs"
+          onClick={toggleAll}
+        >
+          {allCollapsed ? <ChevronsUpDown className="size-3.5" /> : <ChevronsDownUp className="size-3.5" />}
+          {allCollapsed ? "Expand All" : "Collapse All"}
+        </Button>
+
+        <Button
+          variant="outline"
+          size="sm"
+          className="btn-hover-border cursor-pointer gap-1.5 text-xs"
+          onClick={() => setResetOpen(true)}
+        >
+          <RotateCcw className="size-3.5" />
+          Reset
+        </Button>
+      </div>
+
       {/* Personal Information — fixed, cannot be removed */}
       <PersonalSection
         data={content.personal}
         onChange={(personal) => onChange({ ...content, personal })}
+        collapsed={personalCollapsed}
+        onToggleCollapse={() => setPersonalCollapsed((v) => !v)}
       />
 
       {/* Dynamic sections */}
@@ -70,6 +147,8 @@ export function FormPanel({ content, onChange }: FormPanelProps) {
           isLast={i === activeSections.length - 1}
           onMoveUp={() => moveSection(i, -1)}
           onMoveDown={() => moveSection(i, 1)}
+          collapsed={sectionCollapsed[type] !== false}
+          onToggleCollapse={() => setSectionCollapse(type, !sectionCollapsed[type])}
         />
       ))}
 
@@ -97,6 +176,28 @@ export function FormPanel({ content, onChange }: FormPanelProps) {
           </DropdownMenuContent>
         </DropdownMenu>
       )}
+
+      {/* Reset confirmation dialog */}
+      <AlertDialog open={resetOpen} onOpenChange={setResetOpen}>
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset all content?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will clear all sections and personal information. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="btn-hover-border cursor-pointer">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="outline"
+              className="btn-hover-destructive cursor-pointer border-destructive/40 text-destructive hover:border-destructive hover:bg-destructive/10 hover:text-destructive"
+              onClick={handleReset}
+            >
+              Reset
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -114,6 +215,8 @@ function CollapsibleSection({
   isLast,
   onMoveUp,
   onMoveDown,
+  collapsed,
+  onToggleCollapse,
 }: {
   type: SectionType;
   content: ResumeContent;
@@ -123,8 +226,9 @@ function CollapsibleSection({
   isLast: boolean;
   onMoveUp: () => void;
   onMoveDown: () => void;
+  collapsed: boolean;
+  onToggleCollapse: () => void;
 }) {
-  const [collapsed, setCollapsed] = useState(false);
   const meta = SECTION_META[type];
 
   return (
@@ -134,7 +238,7 @@ function CollapsibleSection({
         <button
           type="button"
           className="flex flex-1 cursor-pointer items-center gap-2 py-3 text-sm font-semibold tracking-tight transition-colors hover:text-foreground"
-          onClick={() => setCollapsed(!collapsed)}
+          onClick={onToggleCollapse}
         >
           {meta.label}
           <ChevronDown className={`size-4 text-muted-foreground transition-transform duration-200 ${collapsed ? "-rotate-90" : ""}`} />

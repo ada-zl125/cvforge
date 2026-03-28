@@ -15,24 +15,24 @@ interface EditorContentProps {
 }
 
 export function EditorContent({ resume }: EditorContentProps) {
-  const template: ResumeTemplate = resume.template;
+  const [template, setTemplate] = useState<ResumeTemplate>(resume.template);
   const [title, setTitle] = useState(resume.title);
   const [content, setContent] = useState<ResumeContent>(resume.content);
   const [saveStatus, setSaveStatus] = useState<"saved" | "saving" | "unsaved">("saved");
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const latestRef = useRef({ title, content });
+  const latestRef = useRef({ title, content, template });
 
   useEffect(() => {
-    latestRef.current = { title, content };
-  }, [title, content]);
+    latestRef.current = { title, content, template };
+  }, [title, content, template]);
 
   const persist = useCallback(async () => {
     setSaveStatus("saving");
     const supabase = createClient();
-    const { title: t, content: c } = latestRef.current;
+    const { title: t, content: c, template: tmpl } = latestRef.current;
     const { error } = await supabase
       .from("resumes")
-      .update({ title: t, content: c, updated_at: new Date().toISOString() })
+      .update({ title: t, content: c, template: tmpl, updated_at: new Date().toISOString() })
       .eq("id", resume.id);
     setSaveStatus(error ? "unsaved" : "saved");
   }, [resume.id]);
@@ -53,6 +53,11 @@ export function EditorContent({ resume }: EditorContentProps) {
     scheduleSave();
   }
 
+  function handleTemplateChange(newTemplate: ResumeTemplate) {
+    setTemplate(newTemplate);
+    scheduleSave();
+  }
+
   return (
     <div className="flex h-screen flex-col">
       <Toolbar
@@ -61,6 +66,7 @@ export function EditorContent({ resume }: EditorContentProps) {
         content={content}
         saveStatus={saveStatus}
         onTitleChange={handleTitleChange}
+        onTemplateChange={handleTemplateChange}
       />
 
       <div className="flex flex-1 overflow-hidden">
