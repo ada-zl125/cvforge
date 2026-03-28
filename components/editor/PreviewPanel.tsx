@@ -10,7 +10,7 @@ interface PreviewPanelProps {
 export function PreviewPanel({ content }: PreviewPanelProps) {
   return (
     <div className="flex flex-1 items-start justify-center overflow-y-auto bg-muted/50 p-8">
-      <div className="shadow-lg">
+      <div className="preview-a4 rounded-sm border border-border shadow-lg">
         <AcademicTemplate content={content} />
       </div>
     </div>
