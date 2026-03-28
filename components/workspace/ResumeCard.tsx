@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Copy, Trash2 } from "lucide-react";
+import { Pencil, Trash2, Settings, MoreHorizontal, Copy } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { ResumeRow, ResumeTemplate } from "@/lib/types/resume";
 import {
@@ -23,10 +23,16 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 
 /* ------------------------------------------------------------------ */
 /*  Template colour mapping                                            */
@@ -49,6 +55,11 @@ const TEMPLATE_LABELS: Record<ResumeTemplate, string> = {
   professional: "Professional",
   academic: "Academic",
 };
+
+const SETTINGS_TEMPLATES: { value: ResumeTemplate; label: string; bg: string; text: string }[] = [
+  { value: "classic",  label: "Classic",  bg: "bg-blue-50",  text: "text-blue-600" },
+  { value: "academic", label: "Academic", bg: "bg-teal-50",  text: "text-teal-600" },
+];
 
 const TITLE_MAX_LENGTH = 50;
 
@@ -87,28 +98,35 @@ export function ResumeCard({ resume }: ResumeCardProps) {
   const colors = TEMPLATE_COLORS[resume.template] ?? TEMPLATE_COLORS.classic;
   const label = TEMPLATE_LABELS[resume.template] ?? "Classic";
 
-  const [renameOpen, setRenameOpen] = useState(false);
-  const [renameValue, setRenameValue] = useState(resume.title);
-  const [renameLoading, setRenameLoading] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsTitle, setSettingsTitle] = useState(resume.title);
+  const [settingsTemplate, setSettingsTemplate] = useState(resume.template);
+  const [settingsLoading, setSettingsLoading] = useState(false);
 
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  /* ---- Rename ---- */
-  async function handleRename() {
-    const trimmed = renameValue.trim();
-    if (!trimmed || trimmed === resume.title) {
-      setRenameOpen(false);
+  /* ---- Settings (title + template) ---- */
+  async function handleSettingsSave() {
+    const trimmed = settingsTitle.trim();
+    if (!trimmed) return;
+    const titleChanged = trimmed !== resume.title;
+    const templateChanged = settingsTemplate !== resume.template;
+    if (!titleChanged && !templateChanged) {
+      setSettingsOpen(false);
       return;
     }
-    setRenameLoading(true);
+    setSettingsLoading(true);
     try {
       const supabase = createClient();
-      await supabase.from("resumes").update({ title: trimmed }).eq("id", resume.id);
-      setRenameOpen(false);
+      const updates: Record<string, string> = {};
+      if (titleChanged) updates.title = trimmed;
+      if (templateChanged) updates.template = settingsTemplate;
+      await supabase.from("resumes").update(updates).eq("id", resume.id);
+      setSettingsOpen(false);
       router.refresh();
     } finally {
-      setRenameLoading(false);
+      setSettingsLoading(false);
     }
   }
 
@@ -117,7 +135,6 @@ export function ResumeCard({ resume }: ResumeCardProps) {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-
     await supabase.from("resumes").insert({
       user_id: user.id,
       title: `${resume.title} (Copy)`,
@@ -154,13 +171,42 @@ export function ResumeCard({ resume }: ResumeCardProps) {
 
         {/* Card body */}
         <div className="flex flex-col gap-3 px-4 py-3.5">
-          {/* Top section: badge → title → date */}
-          <div className="flex flex-col gap-2">
+          {/* Top row: badge + three-dot menu */}
+          <div className="flex items-start justify-between">
             <span
-              className={`inline-flex w-fit items-center rounded px-1.5 py-0.5 text-[11px] font-medium ${colors.bg} ${colors.text}`}
+              className={`inline-flex items-center rounded px-1.5 py-0.5 text-[11px] font-medium ${colors.bg} ${colors.text}`}
             >
               {label}
             </span>
+
+            {/* Three-dot menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                className="flex size-7 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <MoreHorizontal className="size-4" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" sideOffset={4} onClick={(e) => e.stopPropagation()}>
+                <DropdownMenuItem className="cursor-pointer gap-2" onClick={() => { setSettingsOpen(true); setSettingsTitle(resume.title); setSettingsTemplate(resume.template); }}>
+                  <Settings className="size-4" />
+                  Settings
+                </DropdownMenuItem>
+                <DropdownMenuItem className="cursor-pointer gap-2" onClick={() => handleDuplicate()}>
+                  <Copy className="size-4" />
+                  Duplicate
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="cursor-pointer gap-2 text-destructive focus:text-destructive" onClick={() => setDeleteOpen(true)}>
+                  <Trash2 className="size-4" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          {/* Title + date */}
+          <div className="flex flex-col gap-1.5">
             <p
               className="text-sm font-semibold text-foreground"
               title={resume.title.length > TITLE_MAX_LENGTH ? resume.title : undefined}
@@ -172,66 +218,78 @@ export function ResumeCard({ resume }: ResumeCardProps) {
             </p>
           </div>
 
-          {/* Action buttons row */}
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              className="flex cursor-pointer items-center gap-1 rounded-[5px] px-2 py-1 text-xs font-medium text-foreground hover:bg-muted"
-              onClick={(e) => { e.stopPropagation(); router.push(`/editor/${resume.id}`); }}
-            >
-              <Pencil className="size-3.5" />
-              Edit
-            </button>
-
-            <Separator orientation="vertical" className="!h-3.5" />
-
-            <button
-              type="button"
-              className="flex cursor-pointer items-center gap-1 rounded-[5px] px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
-              onClick={(e) => { e.stopPropagation(); handleDuplicate(); }}
-            >
-              <Copy className="size-3.5" />
-              Duplicate
-            </button>
-
-            <Separator orientation="vertical" className="!h-3.5" />
-
-            <button
-              type="button"
-              className="flex cursor-pointer items-center gap-1 rounded-[5px] px-2 py-1 text-xs font-medium text-destructive hover:bg-destructive/10"
-              onClick={(e) => { e.stopPropagation(); setDeleteOpen(true); }}
-            >
-              <Trash2 className="size-3.5" />
-              Delete
-            </button>
-          </div>
+          {/* Edit button */}
+          <button
+            type="button"
+            className="flex cursor-pointer items-center gap-1 self-start rounded-[5px] px-2 py-1 text-xs font-medium text-foreground hover:bg-muted"
+            onClick={(e) => { e.stopPropagation(); router.push(`/editor/${resume.id}`); }}
+          >
+            <Pencil className="size-3.5" />
+            Edit
+          </button>
         </div>
       </div>
 
-      {/* Rename dialog */}
-      <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
-        <DialogContent className="sm:max-w-sm">
+      {/* Settings dialog (title + template) — matches CreateResumeModal style */}
+      <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Rename Resume</DialogTitle>
-            <DialogDescription>Enter a new title for your resume.</DialogDescription>
+            <DialogTitle>Resume Settings</DialogTitle>
+            <DialogDescription>Update the title and template for your resume.</DialogDescription>
           </DialogHeader>
-          <div className="grid gap-2 py-2">
-            <Label htmlFor={`rename-${resume.id}`}>Title</Label>
-            <Input
-              id={`rename-${resume.id}`}
-              value={renameValue}
-              onChange={(e) => setRenameValue(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") handleRename(); }}
-              autoFocus
-            />
+          <div className="grid gap-4 py-2">
+            {/* Title input */}
+            <div className="grid gap-1.5">
+              <div className="flex items-center justify-between">
+                <Label htmlFor={`settings-title-${resume.id}`}>Title</Label>
+                <span className={`text-xs ${settingsTitle.length > TITLE_MAX_LENGTH ? "text-destructive" : "text-muted-foreground"}`}>
+                  {settingsTitle.length}/{TITLE_MAX_LENGTH}
+                </span>
+              </div>
+              <Input
+                id={`settings-title-${resume.id}`}
+                value={settingsTitle}
+                onChange={(e) => setSettingsTitle(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") handleSettingsSave(); }}
+                className={settingsTitle.length > TITLE_MAX_LENGTH ? "border-destructive focus:border-destructive" : ""}
+                autoFocus
+              />
+              {settingsTitle.length > TITLE_MAX_LENGTH && (
+                <p className="text-xs text-destructive">Title must be {TITLE_MAX_LENGTH} characters or fewer.</p>
+              )}
+            </div>
+
+            {/* Template picker */}
+            <div className="grid gap-2">
+              <Label>Template</Label>
+              <div className="flex gap-2">
+                {SETTINGS_TEMPLATES.map((t) => {
+                  const active = settingsTemplate === t.value;
+                  return (
+                    <button
+                      key={t.value}
+                      type="button"
+                      onClick={() => setSettingsTemplate(t.value)}
+                      className={`cursor-pointer rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                        active
+                          ? `${t.bg} ${t.text} border-current`
+                          : "border-border text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                      }`}
+                    >
+                      {t.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
           <DialogFooter>
             <Button
-              onClick={handleRename}
-              disabled={!renameValue.trim() || renameLoading}
+              onClick={handleSettingsSave}
+              disabled={!settingsTitle.trim() || settingsTitle.length > TITLE_MAX_LENGTH || settingsLoading}
               className="cursor-pointer"
             >
-              {renameLoading ? "Saving..." : "Save"}
+              {settingsLoading ? "Saving..." : "Save"}
             </Button>
           </DialogFooter>
         </DialogContent>

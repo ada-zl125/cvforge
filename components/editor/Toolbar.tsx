@@ -15,23 +15,10 @@ import {
 
 type SaveStatus = "saved" | "saving" | "unsaved";
 
-const TEMPLATE_COLORS: Record<ResumeTemplate, { bg: string; text: string }> = {
-  classic:      { bg: "bg-blue-50",    text: "text-blue-600" },
-  modern:       { bg: "bg-violet-50",  text: "text-violet-600" },
-  minimal:      { bg: "bg-emerald-50", text: "text-emerald-600" },
-  creative:     { bg: "bg-amber-50",   text: "text-amber-600" },
-  professional: { bg: "bg-indigo-50",  text: "text-indigo-600" },
-  academic:     { bg: "bg-teal-50",    text: "text-teal-600" },
-};
-
-const TEMPLATE_LABELS: Record<ResumeTemplate, string> = {
-  classic: "Classic",
-  modern: "Modern",
-  minimal: "Minimal",
-  creative: "Creative",
-  professional: "Professional",
-  academic: "Academic",
-};
+const TEMPLATE_OPTIONS: { value: ResumeTemplate; label: string; bg: string; text: string }[] = [
+  { value: "classic",  label: "Classic",  bg: "bg-blue-50",  text: "text-blue-600" },
+  { value: "academic", label: "Academic", bg: "bg-teal-50",  text: "text-teal-600" },
+];
 
 interface ToolbarProps {
   title: string;
@@ -39,12 +26,12 @@ interface ToolbarProps {
   content: ResumeContent;
   saveStatus: SaveStatus;
   onTitleChange: (title: string) => void;
+  onTemplateChange: (template: ResumeTemplate) => void;
 }
 
-export function Toolbar({ title, template, content, saveStatus, onTitleChange }: ToolbarProps) {
+export function Toolbar({ title, template, content, saveStatus, onTitleChange, onTemplateChange }: ToolbarProps) {
   const [exportingFormat, setExportingFormat] = useState<"pdf" | "png" | null>(null);
-  const colors = TEMPLATE_COLORS[template] ?? TEMPLATE_COLORS.classic;
-  const label = TEMPLATE_LABELS[template] ?? "Classic";
+  const current = TEMPLATE_OPTIONS.find((t) => t.value === template) ?? TEMPLATE_OPTIONS[0];
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(title);
@@ -92,7 +79,7 @@ export function Toolbar({ title, template, content, saveStatus, onTitleChange }:
   }
 
   return (
-    <header className="flex h-14 shrink-0 items-center gap-4 border-b border-border bg-card px-4">
+    <header className="editor-toolbar flex h-14 shrink-0 items-center gap-4 border-b border-border bg-card px-4">
       {/* Back button */}
       <Button
         variant="ghost"
@@ -104,10 +91,24 @@ export function Toolbar({ title, template, content, saveStatus, onTitleChange }:
         <ArrowLeft className="size-4" />
       </Button>
 
-      {/* Template badge */}
-      <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[11px] font-medium ${colors.bg} ${colors.text}`}>
-        {label}
-      </span>
+      {/* Template selector */}
+      <DropdownMenu>
+        <DropdownMenuTrigger className={`inline-flex cursor-pointer items-center rounded px-1.5 py-0.5 text-[11px] font-medium transition-opacity hover:opacity-80 ${current.bg} ${current.text}`}>
+          {current.label}
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" sideOffset={4}>
+          {TEMPLATE_OPTIONS.map((t) => (
+            <DropdownMenuItem
+              key={t.value}
+              className="cursor-pointer gap-2"
+              onClick={() => onTemplateChange(t.value)}
+            >
+              <span className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-medium ${t.bg} ${t.text}`}>{t.label}</span>
+              {t.value === template && <Check className="ml-auto size-3.5" />}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       {/* Title — click to rename */}
       {editing ? (

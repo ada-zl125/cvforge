@@ -11,7 +11,7 @@ async function launchBrowser() {
     const chromium = (await import("@sparticuz/chromium")).default;
     return puppeteer.launch({
       args: chromium.args,
-      defaultViewport: { width: 794, height: 1123 },
+      defaultViewport: null,
       executablePath: await chromium.executablePath(),
       headless: true,
     });
@@ -33,7 +33,7 @@ async function launchBrowser() {
 
   return puppeteer.launch({
     args: ["--no-sandbox", "--disable-setuid-sandbox"],
-    defaultViewport: { width: 794, height: 1123 },
+    defaultViewport: null,
     executablePath,
     headless: true,
   });
