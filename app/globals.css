@@ -189,3 +189,23 @@
   border-color: var(--foreground) !important;
   box-shadow: 0 2px 8px color-mix(in srgb, var(--foreground) 8%, transparent);
 }
+
+/* Editor toolbar hover: border → black */
+.editor-toolbar {
+  transition: border-color 200ms ease-out, box-shadow 200ms ease-out;
+}
+
+.editor-toolbar:hover {
+  border-color: var(--foreground) !important;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--foreground) 6%, transparent);
+}
+
+/* Preview A4 area hover: border → black */
+.preview-a4 {
+  transition: border-color 200ms ease-out, box-shadow 200ms ease-out;
+}
+
+.preview-a4:hover {
+  border-color: var(--foreground) !important;
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--foreground) 8%, transparent);
+}

@@ -20,13 +20,9 @@ import { Button } from "@/components/ui/button";
 /*  Template options                                                    */
 /* ------------------------------------------------------------------ */
 
-const TEMPLATES: { value: ResumeTemplate; label: string; color: string }[] = [
-  { value: "classic",      label: "Classic",      color: "bg-blue-500" },
-  { value: "modern",       label: "Modern",       color: "bg-violet-500" },
-  { value: "minimal",      label: "Minimal",      color: "bg-emerald-500" },
-  { value: "creative",     label: "Creative",     color: "bg-amber-500" },
-  { value: "professional", label: "Professional", color: "bg-indigo-500" },
-  { value: "academic",     label: "Academic",     color: "bg-teal-500" },
+const TEMPLATES: { value: ResumeTemplate; label: string; bg: string; text: string }[] = [
+  { value: "classic",  label: "Classic",  bg: "bg-blue-50",  text: "text-blue-600" },
+  { value: "academic", label: "Academic", bg: "bg-teal-50",  text: "text-teal-600" },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -117,22 +113,24 @@ export function CreateResumeModal({ open, onOpenChange }: CreateResumeModalProps
           {/* Template picker */}
           <div className="grid gap-2">
             <Label>Template</Label>
-            <div className="grid grid-cols-3 gap-2">
-              {TEMPLATES.map((t) => (
-                <button
-                  key={t.value}
-                  type="button"
-                  onClick={() => setTemplate(t.value)}
-                  className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors ${
-                    template === t.value
-                      ? "border-foreground/20 bg-muted font-medium"
-                      : "border-border hover:bg-muted/50"
-                  }`}
-                >
-                  <span className={`size-2.5 shrink-0 rounded-full ${t.color}`} />
-                  {t.label}
-                </button>
-              ))}
+            <div className="flex gap-2">
+              {TEMPLATES.map((t) => {
+                const active = template === t.value;
+                return (
+                  <button
+                    key={t.value}
+                    type="button"
+                    onClick={() => setTemplate(t.value)}
+                    className={`cursor-pointer rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                      active
+                        ? `${t.bg} ${t.text} border-current`
+                        : "border-border text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>

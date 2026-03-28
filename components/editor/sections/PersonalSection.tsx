@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { ChevronDown, ChevronUp, Plus, Trash2, Mail, Phone, MapPin, Globe } from "lucide-react";
 import type { PersonalInfo, ContactField, ContactFieldType } from "@/lib/types/resume";
 import { Button } from "@/components/ui/button";
@@ -23,11 +22,12 @@ const CONTACT_META: Record<ContactFieldType, { icon: typeof Mail; label: string;
 interface PersonalSectionProps {
   data: PersonalInfo;
   onChange: (data: PersonalInfo) => void;
+  collapsed: boolean;
+  onToggleCollapse: () => void;
 }
 
-export function PersonalSection({ data: rawData, onChange }: PersonalSectionProps) {
+export function PersonalSection({ data: rawData, onChange, collapsed, onToggleCollapse }: PersonalSectionProps) {
   const data: PersonalInfo = { ...rawData, contacts: rawData.contacts ?? [] };
-  const [collapsed, setCollapsed] = useState(false);
 
   function updateName(fullName: string) {
     onChange({ ...data, fullName });
@@ -76,7 +76,7 @@ export function PersonalSection({ data: rawData, onChange }: PersonalSectionProp
       <button
         type="button"
         className="section-header flex w-full cursor-pointer items-center justify-between px-4 py-3 text-sm font-semibold tracking-tight"
-        onClick={() => setCollapsed(!collapsed)}
+        onClick={onToggleCollapse}
       >
         Personal Information
         <ChevronDown className={`size-4 text-muted-foreground transition-transform duration-200 ${collapsed ? "-rotate-90" : ""}`} />
