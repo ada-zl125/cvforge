@@ -1,23 +1,61 @@
 "use client";
 
-import type { ResumeContent, ContactField, EducationItem, ExperienceItem, ProjectItem, SkillGroup, SectionType } from "@/lib/types/resume";
+import type { ResumeContent, ResumeLanguage, ContactField, EducationItem, ExperienceItem, ProjectItem, SkillGroup, SectionType } from "@/lib/types/resume";
 
 interface AcademicTemplateProps {
   content: ResumeContent;
+  language?: ResumeLanguage;
 }
 
 /* ------------------------------------------------------------------ */
 /*  A4 page: 210mm × 297mm ≈ 794px × 1123px at 96 DPI                */
 /*  Narrow margins: 1.27cm ≈ 48px                                     */
-/*  Font: Times New Roman + SimSun (serif)                             */
+/*  EN: Times New Roman, serif                                         */
+/*  ZH: SimSun for Chinese, Times New Roman for English                */
 /*  Name: 20pt bold, everything else: 11pt                             */
 /* ------------------------------------------------------------------ */
 
-const FONT_FAMILY = "'Times New Roman', SimSun, serif";
+const FONT_EN = "'Times New Roman', SimSun, serif";
+const FONT_ZH = "'Times New Roman', SimSun, serif";
 const BODY_SIZE = "11pt";
 const NAME_SIZE = "20pt";
 
-/** Common line style: spacing before 0.15pt, after 0pt, line-height 13pt, indent left 0.2cm */
+/* ---- Chinese section title mapping ---- */
+
+const SECTION_TITLES_ZH: Record<SectionType, string> = {
+  education: "教育经历",
+  experience: "工作经历",
+  projects: "项目经历",
+  skills: "技能",
+};
+
+const SECTION_TITLES_EN: Record<SectionType, string> = {
+  education: "Education",
+  experience: "Experience",
+  projects: "Projects",
+  skills: "Skills",
+};
+
+const EXTRA_FIELD_LABELS_ZH: Record<string, string> = {
+  Grade: "成绩",
+  Awards: "获奖",
+};
+
+function getSectionTitle(type: SectionType, lang: ResumeLanguage): string {
+  return lang === "zh" ? SECTION_TITLES_ZH[type] : SECTION_TITLES_EN[type];
+}
+
+function getExtraFieldLabel(label: string, lang: ResumeLanguage): string {
+  if (lang === "zh" && EXTRA_FIELD_LABELS_ZH[label]) return EXTRA_FIELD_LABELS_ZH[label];
+  return label;
+}
+
+function getFontFamily(lang: ResumeLanguage): string {
+  return lang === "zh" ? FONT_ZH : FONT_EN;
+}
+
+/* ---- Shared style builders ---- */
+
 const LINE_STYLE: React.CSSProperties = {
   fontSize: BODY_SIZE,
   lineHeight: "13pt",
@@ -28,7 +66,6 @@ const LINE_STYLE: React.CSSProperties = {
   letterSpacing: "-0.01em",
 };
 
-/** Bullet container: flex row, bullet at 0.2cm, text at 0.6cm */
 const BULLET_ROW_STYLE: React.CSSProperties = {
   fontSize: BODY_SIZE,
   lineHeight: "13pt",
@@ -49,23 +86,18 @@ const BULLET_DOT_STYLE: React.CSSProperties = {
 
 /* ---- Shared helpers ---- */
 
-function SectionTitle({ children }: { children: React.ReactNode }) {
+function SectionTitle({ type, lang, fontFamily }: { type: SectionType; lang: ResumeLanguage; fontFamily: string }) {
+  const title = getSectionTitle(type, lang);
   return (
     <div className="mb-1">
-      <h2 style={{ fontSize: BODY_SIZE, fontFamily: FONT_FAMILY }} className="font-bold uppercase tracking-normal">
-        {children}
+      <h2
+        style={{ fontSize: BODY_SIZE, fontFamily }}
+        className={`font-bold tracking-normal ${lang === "en" ? "uppercase" : ""}`}
+      >
+        {title}
       </h2>
       <div className="mt-0.5 border-t border-black" />
     </div>
-  );
-}
-
-function DateRange({ start, end }: { start: string; end: string }) {
-  if (!start && !end) return null;
-  return (
-    <span className="shrink-0">
-      {start}{start && end ? " – " : ""}{end}
-    </span>
   );
 }
 
@@ -74,18 +106,6 @@ function BulletItem({ children }: { children: React.ReactNode }) {
     <div style={BULLET_ROW_STYLE}>
       <span style={BULLET_DOT_STYLE}>●</span>
       <span style={{ flex: 1 }}>{children}</span>
-    </div>
-  );
-}
-
-function BulletList({ text }: { text: string }) {
-  const lines = text.split("\n").filter(Boolean);
-  if (lines.length === 0) return null;
-  return (
-    <div>
-      {lines.map((line, i) => (
-        <BulletItem key={i}>{line.replace(/^[-•]\s*/, "")}</BulletItem>
-      ))}
     </div>
   );
 }
@@ -117,11 +137,11 @@ function formatContact(field: ContactField): React.ReactNode {
 
 /* ---- Personal header ---- */
 
-function PersonalHeader({ personal }: { personal: ResumeContent["personal"] }) {
+function PersonalHeader({ personal, fontFamily }: { personal: ResumeContent["personal"]; fontFamily: string }) {
   const contacts = personal.contacts ?? [];
   return (
     <div className="mb-2 text-center">
-      <h1 className="font-bold leading-tight" style={{ fontSize: NAME_SIZE, fontFamily: FONT_FAMILY }}>
+      <h1 className="font-bold leading-tight" style={{ fontSize: NAME_SIZE, fontFamily }}>
         {personal.fullName || "Your Name"}
       </h1>
       {contacts.length > 0 && (
@@ -140,37 +160,47 @@ function PersonalHeader({ personal }: { personal: ResumeContent["personal"] }) {
 
 /* ---- Section blocks ---- */
 
-function EducationBlock({ items }: { items: EducationItem[] }) {
+function EducationBlock({ items, lang, fontFamily }: { items: EducationItem[]; lang: ResumeLanguage; fontFamily: string }) {
   if (items.length === 0) return null;
   return (
     <section className="mb-2">
-      <SectionTitle>Education</SectionTitle>
+      <SectionTitle type="education" lang={lang} fontFamily={fontFamily} />
       <div className="space-y-1.5">
         {items.map((edu) => {
           const extraFields = edu.extraFields ?? [];
-          const degreeText = [edu.degree, edu.field].filter(Boolean).join(" ");
           const dateText = [edu.startDate, edu.endDate].filter(Boolean).join(" – ");
+
+          // Chinese: "学位: {field}{degree}" e.g. "学位: 计算机科学与技术理学学士"
+          // English: "Degree: {degree} {field}" e.g. "Degree: Bachelor of Science Computer Science"
+          let degreeLine: string;
+          if (lang === "zh") {
+            const combined = [edu.field, edu.degree].filter(Boolean).join("");
+            degreeLine = combined ? `学位: ${combined}` : "";
+          } else {
+            const combined = [edu.degree, edu.field].filter(Boolean).join(" ");
+            degreeLine = combined ? `Degree: ${combined}` : "";
+          }
 
           return (
             <div key={edu.id}>
-              {/* Row 1: Institution (left, bold) | Location (right, bold) — flush left */}
+              {/* Row 1: Institution (left, bold) | Location (right, bold) */}
               <div className="flex items-baseline justify-between gap-2" style={{ ...LINE_STYLE, paddingLeft: 0 }}>
                 <span className="font-bold">{edu.institution}</span>
                 <span className="shrink-0 font-bold">{edu.location}</span>
               </div>
-              {/* Row 2: bullet • Degree field (left) | date range (right) */}
-              {degreeText && (
+              {/* Row 2: bullet • Degree info (left) | date range (right) */}
+              {degreeLine && (
                 <div style={BULLET_ROW_STYLE}>
                   <span style={BULLET_DOT_STYLE}>●</span>
                   <span style={{ flex: 1, display: "flex", justifyContent: "space-between", gap: "0.5em" }}>
-                    <span>Degree: {degreeText}</span>
+                    <span>{degreeLine}</span>
                     {dateText && <span className="shrink-0">{dateText}</span>}
                   </span>
                 </div>
               )}
               {/* Extra fields as bullet list */}
               {extraFields.map((ef) => (
-                <BulletItem key={ef.id}>{ef.label}: {ef.value}</BulletItem>
+                <BulletItem key={ef.id} >{getExtraFieldLabel(ef.label, lang)}: {ef.value}</BulletItem>
               ))}
             </div>
           );
@@ -180,11 +210,11 @@ function EducationBlock({ items }: { items: EducationItem[] }) {
   );
 }
 
-function ExperienceBlock({ items }: { items: ExperienceItem[] }) {
+function ExperienceBlock({ items, lang, fontFamily }: { items: ExperienceItem[]; lang: ResumeLanguage; fontFamily: string }) {
   if (items.length === 0) return null;
   return (
     <section className="mb-2">
-      <SectionTitle>Experience</SectionTitle>
+      <SectionTitle type="experience" lang={lang} fontFamily={fontFamily} />
       <div className="space-y-1.5">
         {items.map((exp) => {
           const descriptions = exp.descriptions ?? [];
@@ -192,12 +222,12 @@ function ExperienceBlock({ items }: { items: ExperienceItem[] }) {
 
           return (
             <div key={exp.id}>
-              {/* Row 1: Company (left, bold) | Location (right, bold) — flush left */}
+              {/* Row 1: Company (left, bold) | Location (right, bold) */}
               <div className="flex items-baseline justify-between gap-2" style={{ ...LINE_STYLE, paddingLeft: 0 }}>
                 <span className="font-bold">{exp.company}</span>
                 <span className="shrink-0 font-bold">{exp.location}</span>
               </div>
-              {/* Row 2: Position (left) | date range (right) — flush left */}
+              {/* Row 2: Position (left) | date range (right) */}
               {exp.position && (
                 <div className="flex items-baseline justify-between gap-2" style={{ ...LINE_STYLE, paddingLeft: 0 }}>
                   <span>{exp.position}</span>
@@ -206,7 +236,7 @@ function ExperienceBlock({ items }: { items: ExperienceItem[] }) {
               )}
               {/* Description bullet items */}
               {descriptions.map((desc) =>
-                desc.value ? <BulletItem key={desc.id}>{desc.value}</BulletItem> : null
+                desc.value ? <BulletItem key={desc.id} >{desc.value}</BulletItem> : null
               )}
             </div>
           );
@@ -216,11 +246,11 @@ function ExperienceBlock({ items }: { items: ExperienceItem[] }) {
   );
 }
 
-function ProjectsBlock({ items }: { items: ProjectItem[] }) {
+function ProjectsBlock({ items, lang, fontFamily }: { items: ProjectItem[]; lang: ResumeLanguage; fontFamily: string }) {
   if (items.length === 0) return null;
   return (
     <section className="mb-2">
-      <SectionTitle>Projects</SectionTitle>
+      <SectionTitle type="projects" lang={lang} fontFamily={fontFamily} />
       <div className="space-y-1.5">
         {items.map((proj) => {
           const descriptions = proj.descriptions ?? [];
@@ -229,7 +259,7 @@ function ProjectsBlock({ items }: { items: ProjectItem[] }) {
 
           return (
             <div key={proj.id}>
-              {/* Row 1: Project Name [| Website] (left, bold) | date range (right) — flush left */}
+              {/* Row 1: Project Name [| Website] (left, bold) | date range (right) */}
               <div className="flex items-baseline justify-between gap-2" style={{ ...LINE_STYLE, paddingLeft: 0 }}>
                 <span>
                   <span className="font-bold">{proj.name}</span>
@@ -244,7 +274,7 @@ function ProjectsBlock({ items }: { items: ProjectItem[] }) {
               </div>
               {/* Description bullet items */}
               {descriptions.map((desc) =>
-                desc.value ? <BulletItem key={desc.id}>{desc.value}</BulletItem> : null
+                desc.value ? <BulletItem key={desc.id} >{desc.value}</BulletItem> : null
               )}
             </div>
           );
@@ -254,11 +284,11 @@ function ProjectsBlock({ items }: { items: ProjectItem[] }) {
   );
 }
 
-function SkillsBlock({ items }: { items: SkillGroup[] }) {
+function SkillsBlock({ items, lang, fontFamily }: { items: SkillGroup[]; lang: ResumeLanguage; fontFamily: string }) {
   if (items.length === 0) return null;
   return (
     <section className="mb-2">
-      <SectionTitle>Skills</SectionTitle>
+      <SectionTitle type="skills" lang={lang} fontFamily={fontFamily} />
       <div>
         {items.map((group) => (
           <div key={group.id} style={{ ...LINE_STYLE, paddingLeft: 0 }}>
@@ -273,18 +303,21 @@ function SkillsBlock({ items }: { items: SkillGroup[] }) {
 
 /* ---- Section renderer (respects content.sections order) ---- */
 
-const SECTION_RENDERERS: Record<SectionType, (content: ResumeContent) => React.ReactNode> = {
-  education: (c) => <EducationBlock key="education" items={c.education} />,
-  experience: (c) => <ExperienceBlock key="experience" items={c.experience} />,
-  projects: (c) => <ProjectsBlock key="projects" items={c.projects} />,
-  skills: (c) => <SkillsBlock key="skills" items={c.skills} />,
+type SectionRenderer = (content: ResumeContent, lang: ResumeLanguage, fontFamily: string) => React.ReactNode;
+
+const SECTION_RENDERERS: Record<SectionType, SectionRenderer> = {
+  education: (c, l, f) => <EducationBlock key="education" items={c.education} lang={l} fontFamily={f} />,
+  experience: (c, l, f) => <ExperienceBlock key="experience" items={c.experience} lang={l} fontFamily={f} />,
+  projects: (c, l, f) => <ProjectsBlock key="projects" items={c.projects} lang={l} fontFamily={f} />,
+  skills: (c, l, f) => <SkillsBlock key="skills" items={c.skills} lang={l} fontFamily={f} />,
 };
 
 /* ---- Main template ---- */
 
-export function AcademicTemplate({ content }: AcademicTemplateProps) {
+export function GeneralTemplate({ content, language = "en" }: AcademicTemplateProps) {
   const activeSections = content.sections ?? [];
   const hasContent = content.personal.fullName || activeSections.length > 0;
+  const fontFamily = getFontFamily(language);
 
   return (
     <div
@@ -293,10 +326,10 @@ export function AcademicTemplate({ content }: AcademicTemplateProps) {
         width: "794px",
         minHeight: "1123px",
         padding: "48px",
-        fontFamily: FONT_FAMILY,
+        fontFamily,
       }}
     >
-      <PersonalHeader personal={content.personal} />
+      <PersonalHeader personal={content.personal} fontFamily={fontFamily} />
 
       {!hasContent && (
         <p className="mt-24 text-center text-sm text-gray-400">
@@ -304,7 +337,7 @@ export function AcademicTemplate({ content }: AcademicTemplateProps) {
         </p>
       )}
 
-      {activeSections.map((type) => SECTION_RENDERERS[type](content))}
+      {activeSections.map((type) => SECTION_RENDERERS[type](content, language, fontFamily))}
     </div>
   );
 }
