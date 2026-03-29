@@ -118,15 +118,22 @@
 
 .sidebar-hover,
 .btn-hover-border,
+.btn-hover-primary,
 .btn-hover-destructive,
 .sidebar-inner-border {
-  transition: border-color 200ms ease-out, background-color 200ms ease-out;
+  transition: border-color 200ms ease-out, background-color 200ms ease-out, color 200ms ease-out;
 }
 
 .sidebar-hover:hover,
 .btn-hover-border:hover,
 .sidebar-hover:hover .sidebar-inner-border {
   border-color: var(--foreground) !important;
+}
+
+.btn-hover-primary:not(:disabled):hover {
+  border-color: var(--primary) !important;
+  background-color: color-mix(in srgb, var(--primary) 8%, transparent) !important;
+  color: var(--primary) !important;
 }
 
 /* Editor form panel — section card hover: border → black, subtle lift */

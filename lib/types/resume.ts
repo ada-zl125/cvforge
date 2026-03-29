@@ -94,18 +94,16 @@ export interface ResumeContent {
 /* ------------------------------------------------------------------ */
 
 export type ResumeTemplate =
-  | "classic"
-  | "modern"
-  | "minimal"
-  | "creative"
-  | "professional"
-  | "academic";
+  | "general";
+
+export type ResumeLanguage = "en" | "zh";
 
 export interface ResumeRow {
   id: string;
   user_id: string;
   title: string;
   template: ResumeTemplate;
+  language: ResumeLanguage;
   content: ResumeContent;
   created_at: string;
   updated_at: string;

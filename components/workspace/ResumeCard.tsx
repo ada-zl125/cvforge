@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Trash2, Settings, MoreHorizontal, Copy } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import type { ResumeRow, ResumeTemplate } from "@/lib/types/resume";
+import type { ResumeRow, ResumeTemplate, ResumeLanguage } from "@/lib/types/resume";
 import {
   Dialog,
   DialogContent,
@@ -39,26 +39,20 @@ import { Label } from "@/components/ui/label";
 /* ------------------------------------------------------------------ */
 
 const TEMPLATE_COLORS: Record<ResumeTemplate, { bar: string; bg: string; text: string; hex: string }> = {
-  classic:      { bar: "bg-blue-500",    bg: "bg-blue-50",    text: "text-blue-600",    hex: "#3b82f6" },
-  modern:       { bar: "bg-violet-500",  bg: "bg-violet-50",  text: "text-violet-600",  hex: "#8b5cf6" },
-  minimal:      { bar: "bg-emerald-500", bg: "bg-emerald-50", text: "text-emerald-600", hex: "#10b981" },
-  creative:     { bar: "bg-amber-500",   bg: "bg-amber-50",   text: "text-amber-600",   hex: "#f59e0b" },
-  professional: { bar: "bg-indigo-500",  bg: "bg-indigo-50",  text: "text-indigo-600",  hex: "#6366f1" },
-  academic:     { bar: "bg-teal-500",    bg: "bg-teal-50",    text: "text-teal-600",    hex: "#14b8a6" },
+  general: { bar: "bg-blue-500", bg: "bg-blue-50", text: "text-blue-600", hex: "#3b82f6" },
 };
 
 const TEMPLATE_LABELS: Record<ResumeTemplate, string> = {
-  classic: "Classic",
-  modern: "Modern",
-  minimal: "Minimal",
-  creative: "Creative",
-  professional: "Professional",
-  academic: "Academic",
+  general: "General",
 };
 
 const SETTINGS_TEMPLATES: { value: ResumeTemplate; label: string; bg: string; text: string }[] = [
-  { value: "classic",  label: "Classic",  bg: "bg-blue-50",  text: "text-blue-600" },
-  { value: "academic", label: "Academic", bg: "bg-teal-50",  text: "text-teal-600" },
+  { value: "general", label: "General", bg: "bg-blue-50", text: "text-blue-600" },
+];
+
+const SETTINGS_LANGUAGES: { value: ResumeLanguage; label: string }[] = [
+  { value: "en", label: "English" },
+  { value: "zh", label: "Chinese" },
 ];
 
 const TITLE_MAX_LENGTH = 50;
@@ -95,12 +89,14 @@ interface ResumeCardProps {
 
 export function ResumeCard({ resume }: ResumeCardProps) {
   const router = useRouter();
-  const colors = TEMPLATE_COLORS[resume.template] ?? TEMPLATE_COLORS.classic;
-  const label = TEMPLATE_LABELS[resume.template] ?? "Classic";
+  const colors = TEMPLATE_COLORS[resume.template] ?? TEMPLATE_COLORS.general;
+  const label = TEMPLATE_LABELS[resume.template] ?? "General";
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTitle, setSettingsTitle] = useState(resume.title);
-  const [settingsTemplate, setSettingsTemplate] = useState(resume.template);
+  const normalizedTemplate: ResumeTemplate = TEMPLATE_COLORS[resume.template] ? resume.template : "general";
+  const [settingsTemplate, setSettingsTemplate] = useState(normalizedTemplate);
+  const [settingsLanguage, setSettingsLanguage] = useState<ResumeLanguage>(resume.language ?? "en");
   const [settingsLoading, setSettingsLoading] = useState(false);
 
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -112,7 +108,8 @@ export function ResumeCard({ resume }: ResumeCardProps) {
     if (!trimmed) return;
     const titleChanged = trimmed !== resume.title;
     const templateChanged = settingsTemplate !== resume.template;
-    if (!titleChanged && !templateChanged) {
+    const languageChanged = settingsLanguage !== (resume.language ?? "en");
+    if (!titleChanged && !templateChanged && !languageChanged) {
       setSettingsOpen(false);
       return;
     }
@@ -122,6 +119,7 @@ export function ResumeCard({ resume }: ResumeCardProps) {
       const updates: Record<string, string> = {};
       if (titleChanged) updates.title = trimmed;
       if (templateChanged) updates.template = settingsTemplate;
+      if (languageChanged) updates.language = settingsLanguage;
       await supabase.from("resumes").update(updates).eq("id", resume.id);
       setSettingsOpen(false);
       router.refresh();
@@ -139,6 +137,7 @@ export function ResumeCard({ resume }: ResumeCardProps) {
       user_id: user.id,
       title: `${resume.title} (Copy)`,
       template: resume.template,
+      language: resume.language ?? "en",
       content: resume.content,
     });
     router.refresh();
@@ -188,7 +187,7 @@ export function ResumeCard({ resume }: ResumeCardProps) {
                 <MoreHorizontal className="size-4" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" sideOffset={4} onClick={(e) => e.stopPropagation()}>
-                <DropdownMenuItem className="cursor-pointer gap-2" onClick={() => { setSettingsOpen(true); setSettingsTitle(resume.title); setSettingsTemplate(resume.template); }}>
+                <DropdownMenuItem className="cursor-pointer gap-2" onClick={() => { setSettingsOpen(true); setSettingsTitle(resume.title); setSettingsTemplate(normalizedTemplate); setSettingsLanguage(resume.language ?? "en"); }}>
                   <Settings className="size-4" />
                   Settings
                 </DropdownMenuItem>
@@ -259,6 +258,30 @@ export function ResumeCard({ resume }: ResumeCardProps) {
               )}
             </div>
 
+            {/* Language picker */}
+            <div className="grid gap-2">
+              <Label>Language</Label>
+              <div className="flex gap-2">
+                {SETTINGS_LANGUAGES.map((l) => {
+                  const active = settingsLanguage === l.value;
+                  return (
+                    <button
+                      key={l.value}
+                      type="button"
+                      onClick={() => setSettingsLanguage(l.value)}
+                      className={`cursor-pointer rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                        active
+                          ? "border-foreground bg-foreground/5 text-foreground"
+                          : "border-border text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                      }`}
+                    >
+                      {l.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Template picker */}
             <div className="grid gap-2">
               <Label>Template</Label>
@@ -284,10 +307,14 @@ export function ResumeCard({ resume }: ResumeCardProps) {
             </div>
           </div>
           <DialogFooter>
+            <Button variant="outline" className="btn-hover-border cursor-pointer" onClick={() => setSettingsOpen(false)}>
+              Cancel
+            </Button>
             <Button
+              variant="outline"
               onClick={handleSettingsSave}
               disabled={!settingsTitle.trim() || settingsTitle.length > TITLE_MAX_LENGTH || settingsLoading}
-              className="cursor-pointer"
+              className="btn-hover-primary cursor-pointer"
             >
               {settingsLoading ? "Saving..." : "Save"}
             </Button>

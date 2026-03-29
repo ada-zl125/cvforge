@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import type { ResumeContent } from "@/lib/types/resume";
+import type { ResumeContent, ResumeLanguage } from "@/lib/types/resume";
 import { renderResumeHTML } from "@/lib/pdf/resume-html";
 
 async function launchBrowser() {
@@ -41,12 +41,13 @@ async function launchBrowser() {
 
 export async function POST(request: Request) {
   try {
-    const { content, title } = (await request.json()) as {
+    const { content, title, language = "en" } = (await request.json()) as {
       content: ResumeContent;
       title: string;
+      language?: ResumeLanguage;
     };
 
-    const html = renderResumeHTML(content);
+    const html = renderResumeHTML(content, language);
     const browser = await launchBrowser();
 
     const page = await browser.newPage();
