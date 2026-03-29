@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronDown, ChevronUp, Plus, Trash2, Mail, Phone, MapPin, Globe } from "lucide-react";
-import type { PersonalInfo, ContactField, ContactFieldType } from "@/lib/types/resume";
+import type { PersonalInfo, ContactField, ContactFieldType, ResumeLanguage } from "@/lib/types/resume";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,11 +12,11 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 
-const CONTACT_META: Record<ContactFieldType, { icon: typeof Mail; label: string; unique: boolean }> = {
-  email:    { icon: Mail,   label: "Email",    unique: true },
-  phone:    { icon: Phone,  label: "Phone",    unique: true },
-  location: { icon: MapPin, label: "Location", unique: true },
-  website:  { icon: Globe,  label: "Website",  unique: false },
+const CONTACT_META: Record<ContactFieldType, { icon: typeof Mail; label: string; labelZh: string; unique: boolean }> = {
+  email:    { icon: Mail,   label: "Email",    labelZh: "邮箱", unique: true },
+  phone:    { icon: Phone,  label: "Phone",    labelZh: "电话", unique: true },
+  location: { icon: MapPin, label: "Location", labelZh: "地点", unique: true },
+  website:  { icon: Globe,  label: "Website",  labelZh: "网站", unique: false },
 };
 
 interface PersonalSectionProps {
@@ -24,9 +24,10 @@ interface PersonalSectionProps {
   onChange: (data: PersonalInfo) => void;
   collapsed: boolean;
   onToggleCollapse: () => void;
+  language: ResumeLanguage;
 }
 
-export function PersonalSection({ data: rawData, onChange, collapsed, onToggleCollapse }: PersonalSectionProps) {
+export function PersonalSection({ data: rawData, onChange, collapsed, onToggleCollapse, language }: PersonalSectionProps) {
   const data: PersonalInfo = { ...rawData, contacts: rawData.contacts ?? [] };
 
   function updateName(fullName: string) {
@@ -70,6 +71,8 @@ export function PersonalSection({ data: rawData, onChange, collapsed, onToggleCo
     return !data.contacts.some((c) => c.type === type);
   });
 
+  const zh = language === "zh";
+
   return (
     <section className="section-card rounded-lg border border-border">
       {/* Section header — always visible */}
@@ -78,7 +81,7 @@ export function PersonalSection({ data: rawData, onChange, collapsed, onToggleCo
         className="section-header flex w-full cursor-pointer items-center justify-between px-4 py-3 text-sm font-semibold tracking-tight"
         onClick={onToggleCollapse}
       >
-        Personal Information
+        {zh ? "个人信息" : "Personal Information"}
         <ChevronDown className={`size-4 text-muted-foreground transition-transform duration-200 ${collapsed ? "-rotate-90" : ""}`} />
       </button>
 
@@ -87,12 +90,12 @@ export function PersonalSection({ data: rawData, onChange, collapsed, onToggleCo
         <div className="border-t border-border px-4 pb-4 pt-3">
           {/* Full Name — always present, not removable */}
           <div className="mb-4 flex flex-col gap-1.5">
-            <Label htmlFor="fullName">Full Name</Label>
+            <Label htmlFor="fullName">{zh ? "姓名" : "Full Name"}</Label>
             <Input
               id="fullName"
               value={data.fullName}
               onChange={(e) => updateName(e.target.value)}
-              placeholder="Zhengyang Li"
+              placeholder={zh ? "姓名" : "Your Name"}
             />
           </div>
 
@@ -109,6 +112,7 @@ export function PersonalSection({ data: rawData, onChange, collapsed, onToggleCo
                   onRemove={() => removeContact(field.id)}
                   onMoveUp={() => moveContact(i, -1)}
                   onMoveDown={() => moveContact(i, 1)}
+                  language={language}
                 />
               ))}
             </div>
@@ -118,7 +122,7 @@ export function PersonalSection({ data: rawData, onChange, collapsed, onToggleCo
           <DropdownMenu>
             <DropdownMenuTrigger className="add-btn inline-flex h-7 cursor-pointer items-center gap-1 rounded-md px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
               <Plus className="size-3" />
-              Add field
+              {zh ? "添加字段" : "Add field"}
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" sideOffset={4}>
               {addableTypes.map((type) => {
@@ -130,7 +134,7 @@ export function PersonalSection({ data: rawData, onChange, collapsed, onToggleCo
                     onClick={() => addContact(type)}
                   >
                     <meta.icon className="size-4" />
-                    {meta.label}
+                    {zh ? meta.labelZh : meta.label}
                   </DropdownMenuItem>
                 );
               })}
@@ -154,6 +158,7 @@ function ContactFieldRow({
   onRemove,
   onMoveUp,
   onMoveDown,
+  language,
 }: {
   field: ContactField;
   isFirst: boolean;
@@ -162,8 +167,10 @@ function ContactFieldRow({
   onRemove: () => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
+  language: ResumeLanguage;
 }) {
   const meta = CONTACT_META[field.type];
+  const zh = language === "zh";
 
   return (
     <div className="flex items-end gap-2">
@@ -192,7 +199,7 @@ function ContactFieldRow({
       <div className="flex flex-1 flex-col gap-1">
         <Label className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <meta.icon className="size-3" />
-          {meta.label}
+          {zh ? meta.labelZh : meta.label}
         </Label>
 
         {field.type === "phone" ? (
@@ -201,13 +208,13 @@ function ContactFieldRow({
               className="w-20"
               value={field.countryCode ?? ""}
               onChange={(e) => onUpdate({ countryCode: e.target.value })}
-              placeholder="+44"
+              placeholder="+86"
             />
             <Input
               className="flex-1"
               value={field.value}
               onChange={(e) => onUpdate({ value: e.target.value })}
-              placeholder="7123456789"
+              placeholder={zh ? "13812345678" : "7123456789"}
             />
           </div>
         ) : field.type === "website" ? (
@@ -222,14 +229,20 @@ function ContactFieldRow({
               className="flex-1"
               value={field.value}
               onChange={(e) => onUpdate({ value: e.target.value })}
-              placeholder="https://github.com/johndoe"
+              placeholder="https://github.com/username"
             />
           </div>
         ) : (
           <Input
             value={field.value}
             onChange={(e) => onUpdate({ value: e.target.value })}
-            placeholder={field.type === "email" ? "john@example.com" : "London, UK"}
+            placeholder={
+              field.type === "email"
+                ? "example@email.com"
+                : zh
+                ? "北京, 中国"
+                : "London, UK"
+            }
           />
         )}
       </div>

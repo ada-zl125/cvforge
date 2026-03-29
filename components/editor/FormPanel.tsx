@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { ChevronDown, ChevronUp, Plus, Trash2, GraduationCap, FolderOpen, Briefcase, Wrench, ChevronsUpDown, ChevronsDownUp, RotateCcw, Save, Check, Loader2 } from "lucide-react";
-import type { ResumeContent, SectionType } from "@/lib/types/resume";
+import type { ResumeContent, SectionType, ResumeLanguage } from "@/lib/types/resume";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -26,11 +26,11 @@ import { ProjectsSection } from "./sections/ProjectsSection";
 import { ExperienceSection } from "./sections/ExperienceSection";
 import { SkillsSection } from "./sections/SkillsSection";
 
-const SECTION_META: Record<SectionType, { icon: typeof GraduationCap; label: string }> = {
-  education:  { icon: GraduationCap, label: "Education" },
-  projects:   { icon: FolderOpen,    label: "Projects" },
-  experience: { icon: Briefcase,     label: "Experience" },
-  skills:     { icon: Wrench,        label: "Skills" },
+const SECTION_META: Record<SectionType, { icon: typeof GraduationCap; label: string; labelZh: string }> = {
+  education:  { icon: GraduationCap, label: "Education",  labelZh: "教育经历" },
+  projects:   { icon: FolderOpen,    label: "Projects",   labelZh: "项目经历" },
+  experience: { icon: Briefcase,     label: "Experience", labelZh: "工作经历" },
+  skills:     { icon: Wrench,        label: "Skills",     labelZh: "技能" },
 };
 
 const EMPTY_CONTENT: ResumeContent = {
@@ -49,9 +49,10 @@ interface FormPanelProps {
   onChange: (content: ResumeContent) => void;
   saveStatus: SaveStatus;
   onSave: () => void;
+  language: ResumeLanguage;
 }
 
-export function FormPanel({ content, onChange, saveStatus, onSave }: FormPanelProps) {
+export function FormPanel({ content, onChange, saveStatus, onSave, language }: FormPanelProps) {
   const activeSections = content.sections ?? [];
   const availableSections = (Object.keys(SECTION_META) as SectionType[]).filter(
     (s) => !activeSections.includes(s),
@@ -150,6 +151,7 @@ export function FormPanel({ content, onChange, saveStatus, onSave }: FormPanelPr
         onChange={(personal) => onChange({ ...content, personal })}
         collapsed={personalCollapsed}
         onToggleCollapse={() => setPersonalCollapsed((v) => !v)}
+        language={language}
       />
 
       {/* Dynamic sections */}
@@ -166,6 +168,7 @@ export function FormPanel({ content, onChange, saveStatus, onSave }: FormPanelPr
           onMoveDown={() => moveSection(i, 1)}
           collapsed={sectionCollapsed[type] !== false}
           onToggleCollapse={() => setSectionCollapse(type, !sectionCollapsed[type])}
+          language={language}
         />
       ))}
 
@@ -186,7 +189,7 @@ export function FormPanel({ content, onChange, saveStatus, onSave }: FormPanelPr
                   onClick={() => addSection(type)}
                 >
                   <meta.icon className="size-4" />
-                  {meta.label}
+                  {language === "zh" ? meta.labelZh : meta.label}
                 </DropdownMenuItem>
               );
             })}
@@ -234,6 +237,7 @@ function CollapsibleSection({
   onMoveDown,
   collapsed,
   onToggleCollapse,
+  language,
 }: {
   type: SectionType;
   content: ResumeContent;
@@ -245,8 +249,10 @@ function CollapsibleSection({
   onMoveDown: () => void;
   collapsed: boolean;
   onToggleCollapse: () => void;
+  language: ResumeLanguage;
 }) {
   const meta = SECTION_META[type];
+  const sectionLabel = language === "zh" ? meta.labelZh : meta.label;
 
   return (
     <section className="section-card rounded-lg border border-border">
@@ -257,7 +263,7 @@ function CollapsibleSection({
           className="flex flex-1 cursor-pointer items-center gap-2 py-3 text-sm font-semibold tracking-tight transition-colors hover:text-foreground"
           onClick={onToggleCollapse}
         >
-          {meta.label}
+          {sectionLabel}
           <ChevronDown className={`size-4 text-muted-foreground transition-transform duration-200 ${collapsed ? "-rotate-90" : ""}`} />
         </button>
         <div className="flex items-center gap-0.5">
@@ -291,16 +297,16 @@ function CollapsibleSection({
       {!collapsed && (
         <div className="border-t border-border px-4 pb-4 pt-3">
           {type === "education" && (
-            <EducationSection items={content.education} onChange={(education) => onChange({ ...content, education })} />
+            <EducationSection items={content.education} onChange={(education) => onChange({ ...content, education })} language={language} />
           )}
           {type === "projects" && (
-            <ProjectsSection items={content.projects} onChange={(projects) => onChange({ ...content, projects })} />
+            <ProjectsSection items={content.projects} onChange={(projects) => onChange({ ...content, projects })} language={language} />
           )}
           {type === "experience" && (
-            <ExperienceSection items={content.experience} onChange={(experience) => onChange({ ...content, experience })} />
+            <ExperienceSection items={content.experience} onChange={(experience) => onChange({ ...content, experience })} language={language} />
           )}
           {type === "skills" && (
-            <SkillsSection items={content.skills} onChange={(skills) => onChange({ ...content, skills })} />
+            <SkillsSection items={content.skills} onChange={(skills) => onChange({ ...content, skills })} language={language} />
           )}
         </div>
       )}

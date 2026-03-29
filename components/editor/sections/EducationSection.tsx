@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Plus, Trash2, ChevronUp, ChevronDown, ChevronRight } from "lucide-react";
-import type { EducationItem, EducationExtraField, EducationExtraFieldType } from "@/lib/types/resume";
+import type { EducationItem, EducationExtraField, EducationExtraFieldType, ResumeLanguage } from "@/lib/types/resume";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,15 +13,25 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 
-const EXTRA_FIELD_META: Record<EducationExtraFieldType, { label: string; unique: boolean }> = {
-  grade:  { label: "Grade",  unique: true },
-  awards: { label: "Awards", unique: true },
-  custom: { label: "Custom Field", unique: false },
+const EXTRA_FIELD_META: Record<EducationExtraFieldType, { label: string; labelZh: string; unique: boolean }> = {
+  grade:  { label: "Grade",        labelZh: "成绩",    unique: true },
+  awards: { label: "Awards",       labelZh: "获奖",    unique: true },
+  custom: { label: "Custom Field", labelZh: "自定义字段", unique: false },
 };
+
+const EN_MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+function defaultDate(yearsOffset: number, lang: ResumeLanguage): string {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() + yearsOffset);
+  if (lang === "zh") return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, "0")}`;
+  return `${EN_MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
 
 interface EducationSectionProps {
   items: EducationItem[];
   onChange: (items: EducationItem[]) => void;
+  language: ResumeLanguage;
 }
 
 function emptyEducation(): EducationItem {
@@ -37,7 +47,7 @@ function emptyEducation(): EducationItem {
   };
 }
 
-export function EducationSection({ items, onChange }: EducationSectionProps) {
+export function EducationSection({ items, onChange, language }: EducationSectionProps) {
   function update(index: number, field: keyof EducationItem, value: string) {
     const next = items.map((item, i) => (i === index ? { ...item, [field]: value } : item));
     onChange(next);
@@ -68,7 +78,7 @@ export function EducationSection({ items, onChange }: EducationSectionProps) {
     <div>
       <div className="space-y-4">
         <Button variant="ghost" size="xs" className="add-btn cursor-pointer gap-1 text-xs" onClick={add}>
-          <Plus className="size-3" /> Add Entry
+          <Plus className="size-3" /> {language === "zh" ? "添加条目" : "Add Entry"}
         </Button>
         {items.map((edu, i) => (
           <EducationBlock
@@ -82,6 +92,7 @@ export function EducationSection({ items, onChange }: EducationSectionProps) {
             onMoveUp={() => move(i, -1)}
             onMoveDown={() => move(i, 1)}
             onExtraFieldsChange={(fields) => updateExtraFields(i, fields)}
+            language={language}
           />
         ))}
       </div>
@@ -103,6 +114,7 @@ function EducationBlock({
   onMoveUp,
   onMoveDown,
   onExtraFieldsChange,
+  language,
 }: {
   edu: EducationItem;
   index: number;
@@ -113,9 +125,11 @@ function EducationBlock({
   onMoveUp: () => void;
   onMoveDown: () => void;
   onExtraFieldsChange: (fields: EducationExtraField[]) => void;
+  language: ResumeLanguage;
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const extraFields = edu.extraFields ?? [];
+  const zh = language === "zh";
 
   // Filter out unique types already added
   const addableTypes = (Object.keys(EXTRA_FIELD_META) as EducationExtraFieldType[]).filter((type) => {
@@ -129,7 +143,7 @@ function EducationBlock({
     const field: EducationExtraField = {
       id: crypto.randomUUID(),
       type,
-      label: type === "custom" ? "" : meta.label,
+      label: type === "custom" ? "" : (zh ? meta.labelZh : meta.label),
       value: "",
     };
     onExtraFieldsChange([...extraFields, field]);
@@ -154,7 +168,7 @@ function EducationBlock({
         >
           <ChevronRight className={`size-3 text-muted-foreground transition-transform duration-200 ${collapsed ? "" : "rotate-90"}`} />
           <span className="text-xs font-medium">
-            {edu.institution || `Entry #${index + 1}`}
+            {edu.institution || `${zh ? "条目" : "Entry"} #${index + 1}`}
           </span>
         </button>
         <div className="flex items-center gap-0.5">
@@ -184,28 +198,28 @@ function EducationBlock({
       {/* Fixed fields */}
       <div className="grid grid-cols-2 gap-x-3 gap-y-2">
         <div className="col-span-2 flex flex-col gap-1">
-          <Label className="text-xs">Institution</Label>
-          <Input value={edu.institution} onChange={(e) => onUpdate("institution", e.target.value)} placeholder="University of..." />
+          <Label className="text-xs">{zh ? "学校" : "Institution"}</Label>
+          <Input value={edu.institution} onChange={(e) => onUpdate("institution", e.target.value)} placeholder={zh ? "你的学校" : "University of..."} />
         </div>
         <div className="flex flex-col gap-1">
-          <Label className="text-xs">Degree</Label>
-          <Input value={edu.degree} onChange={(e) => onUpdate("degree", e.target.value)} placeholder="BSc / MSc / PhD" />
+          <Label className="text-xs">{zh ? "学位" : "Degree"}</Label>
+          <Input value={edu.degree} onChange={(e) => onUpdate("degree", e.target.value)} placeholder={zh ? "理学学士 / 理学硕士 / 博士" : "BSc / MSc / PhD"} />
         </div>
         <div className="flex flex-col gap-1">
-          <Label className="text-xs">Field of Study</Label>
-          <Input value={edu.field} onChange={(e) => onUpdate("field", e.target.value)} placeholder="Computer Science" />
+          <Label className="text-xs">{zh ? "专业" : "Field of Study"}</Label>
+          <Input value={edu.field} onChange={(e) => onUpdate("field", e.target.value)} placeholder={zh ? "计算机科学与技术" : "Computer Science"} />
         </div>
         <div className="flex flex-col gap-1">
-          <Label className="text-xs">Location</Label>
-          <Input value={edu.location} onChange={(e) => onUpdate("location", e.target.value)} placeholder="London, UK" />
+          <Label className="text-xs">{zh ? "地点" : "Location"}</Label>
+          <Input value={edu.location} onChange={(e) => onUpdate("location", e.target.value)} placeholder={zh ? "北京, 中国" : "London, UK"} />
         </div>
         <div className="flex flex-col gap-1">
-          <Label className="text-xs">Start Date</Label>
-          <Input value={edu.startDate} onChange={(e) => onUpdate("startDate", e.target.value)} placeholder="Sep 2021" />
+          <Label className="text-xs">{zh ? "开始时间" : "Start Date"}</Label>
+          <Input value={edu.startDate} onChange={(e) => onUpdate("startDate", e.target.value)} placeholder={defaultDate(-4, language)} />
         </div>
         <div className="flex flex-col gap-1">
-          <Label className="text-xs">End Date</Label>
-          <Input value={edu.endDate} onChange={(e) => onUpdate("endDate", e.target.value)} placeholder="Jun 2025" />
+          <Label className="text-xs">{zh ? "结束时间" : "End Date"}</Label>
+          <Input value={edu.endDate} onChange={(e) => onUpdate("endDate", e.target.value)} placeholder={defaultDate(0, language)} />
         </div>
       </div>
 
@@ -217,21 +231,25 @@ function EducationBlock({
               {ef.type === "custom" ? (
                 <div className="grid flex-1 grid-cols-[120px_1fr] gap-2">
                   <div className="flex flex-col gap-1">
-                    <Label className="text-xs">Field Name</Label>
-                    <Input value={ef.label} onChange={(e) => updateExtraField(ef.id, { label: e.target.value })} placeholder="Coursework" />
+                    <Label className="text-xs">{zh ? "字段名称" : "Field Name"}</Label>
+                    <Input value={ef.label} onChange={(e) => updateExtraField(ef.id, { label: e.target.value })} placeholder={zh ? "课程作业" : "Coursework"} />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <Label className="text-xs">Value</Label>
-                    <Input value={ef.value} onChange={(e) => updateExtraField(ef.id, { value: e.target.value })} placeholder="Describe..." />
+                    <Label className="text-xs">{zh ? "内容" : "Value"}</Label>
+                    <Input value={ef.value} onChange={(e) => updateExtraField(ef.id, { value: e.target.value })} placeholder={zh ? "描述..." : "Describe..."} />
                   </div>
                 </div>
               ) : (
                 <div className="flex flex-1 flex-col gap-1">
-                  <Label className="text-xs">{EXTRA_FIELD_META[ef.type].label}</Label>
+                  <Label className="text-xs">{zh ? EXTRA_FIELD_META[ef.type].labelZh : EXTRA_FIELD_META[ef.type].label}</Label>
                   <Input
                     value={ef.value}
                     onChange={(e) => updateExtraField(ef.id, { value: e.target.value })}
-                    placeholder={ef.type === "grade" ? "First Class Honours / 3.8/4.0" : "Dean's List, Outstanding Student Scholarship"}
+                    placeholder={
+                      ef.type === "grade"
+                        ? zh ? "一等荣誉学位 / 3.8/4.0" : "First Class Honours / 3.8/4.0"
+                        : zh ? "院长名单, 优秀学生奖学金" : "Dean's List, Outstanding Student Scholarship"
+                    }
                   />
                 </div>
               )}
@@ -253,7 +271,7 @@ function EducationBlock({
           <DropdownMenu>
             <DropdownMenuTrigger className="add-btn inline-flex h-7 cursor-pointer items-center gap-1 rounded-md px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
               <Plus className="size-3" />
-              Add field
+              {zh ? "添加字段" : "Add field"}
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" sideOffset={4}>
               {addableTypes.map((type) => (
@@ -262,7 +280,7 @@ function EducationBlock({
                   className="cursor-pointer"
                   onClick={() => addExtraField(type)}
                 >
-                  {EXTRA_FIELD_META[type].label}
+                  {zh ? EXTRA_FIELD_META[type].labelZh : EXTRA_FIELD_META[type].label}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>

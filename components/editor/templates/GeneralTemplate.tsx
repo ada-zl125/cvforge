@@ -170,11 +170,11 @@ function EducationBlock({ items, lang, fontFamily }: { items: EducationItem[]; l
           const extraFields = edu.extraFields ?? [];
           const dateText = [edu.startDate, edu.endDate].filter(Boolean).join(" – ");
 
-          // Chinese: "学位: {field}{degree}" e.g. "学位: 计算机科学与技术理学学士"
-          // English: "Degree: {degree} {field}" e.g. "Degree: Bachelor of Science Computer Science"
+          // Chinese: "学位: {degree}, {field}" e.g. "学位: 理学学士, 计算机科学与技术"
+          // English: "Degree: {degree} {field}" e.g. "Degree: BSc Computer Science"
           let degreeLine: string;
           if (lang === "zh") {
-            const combined = [edu.field, edu.degree].filter(Boolean).join("");
+            const combined = [edu.degree, edu.field].filter(Boolean).join(", ");
             degreeLine = combined ? `学位: ${combined}` : "";
           } else {
             const combined = [edu.degree, edu.field].filter(Boolean).join(" ");
