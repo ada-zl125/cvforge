@@ -1,7 +1,7 @@
 "use client";
 
 import { Plus, Trash2, ChevronUp, ChevronDown } from "lucide-react";
-import type { SkillGroup } from "@/lib/types/resume";
+import type { SkillGroup, ResumeLanguage } from "@/lib/types/resume";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,13 +9,16 @@ import { Label } from "@/components/ui/label";
 interface SkillsSectionProps {
   items: SkillGroup[];
   onChange: (items: SkillGroup[]) => void;
+  language: ResumeLanguage;
 }
 
 function emptySkillGroup(): SkillGroup {
   return { id: crypto.randomUUID(), category: "", items: "" };
 }
 
-export function SkillsSection({ items, onChange }: SkillsSectionProps) {
+export function SkillsSection({ items, onChange, language }: SkillsSectionProps) {
+  const zh = language === "zh";
+
   function update(index: number, field: "category" | "items", value: string) {
     const next = items.map((g, i) => (i === index ? { ...g, [field]: value } : g));
     onChange(next);
@@ -41,7 +44,7 @@ export function SkillsSection({ items, onChange }: SkillsSectionProps) {
     <div>
       <div className="space-y-3">
         <Button variant="ghost" size="xs" className="add-btn cursor-pointer gap-1 text-xs" onClick={add}>
-          <Plus className="size-3" /> Add Entry
+          <Plus className="size-3" /> {zh ? "添加条目" : "Add Entry"}
         </Button>
         {items.map((group, i) => (
           <div key={group.id} className="skill-row flex items-end gap-2 px-1 py-0.5">
@@ -65,11 +68,11 @@ export function SkillsSection({ items, onChange }: SkillsSectionProps) {
 
             <div className="grid flex-1 grid-cols-[120px_1fr] gap-2">
               <div className="flex flex-col gap-1">
-                <Label className="text-xs">Category</Label>
-                <Input value={group.category} onChange={(e) => update(i, "category", e.target.value)} placeholder="Languages" />
+                <Label className="text-xs">{zh ? "分类" : "Category"}</Label>
+                <Input value={group.category} onChange={(e) => update(i, "category", e.target.value)} placeholder={zh ? "编程语言" : "Languages"} />
               </div>
               <div className="flex flex-col gap-1">
-                <Label className="text-xs">Skills</Label>
+                <Label className="text-xs">{zh ? "技能" : "Skills"}</Label>
                 <Input value={group.items} onChange={(e) => update(i, "items", e.target.value)} placeholder="Python, JavaScript, Go" />
               </div>
             </div>
