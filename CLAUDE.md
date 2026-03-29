@@ -77,4 +77,4 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 
 - Branch naming: `feature/issue-{N}-short-description`
 - PR description must include `Closes #{N}` to auto-close the linked issue
-- GitHub Project: https://github.com/users/ada-zl125/projects/2
+- GitHub Project: https://github.com/users/ada-zl125/projects/

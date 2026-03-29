@@ -1,11 +1,19 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check, Loader2, FileDown, FileText, Image } from "lucide-react";
-import type { ResumeTemplate, ResumeContent } from "@/lib/types/resume";
+import { ArrowLeft, Check, Loader2, FileDown, FileText, Image, Settings } from "lucide-react";
+import type { ResumeTemplate, ResumeLanguage, ResumeContent } from "@/lib/types/resume";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -16,42 +24,61 @@ import {
 type SaveStatus = "saved" | "saving" | "unsaved";
 
 const TEMPLATE_OPTIONS: { value: ResumeTemplate; label: string; bg: string; text: string }[] = [
-  { value: "classic",  label: "Classic",  bg: "bg-blue-50",  text: "text-blue-600" },
-  { value: "academic", label: "Academic", bg: "bg-teal-50",  text: "text-teal-600" },
+  { value: "general", label: "General", bg: "bg-blue-50", text: "text-blue-600" },
 ];
+
+const LANGUAGE_OPTIONS: { value: ResumeLanguage; label: string }[] = [
+  { value: "en", label: "English" },
+  { value: "zh", label: "Chinese" },
+];
+
+const TITLE_MAX = 50;
 
 interface ToolbarProps {
   title: string;
   template: ResumeTemplate;
+  language: ResumeLanguage;
   content: ResumeContent;
   saveStatus: SaveStatus;
-  onTitleChange: (title: string) => void;
-  onTemplateChange: (template: ResumeTemplate) => void;
+  onSettingsChange: (title: string, language: ResumeLanguage, template: ResumeTemplate) => void;
 }
 
-export function Toolbar({ title, template, content, saveStatus, onTitleChange, onTemplateChange }: ToolbarProps) {
-  const [exportingFormat, setExportingFormat] = useState<"pdf" | "png" | null>(null);
-  const current = TEMPLATE_OPTIONS.find((t) => t.value === template) ?? TEMPLATE_OPTIONS[0];
+export function Toolbar({ title, template, language, content, saveStatus, onSettingsChange }: ToolbarProps) {
   const router = useRouter();
-  const [editing, setEditing] = useState(false);
-  const [editValue, setEditValue] = useState(title);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [exportingFormat, setExportingFormat] = useState<"pdf" | "png" | null>(null);
 
+  /* ---- Settings dialog state ---- */
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [draftTitle, setDraftTitle] = useState(title);
+  const [draftLanguage, setDraftLanguage] = useState<ResumeLanguage>(language);
+  const [draftTemplate, setDraftTemplate] = useState<ResumeTemplate>(template);
+
+  // Sync drafts when dialog opens
   useEffect(() => {
-    setEditValue(title);
-  }, [title]);
+    if (settingsOpen) {
+      setDraftTitle(title);
+      setDraftLanguage(language);
+      setDraftTemplate(template);
+    }
+  }, [settingsOpen, title, language, template]);
 
-  useEffect(() => {
-    if (editing) inputRef.current?.select();
-  }, [editing]);
+  const titleTooLong = draftTitle.length > TITLE_MAX;
+  const canSave = draftTitle.trim().length > 0 && !titleTooLong;
 
+  function handleSettingsSave() {
+    if (!canSave) return;
+    onSettingsChange(draftTitle.trim(), draftLanguage, draftTemplate);
+    setSettingsOpen(false);
+  }
+
+  /* ---- Export ---- */
   async function handleExport(format: "pdf" | "png") {
     setExportingFormat(format);
     try {
       const res = await fetch(`/api/export/${format}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content, title }),
+        body: JSON.stringify({ content, title, language }),
       });
       if (!res.ok) throw new Error(`${format.toUpperCase()} export failed`);
       const blob = await res.blob();
@@ -68,115 +95,157 @@ export function Toolbar({ title, template, content, saveStatus, onTitleChange, o
     }
   }
 
-  function commitTitle() {
-    const trimmed = editValue.trim();
-    if (trimmed && trimmed !== title) {
-      onTitleChange(trimmed);
-    } else {
-      setEditValue(title);
-    }
-    setEditing(false);
-  }
-
   return (
-    <header className="editor-toolbar flex h-14 shrink-0 items-center gap-4 border-b border-border bg-card px-4">
-      {/* Back button */}
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        className="cursor-pointer"
-        onClick={() => router.push("/workspace")}
-        aria-label="Back to workspace"
-      >
-        <ArrowLeft className="size-4" />
-      </Button>
+    <>
+      <header className="editor-toolbar flex h-14 shrink-0 items-center gap-3 border-b border-border bg-card px-4">
+        {/* Back button */}
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="cursor-pointer"
+          onClick={() => router.push("/workspace")}
+          aria-label="Back to workspace"
+        >
+          <ArrowLeft className="size-4" />
+        </Button>
 
-      {/* Template selector */}
-      <DropdownMenu>
-        <DropdownMenuTrigger className={`inline-flex cursor-pointer items-center rounded px-1.5 py-0.5 text-[11px] font-medium transition-opacity hover:opacity-80 ${current.bg} ${current.text}`}>
-          {current.label}
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" sideOffset={4}>
-          {TEMPLATE_OPTIONS.map((t) => (
-            <DropdownMenuItem
-              key={t.value}
-              className="cursor-pointer gap-2"
-              onClick={() => onTemplateChange(t.value)}
-            >
-              <span className={`inline-flex rounded px-1.5 py-0.5 text-[10px] font-medium ${t.bg} ${t.text}`}>{t.label}</span>
-              {t.value === template && <Check className="ml-auto size-3.5" />}
+        {/* Title (static) */}
+        <span className="truncate text-sm font-medium text-foreground">{title}</span>
+
+        {/* Settings button */}
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="cursor-pointer shrink-0 text-muted-foreground hover:text-foreground"
+          onClick={() => setSettingsOpen(true)}
+          aria-label="Resume settings"
+        >
+          <Settings className="size-4" />
+        </Button>
+
+        {/* Save status */}
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          {saveStatus === "saved" && (
+            <>
+              <Check className="size-3.5 text-emerald-500" />
+              <span>Saved</span>
+            </>
+          )}
+          {saveStatus === "saving" && (
+            <>
+              <Loader2 className="size-3.5 animate-spin" />
+              <span>Saving...</span>
+            </>
+          )}
+          {saveStatus === "unsaved" && (
+            <span className="text-amber-500">Unsaved changes</span>
+          )}
+        </div>
+
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* Export dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger className="btn-hover-border inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 text-sm font-medium hover:bg-muted">
+            <FileDown className="size-4" />
+            Export
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" sideOffset={4} className="min-w-[160px]">
+            <DropdownMenuItem className="cursor-pointer gap-2 whitespace-nowrap" onClick={() => handleExport("pdf")} disabled={exportingFormat !== null}>
+              {exportingFormat === "pdf" ? <Loader2 className="size-4 animate-spin" /> : <FileText className="size-4" />}
+              {exportingFormat === "pdf" ? "Exporting..." : "Download PDF"}
             </DropdownMenuItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
+            <DropdownMenuItem className="cursor-pointer gap-2 whitespace-nowrap" onClick={() => handleExport("png")} disabled={exportingFormat !== null}>
+              {exportingFormat === "png" ? <Loader2 className="size-4 animate-spin" /> : <Image className="size-4" />}
+              {exportingFormat === "png" ? "Exporting..." : "Download PNG"}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </header>
 
-      {/* Title — click to rename */}
-      {editing ? (
-        <Input
-          ref={inputRef}
-          value={editValue}
-          onChange={(e) => setEditValue(e.target.value)}
-          onBlur={commitTitle}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") commitTitle();
-            if (e.key === "Escape") {
-              setEditValue(title);
-              setEditing(false);
-            }
-          }}
-          className="h-7 max-w-64 text-sm font-medium"
-        />
-      ) : (
-        <button
-          type="button"
-          className="cursor-pointer rounded px-2 py-1 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-          onClick={() => setEditing(true)}
-        >
-          {title}
-        </button>
-      )}
+      {/* Settings Dialog */}
+      <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Resume Settings</DialogTitle>
+          </DialogHeader>
 
-      {/* Save status */}
-      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-        {saveStatus === "saved" && (
-          <>
-            <Check className="size-3.5 text-emerald-500" />
-            <span>Saved</span>
-          </>
-        )}
-        {saveStatus === "saving" && (
-          <>
-            <Loader2 className="size-3.5 animate-spin" />
-            <span>Saving...</span>
-          </>
-        )}
-        {saveStatus === "unsaved" && (
-          <span className="text-amber-500">Unsaved changes</span>
-        )}
-      </div>
+          <div className="grid gap-4 py-2">
+            {/* Title */}
+            <div className="grid gap-1.5">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="settings-title">Title</Label>
+                <span className={`text-xs ${titleTooLong ? "text-destructive" : "text-muted-foreground"}`}>
+                  {draftTitle.length}/{TITLE_MAX}
+                </span>
+              </div>
+              <Input
+                id="settings-title"
+                value={draftTitle}
+                onChange={(e) => setDraftTitle(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") handleSettingsSave(); }}
+                className={titleTooLong ? "border-destructive focus:border-destructive" : ""}
+                autoFocus
+              />
+              {titleTooLong && (
+                <p className="text-xs text-destructive">Title must be {TITLE_MAX} characters or fewer.</p>
+              )}
+            </div>
 
-      {/* Spacer */}
-      <div className="flex-1" />
+            {/* Language picker */}
+            <div className="grid gap-2">
+              <Label>Language</Label>
+              <div className="flex gap-2">
+                {LANGUAGE_OPTIONS.map((l) => (
+                  <button
+                    key={l.value}
+                    type="button"
+                    onClick={() => setDraftLanguage(l.value)}
+                    className={`cursor-pointer rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                      draftLanguage === l.value
+                        ? "border-foreground bg-foreground/5 text-foreground"
+                        : "border-border text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                    }`}
+                  >
+                    {l.label}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-      {/* Export dropdown */}
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          className="btn-hover-border inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 text-sm font-medium hover:bg-muted"
-        >
-          <FileDown className="size-4" />
-          Export
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" sideOffset={4} className="min-w-[160px]">
-          <DropdownMenuItem className="cursor-pointer gap-2 whitespace-nowrap" onClick={() => handleExport("pdf")} disabled={exportingFormat !== null}>
-            {exportingFormat === "pdf" ? <Loader2 className="size-4 animate-spin" /> : <FileText className="size-4" />}
-            {exportingFormat === "pdf" ? "Exporting..." : "Download PDF"}
-          </DropdownMenuItem>
-          <DropdownMenuItem className="cursor-pointer gap-2 whitespace-nowrap" onClick={() => handleExport("png")} disabled={exportingFormat !== null}>
-            {exportingFormat === "png" ? <Loader2 className="size-4 animate-spin" /> : <Image className="size-4" />}
-            {exportingFormat === "png" ? "Exporting..." : "Download PNG"}
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </header>
+            {/* Template picker */}
+            <div className="grid gap-2">
+              <Label>Template</Label>
+              <div className="flex gap-2">
+                {TEMPLATE_OPTIONS.map((t) => (
+                  <button
+                    key={t.value}
+                    type="button"
+                    onClick={() => setDraftTemplate(t.value)}
+                    className={`cursor-pointer rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                      draftTemplate === t.value
+                        ? `${t.bg} ${t.text} border-current`
+                        : "border-border text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" className="btn-hover-border cursor-pointer" onClick={() => setSettingsOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="outline" className="btn-hover-primary cursor-pointer" onClick={handleSettingsSave} disabled={!canSave}>
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

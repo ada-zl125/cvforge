@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { ChevronDown, ChevronUp, Plus, Trash2, GraduationCap, FolderOpen, Briefcase, Wrench, ChevronsUpDown, ChevronsDownUp, RotateCcw } from "lucide-react";
+import { ChevronDown, ChevronUp, Plus, Trash2, GraduationCap, FolderOpen, Briefcase, Wrench, ChevronsUpDown, ChevronsDownUp, RotateCcw, Save, Check, Loader2 } from "lucide-react";
 import type { ResumeContent, SectionType } from "@/lib/types/resume";
 import { Button } from "@/components/ui/button";
 import {
@@ -42,12 +42,16 @@ const EMPTY_CONTENT: ResumeContent = {
   projects: [],
 };
 
+type SaveStatus = "saved" | "saving" | "unsaved";
+
 interface FormPanelProps {
   content: ResumeContent;
   onChange: (content: ResumeContent) => void;
+  saveStatus: SaveStatus;
+  onSave: () => void;
 }
 
-export function FormPanel({ content, onChange }: FormPanelProps) {
+export function FormPanel({ content, onChange, saveStatus, onSave }: FormPanelProps) {
   const activeSections = content.sections ?? [];
   const availableSections = (Object.keys(SECTION_META) as SectionType[]).filter(
     (s) => !activeSections.includes(s),
@@ -124,6 +128,19 @@ export function FormPanel({ content, onChange }: FormPanelProps) {
         >
           <RotateCcw className="size-3.5" />
           Reset
+        </Button>
+
+        <div className="flex-1" />
+
+        <Button
+          variant="outline"
+          size="sm"
+          className="btn-hover-border cursor-pointer gap-1.5 text-xs"
+          onClick={onSave}
+          disabled={saveStatus !== "unsaved"}
+        >
+          {saveStatus === "saving" ? <Loader2 className="size-3.5 animate-spin" /> : saveStatus === "saved" ? <Check className="size-3.5 text-emerald-500" /> : <Save className="size-3.5" />}
+          {saveStatus === "saving" ? "Saving..." : saveStatus === "saved" ? "Saved" : "Save"}
         </Button>
       </div>
 
