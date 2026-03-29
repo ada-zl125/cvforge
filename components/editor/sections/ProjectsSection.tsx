@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Plus, Trash2, ChevronUp, ChevronDown, ChevronRight } from "lucide-react";
-import type { ProjectItem, DescriptionField } from "@/lib/types/resume";
+import type { ProjectItem, DescriptionField, ResumeLanguage } from "@/lib/types/resume";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,9 +13,19 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 
+const EN_MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+function defaultDate(yearsOffset: number, lang: ResumeLanguage): string {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() + yearsOffset);
+  if (lang === "zh") return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, "0")}`;
+  return `${EN_MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
+
 interface ProjectsSectionProps {
   items: ProjectItem[];
   onChange: (items: ProjectItem[]) => void;
+  language: ResumeLanguage;
 }
 
 function emptyDescription(): DescriptionField {
@@ -34,7 +44,7 @@ function emptyProject(): ProjectItem {
   };
 }
 
-export function ProjectsSection({ items, onChange }: ProjectsSectionProps) {
+export function ProjectsSection({ items, onChange, language }: ProjectsSectionProps) {
   function update(index: number, field: keyof ProjectItem, value: string) {
     const next = items.map((item, i) => (i === index ? { ...item, [field]: value } : item));
     onChange(next);
@@ -65,7 +75,7 @@ export function ProjectsSection({ items, onChange }: ProjectsSectionProps) {
     <div>
       <div className="space-y-4">
         <Button variant="ghost" size="xs" className="add-btn cursor-pointer gap-1 text-xs" onClick={add}>
-          <Plus className="size-3" /> Add Entry
+          <Plus className="size-3" /> {language === "zh" ? "添加条目" : "Add Entry"}
         </Button>
         {items.map((proj, i) => (
           <ProjectBlock
@@ -79,6 +89,7 @@ export function ProjectsSection({ items, onChange }: ProjectsSectionProps) {
             onMoveUp={() => move(i, -1)}
             onMoveDown={() => move(i, 1)}
             onDescriptionsChange={(descs) => updateDescriptions(i, descs)}
+            language={language}
           />
         ))}
       </div>
@@ -100,6 +111,7 @@ function ProjectBlock({
   onMoveUp,
   onMoveDown,
   onDescriptionsChange,
+  language,
 }: {
   proj: ProjectItem;
   index: number;
@@ -110,10 +122,12 @@ function ProjectBlock({
   onMoveUp: () => void;
   onMoveDown: () => void;
   onDescriptionsChange: (descs: DescriptionField[]) => void;
+  language: ResumeLanguage;
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const [websiteVisible, setWebsiteVisible] = useState(Boolean(proj.websiteLabel || proj.websiteUrl));
   const descriptions = proj.descriptions ?? [emptyDescription()];
+  const zh = language === "zh";
 
   function updateDesc(id: string, value: string) {
     onDescriptionsChange(descriptions.map((d) => (d.id === id ? { ...d, value } : d)));
@@ -143,7 +157,7 @@ function ProjectBlock({
           onClick={() => setCollapsed(!collapsed)}
         >
           <ChevronRight className={`size-3 text-muted-foreground transition-transform duration-200 ${collapsed ? "" : "rotate-90"}`} />
-          <span className="text-xs font-medium">{proj.name || `Entry #${index + 1}`}</span>
+          <span className="text-xs font-medium">{proj.name || `${zh ? "条目" : "Entry"} #${index + 1}`}</span>
         </button>
         <div className="flex items-center gap-0.5">
           <Button
@@ -172,16 +186,16 @@ function ProjectBlock({
           {/* Fixed fields */}
           <div className="grid grid-cols-2 gap-x-3 gap-y-2">
             <div className="col-span-2 flex flex-col gap-1">
-              <Label className="text-xs">Project Name</Label>
-              <Input value={proj.name} onChange={(e) => onUpdate("name", e.target.value)} placeholder="My Project" />
+              <Label className="text-xs">{zh ? "项目名称" : "Project Name"}</Label>
+              <Input value={proj.name} onChange={(e) => onUpdate("name", e.target.value)} placeholder={zh ? "我的项目" : "My Project"} />
             </div>
             <div className="flex flex-col gap-1">
-              <Label className="text-xs">Start Date</Label>
-              <Input value={proj.startDate} onChange={(e) => onUpdate("startDate", e.target.value)} placeholder="Jan 2024" />
+              <Label className="text-xs">{zh ? "开始时间" : "Start Date"}</Label>
+              <Input value={proj.startDate} onChange={(e) => onUpdate("startDate", e.target.value)} placeholder={defaultDate(-4, language)} />
             </div>
             <div className="flex flex-col gap-1">
-              <Label className="text-xs">End Date</Label>
-              <Input value={proj.endDate} onChange={(e) => onUpdate("endDate", e.target.value)} placeholder="Mar 2024" />
+              <Label className="text-xs">{zh ? "结束时间" : "End Date"}</Label>
+              <Input value={proj.endDate} onChange={(e) => onUpdate("endDate", e.target.value)} placeholder={defaultDate(0, language)} />
             </div>
           </div>
 
@@ -189,7 +203,7 @@ function ProjectBlock({
           {websiteVisible && (
             <div className="mt-3 flex items-end gap-2">
               <div className="flex flex-1 flex-col gap-1">
-                <Label className="text-xs text-muted-foreground">Website</Label>
+                <Label className="text-xs text-muted-foreground">{zh ? "网站" : "Website"}</Label>
                 <div className="flex gap-2">
                   <Input
                     className="w-28"
@@ -218,14 +232,14 @@ function ProjectBlock({
           {/* Description fields */}
           {descriptions.length > 0 && (
             <div className="mt-3 space-y-2">
-              <Label className="text-xs text-muted-foreground">Descriptions</Label>
+              <Label className="text-xs text-muted-foreground">{zh ? "项目描述" : "Descriptions"}</Label>
               {descriptions.map((desc) => (
                 <div key={desc.id} className="flex items-center gap-2">
                   <Input
                     className="flex-1"
                     value={desc.value}
                     onChange={(e) => updateDesc(desc.id, e.target.value)}
-                    placeholder="Describe a feature, technology, or outcome..."
+                    placeholder={zh ? "描述项目特性、技术栈或成果..." : "Describe a feature, technology, or outcome..."}
                   />
                   <Button
                     variant="ghost" size="icon-xs"
@@ -244,15 +258,15 @@ function ProjectBlock({
             <DropdownMenu>
               <DropdownMenuTrigger className="add-btn inline-flex h-7 cursor-pointer items-center gap-1 rounded-md px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
                 <Plus className="size-3" />
-                Add field
+                {zh ? "添加字段" : "Add field"}
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" sideOffset={4}>
                 <DropdownMenuItem className="cursor-pointer" onClick={addDesc}>
-                  Description
+                  {zh ? "描述" : "Description"}
                 </DropdownMenuItem>
                 {!websiteVisible && (
                   <DropdownMenuItem className="cursor-pointer" onClick={() => setWebsiteVisible(true)}>
-                    Website
+                    {zh ? "网站" : "Website"}
                   </DropdownMenuItem>
                 )}
               </DropdownMenuContent>
