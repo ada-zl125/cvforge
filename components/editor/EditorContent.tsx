@@ -97,7 +97,7 @@ export function EditorContent({ resume }: EditorContentProps) {
       <div className="flex flex-1 overflow-hidden">
         {/* Left: Form panel (40%) */}
         <div className="w-2/5 shrink-0 overflow-y-auto border-r border-border">
-          <FormPanel content={content} onChange={handleContentChange} saveStatus={saveStatus} onSave={handleManualSave} />
+          <FormPanel content={content} onChange={handleContentChange} saveStatus={saveStatus} onSave={handleManualSave} language={language} />
         </div>
 
         {/* Right: Preview panel (60%) */}
