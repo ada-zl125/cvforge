@@ -229,7 +229,7 @@ export function AuthModal({ open, onOpenChange, defaultTab = "sign-in" }: AuthMo
         setError(error.message);
         return;
       }
-      setInfo(`A password reset link has been sent to ${values.email}. Please check your inbox.`);
+      setInfo(`A password reset link has been sent to ${values.email}. Please check your inbox (and spam folder).`);
     } finally {
       setLoading(false);
     }
@@ -289,10 +289,16 @@ export function AuthModal({ open, onOpenChange, defaultTab = "sign-in" }: AuthMo
           </DialogHeader>
 
           <div className="mt-2 flex flex-col gap-4">
-            <p className="text-center text-sm text-muted-foreground">
-              We sent a 6-digit code to <span className="font-medium text-foreground">{pendingEmail}</span>.
-              Enter it below to confirm your account.
-            </p>
+            <div className="flex flex-col gap-1 text-center text-sm text-muted-foreground">
+              <p>
+                We sent a 6-digit code to{" "}
+                <span className="font-medium text-foreground">{pendingEmail}</span>.
+                Enter it below to confirm your account.
+              </p>
+              <p className="text-xs">
+                Can&apos;t find it? Check your <span className="font-medium">spam or junk</span> folder.
+              </p>
+            </div>
 
             {errorBanner}
             {infoBanner}
