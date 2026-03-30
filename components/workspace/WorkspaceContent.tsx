@@ -10,14 +10,16 @@ import { CreateResumeModal } from "./CreateResumeModal";
 interface WorkspaceContentProps {
   resumes: ResumeRow[];
   userEmail: string;
+  displayName: string | null;
+  provider: string;
 }
 
-export function WorkspaceContent({ resumes, userEmail }: WorkspaceContentProps) {
+export function WorkspaceContent({ resumes, userEmail, displayName, provider }: WorkspaceContentProps) {
   const [createOpen, setCreateOpen] = useState(false);
 
   return (
     <div className="flex h-screen overflow-hidden bg-muted/30">
-      <Sidebar userEmail={userEmail} onNewResume={() => setCreateOpen(true)} />
+      <Sidebar userEmail={userEmail} displayName={displayName} provider={provider} onNewResume={() => setCreateOpen(true)} />
 
       <main className="flex flex-1 flex-col overflow-y-auto">
         <div className="flex min-h-full flex-col px-10 py-9">
