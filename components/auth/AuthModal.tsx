@@ -24,13 +24,16 @@ import { Separator } from "@/components/ui/separator";
 /* ------------------------------------------------------------------ */
 
 const signInSchema = z.object({
-  email: z.string().email("Please enter a valid email"),
+  email: z.email("Please enter a valid email"),
   password: z.string().min(1, "Password is required"),
 });
 
 const signUpSchema = z.object({
-  email: z.string().email("Please enter a valid email"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  email: z.email("Please enter a valid email"),
+  password: z.string()
+    .min(6, "Password must be at least 6 characters")
+    .regex(/[a-zA-Z]/, "Password must contain at least one letter")
+    .regex(/[0-9]/, "Password must contain at least one number"),
   confirmPassword: z.string().min(1, "Please confirm your password"),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords do not match",
@@ -38,7 +41,7 @@ const signUpSchema = z.object({
 });
 
 const forgotSchema = z.object({
-  email: z.string().email("Please enter a valid email"),
+  email: z.email("Please enter a valid email"),
 });
 
 type SignInValues = z.infer<typeof signInSchema>;
@@ -72,6 +75,7 @@ export function AuthModal({ open, onOpenChange, defaultTab = "sign-in" }: AuthMo
   // OTP state
   const [pendingEmail, setPendingEmail] = useState("");
   const [otp, setOtp] = useState("");
+  const [otpType, setOtpType] = useState<"signup" | "recovery">("signup");
 
   /* ---- Forms ---- */
 
@@ -128,10 +132,21 @@ export function AuthModal({ open, onOpenChange, defaultTab = "sign-in" }: AuthMo
         password: values.password,
       });
       if (error) {
-        if (error.message.toLowerCase().includes("email not confirmed")) {
-          setError("Your email is not verified. Please check your inbox for the confirmation code.");
-        } else if (error.message.toLowerCase().includes("invalid login credentials")) {
-          setError("Incorrect email or password.");
+        const msg = error.message.toLowerCase();
+        if (msg.includes("email not confirmed")) {
+          // Auto-resend OTP and redirect to verify screen
+          setPendingEmail(values.email);
+          setOtpType("signup");
+          const { error: resendErr } = await supabase.auth.resend({
+            type: "signup",
+            email: values.email,
+          });
+          if (!resendErr) {
+            setInfo("A new verification code has been sent to your email.");
+          }
+          setMode("verify-otp");
+        } else if (msg.includes("invalid login credentials")) {
+          setError("Incorrect email or password. If you signed up with Google, use the button below.");
         } else {
           setError(error.message);
         }
@@ -152,7 +167,7 @@ export function AuthModal({ open, onOpenChange, defaultTab = "sign-in" }: AuthMo
     setLoading(true);
     try {
       const supabase = createClient();
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email: values.email,
         password: values.password,
       });
@@ -160,7 +175,13 @@ export function AuthModal({ open, onOpenChange, defaultTab = "sign-in" }: AuthMo
         setError(error.message);
         return;
       }
+      // Supabase anti-enumeration: duplicate confirmed email returns user with empty identities
+      if (data.user?.identities?.length === 0) {
+        setError("An account with this email already exists. Please sign in instead.");
+        return;
+      }
       setPendingEmail(values.email);
+      setOtpType("signup");
       setMode("verify-otp");
     } finally {
       setLoading(false);
@@ -170,8 +191,8 @@ export function AuthModal({ open, onOpenChange, defaultTab = "sign-in" }: AuthMo
   /* ---- Verify OTP ---- */
 
   async function handleVerifyOtp() {
-    if (otp.length !== 6) {
-      setError("Please enter the 6-digit code from your email.");
+    if (otp.length < 6) {
+      setError("Please enter the verification code from your email.");
       return;
     }
     setError(null);
@@ -181,15 +202,20 @@ export function AuthModal({ open, onOpenChange, defaultTab = "sign-in" }: AuthMo
       const { error } = await supabase.auth.verifyOtp({
         email: pendingEmail,
         token: otp,
-        type: "signup",
+        type: otpType,
       });
       if (error) {
         setError("Invalid or expired code. Please try again.");
         return;
       }
-      handleOpenChange(false);
-      router.push("/workspace");
-      router.refresh();
+      if (otpType === "recovery") {
+        handleOpenChange(false);
+        router.push("/auth/reset-password");
+      } else {
+        handleOpenChange(false);
+        router.push("/workspace");
+        router.refresh();
+      }
     } finally {
       setLoading(false);
     }
@@ -201,12 +227,14 @@ export function AuthModal({ open, onOpenChange, defaultTab = "sign-in" }: AuthMo
     setLoading(true);
     try {
       const supabase = createClient();
-      const { error } = await supabase.auth.resend({
-        type: "signup",
-        email: pendingEmail,
-      });
-      if (error) {
-        setError(error.message);
+      let resendError;
+      if (otpType === "recovery") {
+        ({ error: resendError } = await supabase.auth.resetPasswordForEmail(pendingEmail));
+      } else {
+        ({ error: resendError } = await supabase.auth.resend({ type: "signup", email: pendingEmail }));
+      }
+      if (resendError) {
+        setError(resendError.message);
       } else {
         setInfo("A new code has been sent to your email.");
       }
@@ -222,14 +250,15 @@ export function AuthModal({ open, onOpenChange, defaultTab = "sign-in" }: AuthMo
     setLoading(true);
     try {
       const supabase = createClient();
-      const { error } = await supabase.auth.resetPasswordForEmail(values.email, {
-        redirectTo: `${window.location.origin}/auth/callback?next=/auth/reset-password`,
-      });
+      // resetPasswordForEmail sends an OTP when the email template uses {{ .Token }}
+      const { error } = await supabase.auth.resetPasswordForEmail(values.email);
       if (error) {
         setError(error.message);
         return;
       }
-      setInfo(`A password reset link has been sent to ${values.email}. Please check your inbox (and spam folder).`);
+      setPendingEmail(values.email);
+      setOtpType("recovery");
+      setMode("verify-otp");
     } finally {
       setLoading(false);
     }
@@ -279,21 +308,26 @@ export function AuthModal({ open, onOpenChange, defaultTab = "sign-in" }: AuthMo
   /* ------------------------------------------------------------------ */
 
   if (mode === "verify-otp") {
+    const isRecovery = otpType === "recovery";
     return (
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent className="sm:max-w-[420px]">
           <DialogHeader>
             <DialogTitle className="text-center text-2xl font-bold">
-              Verify your email
+              {isRecovery ? "Reset your password" : "Verify your email"}
             </DialogTitle>
           </DialogHeader>
 
           <div className="mt-2 flex flex-col gap-4">
             <div className="flex flex-col gap-1 text-center text-sm text-muted-foreground">
               <p>
-                We sent a 6-digit code to{" "}
-                <span className="font-medium text-foreground">{pendingEmail}</span>.
-                Enter it below to confirm your account.
+                {isRecovery
+                  ? "We sent a verification code to"
+                  : "We sent a verification code to"}{" "}
+                <span className="font-medium text-foreground">{pendingEmail}</span>.{" "}
+                {isRecovery
+                  ? "Enter it below to reset your password."
+                  : "Enter it below to confirm your account."}
               </p>
               <p className="text-xs">
                 Can&apos;t find it? Check your <span className="font-medium">spam or junk</span> folder.
@@ -308,24 +342,34 @@ export function AuthModal({ open, onOpenChange, defaultTab = "sign-in" }: AuthMo
               <Input
                 id="otp-input"
                 value={otp}
-                onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                placeholder="123456"
+                onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 8))}
+                placeholder="12345678"
                 className="text-center text-lg tracking-widest"
-                maxLength={6}
+                maxLength={8}
                 autoFocus
                 onKeyDown={(e) => { if (e.key === "Enter") handleVerifyOtp(); }}
               />
             </div>
 
-            <Button className="cursor-pointer" onClick={handleVerifyOtp} disabled={loading || otp.length !== 6}>
-              {loading ? "Verifying..." : "Verify Email"}
+            <Button className="cursor-pointer" onClick={handleVerifyOtp} disabled={loading || otp.length < 6}>
+              {loading ? "Verifying..." : isRecovery ? "Continue" : "Verify Email"}
             </Button>
 
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <button
                 type="button"
                 className="cursor-pointer hover:text-foreground"
-                onClick={() => { reset(); setTab("sign-up"); }}
+                onClick={() => {
+                  if (isRecovery) {
+                    setMode("forgot-password");
+                    setOtp("");
+                    setError(null);
+                    setInfo(null);
+                  } else {
+                    reset();
+                    setTab("sign-up");
+                  }
+                }}
               >
                 ← Back
               </button>
@@ -360,32 +404,29 @@ export function AuthModal({ open, onOpenChange, defaultTab = "sign-in" }: AuthMo
 
           <div className="mt-2 flex flex-col gap-4">
             <p className="text-center text-sm text-muted-foreground">
-              Enter your email and we&apos;ll send you a link to reset your password.
+              Enter your email and we&apos;ll send you a verification code to reset your password.
             </p>
 
             {errorBanner}
-            {infoBanner}
 
-            {!info && (
-              <form onSubmit={forgotForm.handleSubmit(handleForgotPassword)} className="flex flex-col gap-4">
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="forgot-email">Email</Label>
-                  <Input
-                    id="forgot-email"
-                    type="email"
-                    placeholder="you@example.com"
-                    autoFocus
-                    {...forgotForm.register("email")}
-                  />
-                  {forgotForm.formState.errors.email && (
-                    <p className="text-sm text-destructive">{forgotForm.formState.errors.email.message}</p>
-                  )}
-                </div>
-                <Button type="submit" className="cursor-pointer" disabled={loading}>
-                  {loading ? "Sending..." : "Send reset link"}
-                </Button>
-              </form>
-            )}
+            <form onSubmit={forgotForm.handleSubmit(handleForgotPassword)} className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="forgot-email">Email</Label>
+                <Input
+                  id="forgot-email"
+                  type="email"
+                  placeholder="you@example.com"
+                  autoFocus
+                  {...forgotForm.register("email")}
+                />
+                {forgotForm.formState.errors.email && (
+                  <p className="text-sm text-destructive">{forgotForm.formState.errors.email.message}</p>
+                )}
+              </div>
+              <Button type="submit" className="cursor-pointer" disabled={loading}>
+                {loading ? "Sending..." : "Send reset code"}
+              </Button>
+            </form>
 
             <button
               type="button"
@@ -484,7 +525,7 @@ export function AuthModal({ open, onOpenChange, defaultTab = "sign-in" }: AuthMo
                 <Input
                   id="sign-up-password"
                   type="password"
-                  placeholder="At least 6 characters"
+                  placeholder="Min 6 chars, letters + numbers"
                   {...signUpForm.register("password")}
                 />
                 {signUpForm.formState.errors.password && (
