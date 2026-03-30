@@ -17,10 +17,18 @@ export default async function WorkspacePage() {
     .select("*")
     .order("updated_at", { ascending: false });
 
+  const provider = (user.app_metadata?.provider as string) ?? "email";
+  const displayName =
+    (user.user_metadata?.display_name as string | undefined) ??
+    (user.user_metadata?.full_name as string | undefined) ??
+    null;
+
   return (
     <WorkspaceContent
       resumes={(resumes as ResumeRow[]) ?? []}
       userEmail={user.email ?? ""}
+      displayName={displayName}
+      provider={provider}
     />
   );
 }
