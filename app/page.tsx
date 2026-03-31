@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { PenLine, Eye, Download } from "lucide-react";
+import { PenLine, Eye, Download, MoveRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
@@ -270,7 +270,7 @@ export default function Home() {
             className="group/btn h-12 cursor-pointer rounded-full px-6 text-base transition-all duration-200 hover:brightness-110 hover:shadow-lg hover:shadow-primary/25"
             onClick={() => openAuth("sign-up")}
           >
-            {tr.startBuilding} <span className="ml-1 inline-block transition-transform duration-200 group-hover/btn:translate-x-1">→</span>
+            {tr.startBuilding} <MoveRight className="ml-1 size-4 transition-transform duration-200 group-hover/btn:translate-x-1" />
           </Button>
           <Button
             variant="outline"

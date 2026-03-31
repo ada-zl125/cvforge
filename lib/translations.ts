@@ -110,21 +110,42 @@ const t = {
     confirmPasswordRequired: "Please confirm your password",
     emailRequired: "Please enter a valid email",
     passwordRequired: "Password is required",
+
+    /* ---- Editor toolbar ---- */
+    backToWorkspace: "Back to workspace",
+    savedStatus: "Saved",
+    savingStatus: "Saving...",
+    unsavedStatus: "Unsaved changes",
+    exportLabel: "Export",
+    downloadPdf: "Download PDF",
+    downloadPng: "Download PNG",
+    exporting: "Exporting...",
+    editorResumeSettings: "Resume Settings",
+
+    /* ---- Form panel ---- */
+    expandAll: "Expand All",
+    collapseAll: "Collapse All",
+    resetBtn: "Reset",
+    saveBtn: "Save",
+    addSection: "Add Section",
+    resetTitle: "Reset all content?",
+    resetDesc: "This will clear all sections and personal information. This action cannot be undone.",
+    resetConfirm: "Reset",
   },
 
   zh: {
     /* ---- Landing ---- */
     betaBadge: "公测中 — 免费使用",
-    heroTitle1: "你的简历，",
-    heroTitle2: "专业呈现。",
-    heroSubtitle: "填写你的内容，我们负责专业排版。\n几分钟打造精美简历。",
+    heroTitle1: "专业简历，",
+    heroTitle2: "轻松制作。",
+    heroSubtitle: "填写内容，智能排版。\n几分钟，打造令人印象深刻的简历。",
     startBuilding: "立即开始",
     seeExamples: "查看示例",
     signIn: "登录",
-    getStarted: "免费注册",
-    featuresTitle1: "一切你所需要的，",
-    featuresTitle2: "不多，不少。",
-    featuresSubtitle: "三个简单步骤，从空白到完整简历。",
+    getStarted: "注册",
+    featuresTitle1: "功能齐全，",
+    featuresTitle2: "简单易用。",
+    featuresSubtitle: "三步完成，从空白页到精美简历。",
     footer: "© 2026 EasyCV. 保留所有权利。",
 
     /* ---- Feature cards ---- */
@@ -221,6 +242,27 @@ const t = {
     confirmPasswordRequired: "请确认密码",
     emailRequired: "请输入有效的邮箱地址",
     passwordRequired: "请输入密码",
+
+    /* ---- Editor toolbar ---- */
+    backToWorkspace: "返回工作台",
+    savedStatus: "已保存",
+    savingStatus: "保存中…",
+    unsavedStatus: "有未保存的更改",
+    exportLabel: "导出",
+    downloadPdf: "下载 PDF",
+    downloadPng: "下载 PNG",
+    exporting: "导出中…",
+    editorResumeSettings: "简历设置",
+
+    /* ---- Form panel ---- */
+    expandAll: "展开全部",
+    collapseAll: "收起全部",
+    resetBtn: "重置",
+    saveBtn: "保存",
+    addSection: "添加模块",
+    resetTitle: "重置所有内容？",
+    resetDesc: "这将清除所有模块和个人信息，此操作无法撤销。",
+    resetConfirm: "重置",
   },
 } as const;
 

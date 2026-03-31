@@ -3,6 +3,8 @@
 import { useState, useCallback } from "react";
 import { ChevronDown, ChevronUp, Plus, Trash2, GraduationCap, FolderOpen, Briefcase, Wrench, ChevronsUpDown, ChevronsDownUp, RotateCcw, Save, Check, Loader2 } from "lucide-react";
 import type { ResumeContent, SectionType, ResumeLanguage } from "@/lib/types/resume";
+import { useUILanguage } from "@/lib/ui-language";
+import { t } from "@/lib/translations";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -53,6 +55,8 @@ interface FormPanelProps {
 }
 
 export function FormPanel({ content, onChange, saveStatus, onSave, language }: FormPanelProps) {
+  const { lang } = useUILanguage();
+  const tr = t[lang];
   const activeSections = content.sections ?? [];
   const availableSections = (Object.keys(SECTION_META) as SectionType[]).filter(
     (s) => !activeSections.includes(s),
@@ -118,7 +122,7 @@ export function FormPanel({ content, onChange, saveStatus, onSave, language }: F
           onClick={toggleAll}
         >
           {allCollapsed ? <ChevronsUpDown className="size-3.5" /> : <ChevronsDownUp className="size-3.5" />}
-          {allCollapsed ? "Expand All" : "Collapse All"}
+          {allCollapsed ? tr.expandAll : tr.collapseAll}
         </Button>
 
         <Button
@@ -128,7 +132,7 @@ export function FormPanel({ content, onChange, saveStatus, onSave, language }: F
           onClick={() => setResetOpen(true)}
         >
           <RotateCcw className="size-3.5" />
-          Reset
+          {tr.resetBtn}
         </Button>
 
         <div className="flex-1" />
@@ -141,7 +145,7 @@ export function FormPanel({ content, onChange, saveStatus, onSave, language }: F
           disabled={saveStatus !== "unsaved"}
         >
           {saveStatus === "saving" ? <Loader2 className="size-3.5 animate-spin" /> : saveStatus === "saved" ? <Check className="size-3.5 text-emerald-500" /> : <Save className="size-3.5" />}
-          {saveStatus === "saving" ? "Saving..." : saveStatus === "saved" ? "Saved" : "Save"}
+          {saveStatus === "saving" ? tr.savingStatus : saveStatus === "saved" ? tr.savedStatus : tr.saveBtn}
         </Button>
       </div>
 
@@ -177,7 +181,7 @@ export function FormPanel({ content, onChange, saveStatus, onSave, language }: F
         <DropdownMenu>
           <DropdownMenuTrigger className="add-section-btn flex h-9 w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-dashed border-border text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground">
             <Plus className="size-4" />
-            Add Section
+            {tr.addSection}
           </DropdownMenuTrigger>
           <DropdownMenuContent align="center" sideOffset={4}>
             {availableSections.map((type) => {
@@ -201,19 +205,19 @@ export function FormPanel({ content, onChange, saveStatus, onSave, language }: F
       <AlertDialog open={resetOpen} onOpenChange={setResetOpen}>
         <AlertDialogContent size="sm">
           <AlertDialogHeader>
-            <AlertDialogTitle>Reset all content?</AlertDialogTitle>
+            <AlertDialogTitle>{tr.resetTitle}</AlertDialogTitle>
             <AlertDialogDescription>
-              This will clear all sections and personal information. This action cannot be undone.
+              {tr.resetDesc}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="btn-hover-border cursor-pointer">Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="btn-hover-border cursor-pointer">{tr.cancel}</AlertDialogCancel>
             <AlertDialogAction
               variant="outline"
               className="btn-hover-destructive cursor-pointer border-destructive/40 text-destructive hover:border-destructive hover:bg-destructive/10 hover:text-destructive"
               onClick={handleReset}
             >
-              Reset
+              {tr.resetConfirm}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
