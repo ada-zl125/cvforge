@@ -256,8 +256,7 @@ export default function Home() {
         </div>
         <h1 className="relative max-w-3xl text-center text-6xl font-bold leading-tight tracking-tight">
           {tr.heroTitle1}
-          <br />
-          {tr.heroTitle2}
+          {tr.heroTitle2 && <><br />{tr.heroTitle2}</>}
         </h1>
         <p className="relative max-w-xl text-center text-lg leading-relaxed text-muted-foreground">
           {tr.heroSubtitle.split("\n").map((line, i) => (
