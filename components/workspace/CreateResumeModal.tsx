@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { ResumeTemplate, ResumeLanguage } from "@/lib/types/resume";
+import { useUILanguage } from "@/lib/ui-language";
+import { t } from "@/lib/translations";
 import {
   Dialog,
   DialogContent,
@@ -40,6 +42,8 @@ interface CreateResumeModalProps {
 
 export function CreateResumeModal({ open, onOpenChange }: CreateResumeModalProps) {
   const router = useRouter();
+  const { lang } = useUILanguage();
+  const tr = t[lang];
   const [title, setTitle] = useState("");
   const [template, setTemplate] = useState<ResumeTemplate>("general");
   const [language, setLanguage] = useState<ResumeLanguage>("en");
@@ -88,9 +92,9 @@ export function CreateResumeModal({ open, onOpenChange }: CreateResumeModalProps
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Create New Resume</DialogTitle>
+          <DialogTitle>{tr.createNewResume}</DialogTitle>
           <DialogDescription>
-            Give your resume a title and pick a template.
+            {tr.createNewResumeDesc}
           </DialogDescription>
         </DialogHeader>
 
@@ -98,14 +102,14 @@ export function CreateResumeModal({ open, onOpenChange }: CreateResumeModalProps
           {/* Title input */}
           <div className="grid gap-1.5">
             <div className="flex items-center justify-between">
-              <Label htmlFor="resume-title">Title</Label>
+              <Label htmlFor="resume-title">{tr.titleLabel}</Label>
               <span className={`text-xs ${tooLong ? "text-destructive" : "text-muted-foreground"}`}>
                 {title.length}/50
               </span>
             </div>
             <Input
               id="resume-title"
-              placeholder="e.g. Software Engineer Resume"
+              placeholder={tr.resumeTitlePlaceholder}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") handleCreate(); }}
@@ -113,16 +117,17 @@ export function CreateResumeModal({ open, onOpenChange }: CreateResumeModalProps
               autoFocus
             />
             {tooLong && (
-              <p className="text-xs text-destructive">Title must be 50 characters or fewer.</p>
+              <p className="text-xs text-destructive">{tr.titleTooLong(50)}</p>
             )}
           </div>
 
           {/* Language picker */}
           <div className="grid gap-2">
-            <Label>Language</Label>
+            <Label>{tr.languageLabel}</Label>
             <div className="flex gap-2">
               {LANGUAGES.map((l) => {
                 const active = language === l.value;
+                const label = l.value === "en" ? tr.langEnglish : tr.langChinese;
                 return (
                   <button
                     key={l.value}
@@ -134,7 +139,7 @@ export function CreateResumeModal({ open, onOpenChange }: CreateResumeModalProps
                         : "border-border text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                     }`}
                   >
-                    {l.label}
+                    {label}
                   </button>
                 );
               })}
@@ -143,22 +148,22 @@ export function CreateResumeModal({ open, onOpenChange }: CreateResumeModalProps
 
           {/* Template picker */}
           <div className="grid gap-2">
-            <Label>Template</Label>
+            <Label>{tr.templateLabel}</Label>
             <div className="flex gap-2">
-              {TEMPLATES.map((t) => {
-                const active = template === t.value;
+              {TEMPLATES.map((tmpl) => {
+                const active = template === tmpl.value;
                 return (
                   <button
-                    key={t.value}
+                    key={tmpl.value}
                     type="button"
-                    onClick={() => setTemplate(t.value)}
+                    onClick={() => setTemplate(tmpl.value)}
                     className={`cursor-pointer rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
                       active
-                        ? `${t.bg} ${t.text} border-current`
+                        ? `${tmpl.bg} ${tmpl.text} border-current`
                         : "border-border text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                     }`}
                   >
-                    {t.label}
+                    {tr.templateGeneral}
                   </button>
                 );
               })}
@@ -168,7 +173,7 @@ export function CreateResumeModal({ open, onOpenChange }: CreateResumeModalProps
 
         <DialogFooter>
           <Button variant="outline" className="btn-hover-border cursor-pointer" onClick={() => onOpenChange(false)}>
-            Cancel
+            {tr.cancel}
           </Button>
           <Button
             variant="outline"
@@ -176,7 +181,7 @@ export function CreateResumeModal({ open, onOpenChange }: CreateResumeModalProps
             disabled={!title.trim() || tooLong || loading}
             className="btn-hover-primary cursor-pointer"
           >
-            {loading ? "Creating..." : "Create"}
+            {loading ? tr.creating : tr.create}
           </Button>
         </DialogFooter>
       </DialogContent>
