@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import type { ResumeRow } from "@/lib/types/resume";
+import { useUILanguage } from "@/lib/ui-language";
+import { t } from "@/lib/translations";
 import { Sidebar } from "./Sidebar";
 import { ResumeCard } from "./ResumeCard";
 import { EmptyState } from "./EmptyState";
@@ -16,6 +18,8 @@ interface WorkspaceContentProps {
 
 export function WorkspaceContent({ resumes, userEmail, displayName, provider }: WorkspaceContentProps) {
   const [createOpen, setCreateOpen] = useState(false);
+  const { lang } = useUILanguage();
+  const tr = t[lang];
 
   return (
     <div className="flex h-screen overflow-hidden bg-muted/30">
@@ -25,9 +29,9 @@ export function WorkspaceContent({ resumes, userEmail, displayName, provider }: 
         <div className="flex min-h-full flex-col px-10 py-9">
           {/* Header */}
           <div className={resumes.length === 0 ? "" : "mb-7"}>
-            <h1 className="text-2xl font-bold tracking-tight">My Resumes</h1>
+            <h1 className="text-2xl font-bold tracking-tight">{tr.myResumes}</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Create and manage your professional resumes
+              {tr.myResumesSubtitle}
             </p>
           </div>
 

@@ -137,12 +137,12 @@ function formatContact(field: ContactField): React.ReactNode {
 
 /* ---- Personal header ---- */
 
-function PersonalHeader({ personal, fontFamily }: { personal: ResumeContent["personal"]; fontFamily: string }) {
+function PersonalHeader({ personal, fontFamily, language }: { personal: ResumeContent["personal"]; fontFamily: string; language: ResumeLanguage }) {
   const contacts = personal.contacts ?? [];
   return (
     <div className="mb-2 text-center">
       <h1 className="font-bold leading-tight" style={{ fontSize: NAME_SIZE, fontFamily }}>
-        {personal.fullName || "Your Name"}
+        {personal.fullName || (language === "zh" ? "姓名" : "Your Name")}
       </h1>
       {contacts.length > 0 && (
         <p className="mt-1" style={{ fontSize: BODY_SIZE }}>
@@ -329,7 +329,7 @@ export function GeneralTemplate({ content, language = "en" }: AcademicTemplatePr
         fontFamily,
       }}
     >
-      <PersonalHeader personal={content.personal} fontFamily={fontFamily} />
+      <PersonalHeader personal={content.personal} fontFamily={fontFamily} language={language} />
 
       {!hasContent && (
         <p className="mt-24 text-center text-sm text-gray-400">

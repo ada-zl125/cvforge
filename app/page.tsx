@@ -1,31 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { PenLine, Eye, Download } from "lucide-react";
+import { PenLine, Eye, Download, MoveRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { LanguageSwitcher } from "@/components/ui/language-switcher";
 import { AuthModal } from "@/components/auth/AuthModal";
+import { useUILanguage } from "@/lib/ui-language";
+import { t } from "@/lib/translations";
 
-const features = [
-  {
-    icon: PenLine,
-    title: "Simple Form Input",
-    description:
-      "Just type your experience, education, and skills. No formatting headaches — our smart form guides you through every section.",
-  },
-  {
-    icon: Eye,
-    title: "Real-time A4 Preview",
-    description:
-      "See your resume update live as you type. What you see is exactly what you get — pixel-perfect A4 layout, every time.",
-  },
-  {
-    icon: Download,
-    title: "Export PDF & Word",
-    description:
-      "One click to download your resume as a polished PDF or editable Word document. Ready to send to any employer.",
-  },
-];
+const FEATURE_ICONS = [PenLine, Eye, Download];
 
 function syncCanvasSize(canvas: HTMLCanvasElement): { w: number; h: number } {
   const dpr = window.devicePixelRatio || 1;
@@ -214,6 +198,9 @@ function FeaturesBackground() {
 }
 
 export default function Home() {
+  const { lang } = useUILanguage();
+  const tr = t[lang];
+
   const [authOpen, setAuthOpen] = useState(false);
   const [authTab, setAuthTab] = useState<"sign-in" | "sign-up">("sign-in");
 
@@ -221,6 +208,12 @@ export default function Home() {
     setAuthTab(tab);
     setAuthOpen(true);
   }
+
+  const features = [
+    { icon: FEATURE_ICONS[0], title: tr.feature1Title, description: tr.feature1Desc },
+    { icon: FEATURE_ICONS[1], title: tr.feature2Title, description: tr.feature2Desc },
+    { icon: FEATURE_ICONS[2], title: tr.feature3Title, description: tr.feature3Desc },
+  ];
 
   return (
     <main className="relative flex min-h-screen flex-col overflow-hidden">
@@ -231,19 +224,20 @@ export default function Home() {
         <span className="text-xl font-bold tracking-tight">
           Easy<span className="text-primary">CV</span>
         </span>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
+          <LanguageSwitcher />
           <Button
             variant="secondary"
             className="cursor-pointer rounded-full px-4 transition-colors duration-200 hover:bg-primary/10 hover:text-primary"
             onClick={() => openAuth("sign-in")}
           >
-            Sign In
+            {tr.signIn}
           </Button>
           <Button
             className="cursor-pointer rounded-full px-4 transition-all duration-200 hover:brightness-110"
             onClick={() => openAuth("sign-up")}
           >
-            Get Started
+            {tr.getStarted}
           </Button>
         </div>
       </nav>
@@ -257,18 +251,17 @@ export default function Home() {
         <div className="group/badge relative flex cursor-default items-center gap-1.5 rounded-full bg-primary/10 px-4 py-1.5 transition-all duration-300 hover:bg-primary/15 hover:shadow-md hover:shadow-primary/10 hover:scale-105">
           <span className="h-2 w-2 rounded-full bg-primary transition-transform duration-300 group-hover/badge:scale-125" />
           <span className="text-sm text-primary/80 transition-colors duration-300 group-hover/badge:text-primary">
-            Now in Beta — Free to use
+            {tr.betaBadge}
           </span>
         </div>
         <h1 className="relative max-w-3xl text-center text-6xl font-bold leading-tight tracking-tight">
-          Your resume,
-          <br />
-          perfectly crafted.
+          {tr.heroTitle1}
+          {tr.heroTitle2 && <><br />{tr.heroTitle2}</>}
         </h1>
         <p className="relative max-w-xl text-center text-lg leading-relaxed text-muted-foreground">
-          Fill in your content. We handle the professional layout.
-          <br />
-          Beautiful resumes in minutes, not hours.
+          {tr.heroSubtitle.split("\n").map((line, i) => (
+            <span key={i}>{line}{i === 0 && <br />}</span>
+          ))}
         </p>
         <div className="relative flex items-center gap-4">
           <Button
@@ -276,14 +269,14 @@ export default function Home() {
             className="group/btn h-12 cursor-pointer rounded-full px-6 text-base transition-all duration-200 hover:brightness-110 hover:shadow-lg hover:shadow-primary/25"
             onClick={() => openAuth("sign-up")}
           >
-            Start Building <span className="ml-1 inline-block transition-transform duration-200 group-hover/btn:translate-x-1">→</span>
+            {tr.startBuilding} <MoveRight className="ml-1 size-4 transition-transform duration-200 group-hover/btn:translate-x-1" />
           </Button>
           <Button
             variant="outline"
             size="lg"
             className="h-12 cursor-pointer rounded-full px-6 text-base transition-all duration-200 hover:border-primary/30 hover:bg-primary/5 hover:text-primary"
           >
-            See Examples
+            {tr.seeExamples}
           </Button>
         </div>
       </section>
@@ -294,12 +287,12 @@ export default function Home() {
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(0,113,227,0.05)_0%,transparent_50%),radial-gradient(ellipse_at_bottom_left,rgba(0,113,227,0.05)_0%,transparent_50%)]" />
         <div className="relative flex flex-col items-center gap-4">
           <h2 className="max-w-lg text-center text-4xl font-bold leading-snug tracking-tight">
-            Everything you need.
+            {tr.featuresTitle1}
             <br />
-            Nothing you don&apos;t.
+            {tr.featuresTitle2}
           </h2>
           <p className="text-lg text-muted-foreground">
-            Three simple steps from blank page to polished resume.
+            {tr.featuresSubtitle}
           </p>
         </div>
         <div className="relative grid w-full max-w-5xl grid-cols-3 gap-6">
@@ -326,7 +319,7 @@ export default function Home() {
       <Separator />
       <footer className="flex h-16 items-center justify-center px-20 shadow-[0_-1px_3px_rgba(0,0,0,0.04)] transition-all duration-500 hover:bg-primary/[0.03] hover:shadow-[0_-2px_8px_rgba(0,0,0,0.06)]">
         <p className="text-sm text-muted-foreground">
-          © 2026 EasyCV. All rights reserved.
+          {tr.footer}
         </p>
       </footer>
     </main>

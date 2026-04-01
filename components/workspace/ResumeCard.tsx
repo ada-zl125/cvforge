@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Trash2, Settings, MoreHorizontal, Copy } from "lucide-react";
+import { useUILanguage } from "@/lib/ui-language";
+import { t, type Translations } from "@/lib/translations";
 import { createClient } from "@/lib/supabase/client";
 import type { ResumeRow, ResumeTemplate, ResumeLanguage } from "@/lib/types/resume";
 import {
@@ -61,17 +63,17 @@ const TITLE_MAX_LENGTH = 50;
 /*  Relative time helper                                               */
 /* ------------------------------------------------------------------ */
 
-function timeAgo(dateStr: string): string {
+function timeAgo(dateStr: string, tr: Translations): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60_000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1) return tr.justNow;
+  if (mins < 60) return tr.timeMinute(mins);
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return tr.timeHour(hours);
   const days = Math.floor(hours / 24);
-  if (days < 30) return `${days}d ago`;
+  if (days < 30) return tr.timeDay(days);
   const months = Math.floor(days / 30);
-  return `${months}mo ago`;
+  return tr.timeMonth(months);
 }
 
 function truncateTitle(title: string): string {
@@ -89,8 +91,10 @@ interface ResumeCardProps {
 
 export function ResumeCard({ resume }: ResumeCardProps) {
   const router = useRouter();
+  const { lang } = useUILanguage();
+  const tr = t[lang];
   const colors = TEMPLATE_COLORS[resume.template] ?? TEMPLATE_COLORS.general;
-  const label = TEMPLATE_LABELS[resume.template] ?? "General";
+  const label = lang === "zh" ? tr.templateGeneral : (TEMPLATE_LABELS[resume.template] ?? "General");
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTitle, setSettingsTitle] = useState(resume.title);
@@ -159,7 +163,6 @@ export function ResumeCard({ resume }: ResumeCardProps) {
   return (
     <>
       {/* Card — matches workspace-page.pen design */}
-      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
       <div
         className="resume-card group cursor-pointer overflow-hidden rounded-[10px] border border-border bg-card transition-all duration-200 ease-out"
         style={{ "--card-accent": colors.hex } as React.CSSProperties}
@@ -189,16 +192,16 @@ export function ResumeCard({ resume }: ResumeCardProps) {
               <DropdownMenuContent align="end" sideOffset={4} onClick={(e) => e.stopPropagation()}>
                 <DropdownMenuItem className="cursor-pointer gap-2" onClick={() => { setSettingsOpen(true); setSettingsTitle(resume.title); setSettingsTemplate(normalizedTemplate); setSettingsLanguage(resume.language ?? "en"); }}>
                   <Settings className="size-4" />
-                  Settings
+                  {tr.settings}
                 </DropdownMenuItem>
                 <DropdownMenuItem className="cursor-pointer gap-2" onClick={() => handleDuplicate()}>
                   <Copy className="size-4" />
-                  Duplicate
+                  {tr.duplicate}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem className="cursor-pointer gap-2 text-destructive focus:text-destructive" onClick={() => setDeleteOpen(true)}>
                   <Trash2 className="size-4" />
-                  Delete
+                  {tr.delete}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -213,7 +216,7 @@ export function ResumeCard({ resume }: ResumeCardProps) {
               {truncateTitle(resume.title)}
             </p>
             <p className="text-xs text-muted-foreground">
-              Edited {timeAgo(resume.updated_at)}
+              {tr.edited} {timeAgo(resume.updated_at, tr)}
             </p>
           </div>
 
@@ -224,7 +227,7 @@ export function ResumeCard({ resume }: ResumeCardProps) {
             onClick={(e) => { e.stopPropagation(); router.push(`/editor/${resume.id}`); }}
           >
             <Pencil className="size-3.5" />
-            Edit
+            {tr.edit}
           </button>
         </div>
       </div>
@@ -233,14 +236,14 @@ export function ResumeCard({ resume }: ResumeCardProps) {
       <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Resume Settings</DialogTitle>
-            <DialogDescription>Update the title and template for your resume.</DialogDescription>
+            <DialogTitle>{tr.resumeSettings}</DialogTitle>
+            <DialogDescription>{tr.resumeSettingsDesc}</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-2">
             {/* Title input */}
             <div className="grid gap-1.5">
               <div className="flex items-center justify-between">
-                <Label htmlFor={`settings-title-${resume.id}`}>Title</Label>
+                <Label htmlFor={`settings-title-${resume.id}`}>{tr.titleLabel}</Label>
                 <span className={`text-xs ${settingsTitle.length > TITLE_MAX_LENGTH ? "text-destructive" : "text-muted-foreground"}`}>
                   {settingsTitle.length}/{TITLE_MAX_LENGTH}
                 </span>
@@ -254,16 +257,17 @@ export function ResumeCard({ resume }: ResumeCardProps) {
                 autoFocus
               />
               {settingsTitle.length > TITLE_MAX_LENGTH && (
-                <p className="text-xs text-destructive">Title must be {TITLE_MAX_LENGTH} characters or fewer.</p>
+                <p className="text-xs text-destructive">{tr.titleTooLong(TITLE_MAX_LENGTH)}</p>
               )}
             </div>
 
             {/* Language picker */}
             <div className="grid gap-2">
-              <Label>Language</Label>
+              <Label>{tr.languageLabel}</Label>
               <div className="flex gap-2">
                 {SETTINGS_LANGUAGES.map((l) => {
                   const active = settingsLanguage === l.value;
+                  const langLabel = l.value === "en" ? tr.langEnglish : tr.langChinese;
                   return (
                     <button
                       key={l.value}
@@ -275,7 +279,7 @@ export function ResumeCard({ resume }: ResumeCardProps) {
                           : "border-border text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                       }`}
                     >
-                      {l.label}
+                      {langLabel}
                     </button>
                   );
                 })}
@@ -284,22 +288,22 @@ export function ResumeCard({ resume }: ResumeCardProps) {
 
             {/* Template picker */}
             <div className="grid gap-2">
-              <Label>Template</Label>
+              <Label>{tr.templateLabel}</Label>
               <div className="flex gap-2">
-                {SETTINGS_TEMPLATES.map((t) => {
-                  const active = settingsTemplate === t.value;
+                {SETTINGS_TEMPLATES.map((tmpl) => {
+                  const active = settingsTemplate === tmpl.value;
                   return (
                     <button
-                      key={t.value}
+                      key={tmpl.value}
                       type="button"
-                      onClick={() => setSettingsTemplate(t.value)}
+                      onClick={() => setSettingsTemplate(tmpl.value)}
                       className={`cursor-pointer rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
                         active
-                          ? `${t.bg} ${t.text} border-current`
+                          ? `${tmpl.bg} ${tmpl.text} border-current`
                           : "border-border text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                       }`}
                     >
-                      {t.label}
+                      {tr.templateGeneral}
                     </button>
                   );
                 })}
@@ -308,7 +312,7 @@ export function ResumeCard({ resume }: ResumeCardProps) {
           </div>
           <DialogFooter>
             <Button variant="outline" className="btn-hover-border cursor-pointer" onClick={() => setSettingsOpen(false)}>
-              Cancel
+              {tr.cancel}
             </Button>
             <Button
               variant="outline"
@@ -316,7 +320,7 @@ export function ResumeCard({ resume }: ResumeCardProps) {
               disabled={!settingsTitle.trim() || settingsTitle.length > TITLE_MAX_LENGTH || settingsLoading}
               className="btn-hover-primary cursor-pointer"
             >
-              {settingsLoading ? "Saving..." : "Save"}
+              {settingsLoading ? tr.saving : tr.save}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -326,20 +330,20 @@ export function ResumeCard({ resume }: ResumeCardProps) {
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent size="sm">
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete resume?</AlertDialogTitle>
+            <AlertDialogTitle>{tr.deleteResume}</AlertDialogTitle>
             <AlertDialogDescription>
-              &ldquo;{resume.title}&rdquo; will be permanently deleted. This action cannot be undone.
+              {tr.deleteDesc(resume.title)}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="btn-hover-border cursor-pointer">Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="btn-hover-border cursor-pointer">{tr.cancel}</AlertDialogCancel>
             <AlertDialogAction
               variant="outline"
               className="btn-hover-destructive cursor-pointer border-destructive/40 text-destructive hover:border-destructive hover:bg-destructive/10 hover:text-destructive"
               onClick={handleDelete}
               disabled={deleteLoading}
             >
-              {deleteLoading ? "Deleting..." : "Delete"}
+              {deleteLoading ? tr.deleting : tr.delete}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

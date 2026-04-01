@@ -6,6 +6,8 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createClient } from "@/lib/supabase/client";
+import { useUILanguage } from "@/lib/ui-language";
+import { t } from "@/lib/translations";
 import {
   Dialog,
   DialogContent,
@@ -21,25 +23,27 @@ import { Separator } from "@/components/ui/separator";
 /*  Schemas                                                             */
 /* ------------------------------------------------------------------ */
 
-const displayNameSchema = z.object({
-  displayName: z.string().trim().min(1, "Display name is required").max(50, "Max 50 characters"),
-});
+function makeSchemas(tr: typeof t.en | typeof t.zh) {
+  const displayNameSchema = z.object({
+    displayName: z.string().trim().min(1, tr.displayNameRequired).max(50, tr.displayNameTooLong),
+  });
+  const emailSchema = z.object({
+    email: z.email(tr.emailRequired),
+  });
+  const passwordSchema = z.object({
+    newPassword: z.string().min(6, tr.passwordHint),
+    confirmPassword: z.string().min(1, tr.confirmPasswordRequired),
+  }).refine((d) => d.newPassword === d.confirmPassword, {
+    message: tr.passwordsNoMatch,
+    path: ["confirmPassword"],
+  });
+  return { displayNameSchema, emailSchema, passwordSchema };
+}
 
-const emailSchema = z.object({
-  email: z.string().email("Please enter a valid email"),
-});
-
-const passwordSchema = z.object({
-  newPassword: z.string().min(6, "Password must be at least 6 characters"),
-  confirmPassword: z.string().min(1, "Please confirm your password"),
-}).refine((d) => d.newPassword === d.confirmPassword, {
-  message: "Passwords do not match",
-  path: ["confirmPassword"],
-});
-
-type DisplayNameValues = z.infer<typeof displayNameSchema>;
-type EmailValues = z.infer<typeof emailSchema>;
-type PasswordValues = z.infer<typeof passwordSchema>;
+type _SchemasType = ReturnType<typeof makeSchemas>;
+type DisplayNameValues = z.infer<_SchemasType["displayNameSchema"]>;
+type EmailValues = z.infer<_SchemasType["emailSchema"]>;
+type PasswordValues = z.infer<_SchemasType["passwordSchema"]>;
 
 /* ------------------------------------------------------------------ */
 /*  Props                                                               */
@@ -65,6 +69,9 @@ export function AccountSettingsDialog({
   provider,
 }: AccountSettingsDialogProps) {
   const router = useRouter();
+  const { lang } = useUILanguage();
+  const tr = t[lang];
+  const { displayNameSchema, emailSchema, passwordSchema } = makeSchemas(tr);
   const isGoogle = provider === "google";
 
   // Per-section state
@@ -97,6 +104,7 @@ export function AccountSettingsDialog({
     defaultValues: { newPassword: "", confirmPassword: "" },
   });
 
+
   /* ---- Handlers ---- */
 
   async function handleNameSave(values: DisplayNameValues) {
@@ -127,7 +135,7 @@ export function AccountSettingsDialog({
         { emailRedirectTo: `${window.location.origin}/auth/callback` },
       );
       if (error) { setEmailError(error.message); return; }
-      setEmailInfo(`A confirmation link has been sent to ${values.email}. Click it to complete the change.`);
+      setEmailInfo(tr.emailConfirmSent(values.email));
       emailForm.reset();
     } finally {
       setEmailLoading(false);
@@ -157,14 +165,14 @@ export function AccountSettingsDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Account Settings</DialogTitle>
+          <DialogTitle>{tr.accountSettingsTitle}</DialogTitle>
         </DialogHeader>
 
         <div className="flex flex-col gap-6 py-1">
 
           {/* Provider badge */}
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">Signed in with</span>
+            <span className="text-xs text-muted-foreground">{tr.signedInWith}</span>
             {isGoogle ? (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700">
                 <svg className="size-3" viewBox="0 0 24 24">
@@ -188,17 +196,17 @@ export function AccountSettingsDialog({
           {/* ---- Display name ---- */}
           <form onSubmit={nameForm.handleSubmit(handleNameSave)} className="flex flex-col gap-3">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="display-name">Display name</Label>
+              <Label htmlFor="display-name">{tr.displayNameLabel}</Label>
               <Input
                 id="display-name"
-                placeholder="Your name"
+                placeholder={tr.displayNamePlaceholder}
                 {...nameForm.register("displayName")}
               />
               {nameForm.formState.errors.displayName && (
                 <p className="text-xs text-destructive">{nameForm.formState.errors.displayName.message}</p>
               )}
               {nameError && <p className="text-xs text-destructive">{nameError}</p>}
-              {nameSuccess && <p className="text-xs text-emerald-600">Display name updated.</p>}
+              {nameSuccess && <p className="text-xs text-emerald-600">{tr.displayNameUpdated}</p>}
             </div>
             <Button
               type="submit"
@@ -207,7 +215,7 @@ export function AccountSettingsDialog({
               className="btn-hover-primary cursor-pointer self-start"
               disabled={nameLoading}
             >
-              {nameLoading ? "Saving..." : "Save name"}
+              {nameLoading ? tr.saving : tr.saveName}
             </Button>
           </form>
 
@@ -216,16 +224,16 @@ export function AccountSettingsDialog({
           {/* ---- Email ---- */}
           {isGoogle ? (
             <div className="flex flex-col gap-1">
-              <p className="text-sm font-medium">Email</p>
+              <p className="text-sm font-medium">{tr.emailLabel}</p>
               <p className="text-xs text-muted-foreground">
-                Your email is managed by Google and cannot be changed here.
+                {tr.emailManagedByGoogle}
               </p>
             </div>
           ) : (
             <form onSubmit={emailForm.handleSubmit(handleEmailChange)} className="flex flex-col gap-3">
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="new-email">Change email</Label>
-                <p className="text-xs text-muted-foreground">Current: {email}</p>
+                <Label htmlFor="new-email">{tr.changeEmailLabel}</Label>
+                <p className="text-xs text-muted-foreground">{tr.currentEmail(email)}</p>
                 <Input
                   id="new-email"
                   type="email"
@@ -246,7 +254,7 @@ export function AccountSettingsDialog({
                   className="btn-hover-primary cursor-pointer self-start"
                   disabled={emailLoading}
                 >
-                  {emailLoading ? "Sending..." : "Update email"}
+                  {emailLoading ? tr.sending : tr.updateEmail}
                 </Button>
               )}
             </form>
@@ -258,13 +266,13 @@ export function AccountSettingsDialog({
               <Separator />
               <form onSubmit={pwForm.handleSubmit(handlePasswordChange)} className="flex flex-col gap-3">
                 <div className="flex flex-col gap-3">
-                  <p className="text-sm font-medium">Change password</p>
+                  <p className="text-sm font-medium">{tr.changePasswordLabel}</p>
                   <div className="flex flex-col gap-1.5">
-                    <Label htmlFor="new-password">New password</Label>
+                    <Label htmlFor="new-password">{tr.newPasswordLabel}</Label>
                     <Input
                       id="new-password"
                       type="password"
-                      placeholder="At least 6 characters"
+                      placeholder={tr.atLeast6Chars}
                       {...pwForm.register("newPassword")}
                     />
                     {pwForm.formState.errors.newPassword && (
@@ -272,11 +280,11 @@ export function AccountSettingsDialog({
                     )}
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <Label htmlFor="confirm-password">Confirm password</Label>
+                    <Label htmlFor="confirm-password">{tr.confirmPasswordLabel2}</Label>
                     <Input
                       id="confirm-password"
                       type="password"
-                      placeholder="Re-enter new password"
+                      placeholder={tr.reEnterNewPassword}
                       {...pwForm.register("confirmPassword")}
                     />
                     {pwForm.formState.errors.confirmPassword && (
@@ -284,7 +292,7 @@ export function AccountSettingsDialog({
                     )}
                   </div>
                   {pwError && <p className="text-xs text-destructive">{pwError}</p>}
-                  {pwSuccess && <p className="text-xs text-emerald-600">Password updated successfully.</p>}
+                  {pwSuccess && <p className="text-xs text-emerald-600">{tr.passwordUpdated}</p>}
                 </div>
                 <Button
                   type="submit"
@@ -293,7 +301,7 @@ export function AccountSettingsDialog({
                   className="btn-hover-primary cursor-pointer self-start"
                   disabled={pwLoading}
                 >
-                  {pwLoading ? "Updating..." : "Update password"}
+                  {pwLoading ? tr.updating : tr.updatePassword}
                 </Button>
               </form>
             </>
