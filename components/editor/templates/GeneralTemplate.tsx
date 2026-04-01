@@ -163,9 +163,16 @@ function PersonalHeader({ personal, fontFamily, language }: { personal: ResumeCo
             ))}
           </div>
         )}
-        {websites.map((field) => (
-          <div key={field.id}>{formatContact(field)}</div>
-        ))}
+        {websites.length > 0 && (
+          <div>
+            {websites.map((field, i) => (
+              <span key={field.id}>
+                {i > 0 && " | "}
+                {formatContact(field)}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
     );
 
@@ -179,7 +186,7 @@ function PersonalHeader({ personal, fontFamily, language }: { personal: ResumeCo
         <img
           src={personal.photo}
           alt=""
-          style={{ width: "85px", height: "106px", objectFit: "cover", borderRadius: "2px", flexShrink: 0, marginTop: "-4px" }}
+          style={{ width: "85px", height: "106px", objectFit: "cover", borderRadius: "2px", flexShrink: 0, marginTop: "-20px" }}
         />
       </div>
     );

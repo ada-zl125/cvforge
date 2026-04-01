@@ -114,7 +114,12 @@ export function PhotoCropDialog({ src, onApply, onClose, language }: PhotoCropDi
           <Button variant="outline" onClick={onClose}>
             {zh ? "取消" : "Cancel"}
           </Button>
-          <Button onClick={handleApply} disabled={!completedCrop}>
+          <Button
+            variant="outline"
+            className="btn-hover-primary cursor-pointer"
+            onClick={handleApply}
+            disabled={!completedCrop}
+          >
             {zh ? "应用" : "Apply"}
           </Button>
         </DialogFooter>
