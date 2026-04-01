@@ -110,13 +110,17 @@ function sectionTitle(type: SectionType, lang: ResumeLanguage, fontFamily: strin
 
 function renderPersonalHeader(personal: ResumeContent["personal"], fontFamily: string, language: ResumeLanguage): string {
   const contacts = personal.contacts ?? [];
-  let html = `<div style="margin-bottom:8px;text-align:center">`;
-  html += `<h1 style="font-size:${NAME_SIZE};font-family:${fontFamily};font-weight:bold;line-height:1.1;margin:0">${esc(personal.fullName || (language === "zh" ? "姓名" : "Your Name"))}</h1>`;
-  if (contacts.length > 0) {
-    html += `<p style="font-size:${BODY_SIZE};margin:4px 0 0 0">${contacts.map(formatContact).join(" | ")}</p>`;
+  const hasPhoto = !!personal.photo;
+  const nameHtml = `<h1 style="font-size:${NAME_SIZE};font-family:${fontFamily};font-weight:bold;line-height:1.1;margin:0">${esc(personal.fullName || (language === "zh" ? "姓名" : "Your Name"))}</h1>`;
+  const contactsHtml = contacts.length > 0
+    ? `<p style="font-size:${BODY_SIZE};margin:4px 0 0 0">${contacts.map(formatContact).join(" | ")}</p>`
+    : "";
+
+  if (hasPhoto) {
+    return `<div style="margin-bottom:8px;display:flex;justify-content:space-between;align-items:flex-start;gap:16px"><div>${nameHtml}${contactsHtml}</div><img src="${personal.photo}" alt="" style="width:85px;height:106px;object-fit:cover;border-radius:2px;flex-shrink:0" /></div>`;
   }
-  html += `</div>`;
-  return html;
+
+  return `<div style="margin-bottom:8px;text-align:center">${nameHtml}${contactsHtml}</div>`;
 }
 
 function renderEducation(items: EducationItem[], lang: ResumeLanguage, fontFamily: string): string {

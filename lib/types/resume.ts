@@ -20,6 +20,8 @@ export interface ContactField {
 export interface PersonalInfo {
   fullName: string;
   contacts: ContactField[];
+  /** Base64 JPEG data URL of the headshot photo (optional) */
+  photo?: string;
 }
 
 /* ---- Section ordering ---- */

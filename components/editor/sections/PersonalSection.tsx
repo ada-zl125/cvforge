@@ -11,6 +11,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
+import { PhotoUpload } from "@/components/editor/PhotoUpload";
 
 const CONTACT_META: Record<ContactFieldType, { icon: typeof Mail; label: string; labelZh: string; unique: boolean }> = {
   email:    { icon: Mail,   label: "Email",    labelZh: "邮箱", unique: true },
@@ -88,6 +89,13 @@ export function PersonalSection({ data: rawData, onChange, collapsed, onToggleCo
       {/* Collapsible content */}
       {!collapsed && (
         <div className="border-t border-border px-4 pb-4 pt-3">
+          {/* Photo upload */}
+          <PhotoUpload
+            photo={data.photo}
+            onChange={(photo) => onChange({ ...data, photo })}
+            language={language}
+          />
+
           {/* Full Name — always present, not removable */}
           <div className="mb-4 flex flex-col gap-1.5">
             <Label htmlFor="fullName">{zh ? "姓名" : "Full Name"}</Label>
