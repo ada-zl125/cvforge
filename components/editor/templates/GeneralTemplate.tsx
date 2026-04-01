@@ -139,21 +139,46 @@ function formatContact(field: ContactField): React.ReactNode {
 
 function PersonalHeader({ personal, fontFamily, language }: { personal: ResumeContent["personal"]; fontFamily: string; language: ResumeLanguage }) {
   const contacts = personal.contacts ?? [];
+  const hasPhoto = !!personal.photo;
+
+  const nameEl = (
+    <h1 className="font-bold leading-tight" style={{ fontSize: NAME_SIZE, fontFamily }}>
+      {personal.fullName || (language === "zh" ? "姓名" : "Your Name")}
+    </h1>
+  );
+
+  const contactsEl = contacts.length > 0 && (
+    <p className="mt-1" style={{ fontSize: BODY_SIZE }}>
+      {contacts.map((field, i) => (
+        <span key={field.id}>
+          {i > 0 && " | "}
+          {formatContact(field)}
+        </span>
+      ))}
+    </p>
+  );
+
+  if (hasPhoto) {
+    return (
+      <div className="mb-2 flex items-start justify-between gap-4">
+        <div>
+          {nameEl}
+          {contactsEl}
+        </div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={personal.photo}
+          alt=""
+          style={{ width: "85px", height: "106px", objectFit: "cover", borderRadius: "2px", flexShrink: 0 }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="mb-2 text-center">
-      <h1 className="font-bold leading-tight" style={{ fontSize: NAME_SIZE, fontFamily }}>
-        {personal.fullName || (language === "zh" ? "姓名" : "Your Name")}
-      </h1>
-      {contacts.length > 0 && (
-        <p className="mt-1" style={{ fontSize: BODY_SIZE }}>
-          {contacts.map((field, i) => (
-            <span key={field.id}>
-              {i > 0 && " | "}
-              {formatContact(field)}
-            </span>
-          ))}
-        </p>
-      )}
+      {nameEl}
+      {contactsEl}
     </div>
   );
 }
