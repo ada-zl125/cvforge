@@ -125,12 +125,12 @@ function renderPersonalHeader(personal: ResumeContent["personal"], fontFamily: s
       if (mainContacts.length > 0) {
         photoContactsHtml += `<div style="font-size:${BODY_SIZE}">${mainContacts.map(formatContact).join(" | ")}</div>`;
       }
-      for (const f of websites) {
-        photoContactsHtml += `<div style="font-size:${BODY_SIZE}">${formatContact(f)}</div>`;
+      if (websites.length > 0) {
+        photoContactsHtml += `<div style="font-size:${BODY_SIZE}">${websites.map(formatContact).join(" | ")}</div>`;
       }
       photoContactsHtml += `</div>`;
     }
-    return `<div style="margin-bottom:4px;display:flex;justify-content:space-between;align-items:flex-start;gap:16px"><div>${nameHtml}${photoContactsHtml}</div><img src="${personal.photo}" alt="" style="width:85px;height:106px;object-fit:cover;border-radius:2px;flex-shrink:0;margin-top:-4px" /></div>`;
+    return `<div style="margin-bottom:4px;display:flex;justify-content:space-between;align-items:flex-start;gap:16px"><div>${nameHtml}${photoContactsHtml}</div><img src="${personal.photo}" alt="" style="width:85px;height:106px;object-fit:cover;border-radius:2px;flex-shrink:0;margin-top:-20px" /></div>`;
   }
 
   return `<div style="margin-bottom:8px;text-align:center">${nameHtml}${contactsHtml}</div>`;

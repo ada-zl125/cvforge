@@ -33,6 +33,8 @@ export function PersonalSection({ data: rawData, onChange, collapsed, onToggleCo
   const data: PersonalInfo = { ...rawData, contacts: rawData.contacts ?? [] };
   const photoFileRef = useRef<HTMLInputElement>(null);
   const [photoCropSrc, setPhotoCropSrc] = useState<string | null>(null);
+  const [photoFieldAdded, setPhotoFieldAdded] = useState(!!rawData.photo);
+  const [photoFileName, setPhotoFileName] = useState<string>("");
   const zh = language === "zh";
 
   /* ---- name ---- */
@@ -78,6 +80,7 @@ export function PersonalSection({ data: rawData, onChange, collapsed, onToggleCo
   function onPhotoFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    setPhotoFileName(file.name);
     const reader = new FileReader();
     reader.onload = () => setPhotoCropSrc(reader.result as string);
     reader.readAsDataURL(file);
@@ -86,6 +89,12 @@ export function PersonalSection({ data: rawData, onChange, collapsed, onToggleCo
 
   function triggerPhotoUpload() {
     photoFileRef.current?.click();
+  }
+
+  function removePhotoField() {
+    onChange({ ...data, photo: undefined });
+    setPhotoFieldAdded(false);
+    setPhotoFileName("");
   }
 
   /* ---- addable types ---- */
@@ -159,32 +168,45 @@ export function PersonalSection({ data: rawData, onChange, collapsed, onToggleCo
               </div>
             )}
 
-            {/* Photo row (when uploaded) */}
-            {data.photo && (
-              <div className="mb-3 flex items-center gap-2">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={data.photo}
-                  alt=""
-                  className="h-[50px] w-[40px] shrink-0 rounded object-cover ring-1 ring-border"
-                />
-                <span className="flex-1 text-xs text-muted-foreground">
-                  {zh ? "证件照" : "Photo"}
-                </span>
+            {/* Photo field row */}
+            {photoFieldAdded && (
+              <div className="mb-3 flex items-end gap-2">
+                <div className="flex flex-1 flex-col gap-1">
+                  <Label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Camera className="size-3" />
+                    {zh ? "照片" : "Photo"}
+                  </Label>
+                  {data.photo ? (
+                    /* After upload: show filename + thumbnail */
+                    <div
+                      className="flex h-9 cursor-pointer items-center gap-2 rounded-md border border-input px-3 hover:bg-muted transition-colors"
+                      onClick={triggerPhotoUpload}
+                      title={photoFileName}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={data.photo} alt="" className="h-5 w-4 shrink-0 rounded-sm object-cover" />
+                      <span className="flex-1 truncate text-xs text-foreground">
+                        {photoFileName || (zh ? "已上传" : "Uploaded")}
+                      </span>
+                    </div>
+                  ) : (
+                    /* Before upload: upload button */
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-9 w-full cursor-pointer justify-start text-xs font-normal text-muted-foreground"
+                      onClick={triggerPhotoUpload}
+                    >
+                      {zh ? "上传照片" : "Upload Photo"}
+                    </Button>
+                  )}
+                </div>
                 <Button
                   variant="ghost"
                   size="icon-xs"
-                  className="cursor-pointer text-muted-foreground hover:text-foreground"
-                  onClick={triggerPhotoUpload}
-                  title={zh ? "更换照片" : "Change photo"}
-                >
-                  <Camera className="size-3" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  className="cursor-pointer text-muted-foreground hover:text-destructive"
-                  onClick={() => onChange({ ...data, photo: undefined })}
+                  className="mb-0.5 cursor-pointer text-muted-foreground hover:text-destructive"
+                  onClick={removePhotoField}
                 >
                   <Trash2 className="size-3" />
                 </Button>
@@ -211,11 +233,11 @@ export function PersonalSection({ data: rawData, onChange, collapsed, onToggleCo
                     </DropdownMenuItem>
                   );
                 })}
-                {/* Photo option — only when no photo yet */}
-                {!data.photo && (
+                {/* Photo option — only when field not yet added */}
+                {!photoFieldAdded && (
                   <DropdownMenuItem
                     className="cursor-pointer gap-2"
-                    onClick={triggerPhotoUpload}
+                    onClick={() => setPhotoFieldAdded(true)}
                   >
                     <Camera className="size-4" />
                     {zh ? "照片" : "Photo"}
