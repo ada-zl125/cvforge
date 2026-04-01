@@ -186,7 +186,7 @@ function PersonalHeader({ personal, fontFamily, language }: { personal: ResumeCo
         <img
           src={personal.photo}
           alt=""
-          style={{ width: "85px", height: "106px", objectFit: "cover", borderRadius: "2px", flexShrink: 0, marginTop: "-20px" }}
+          style={{ width: "85px", height: "106px", objectFit: "cover", borderRadius: "2px", flexShrink: 0, marginTop: "-15px" }}
         />
       </div>
     );
