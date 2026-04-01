@@ -163,7 +163,6 @@ export function ResumeCard({ resume }: ResumeCardProps) {
   return (
     <>
       {/* Card — matches workspace-page.pen design */}
-      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
       <div
         className="resume-card group cursor-pointer overflow-hidden rounded-[10px] border border-border bg-card transition-all duration-200 ease-out"
         style={{ "--card-accent": colors.hex } as React.CSSProperties}

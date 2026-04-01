@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check, Loader2, FileDown, FileText, Image, Settings } from "lucide-react";
+import { ArrowLeft, Check, Loader2, FileDown, FileText, Image as ImageIcon, Settings } from "lucide-react";
 import type { ResumeTemplate, ResumeLanguage, ResumeContent } from "@/lib/types/resume";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -165,7 +165,7 @@ export function Toolbar({ title, template, language, content, saveStatus, onSett
               {exportingFormat === "pdf" ? tr.exporting : tr.downloadPdf}
             </DropdownMenuItem>
             <DropdownMenuItem className="cursor-pointer gap-2 whitespace-nowrap" onClick={() => handleExport("png")} disabled={exportingFormat !== null}>
-              {exportingFormat === "png" ? <Loader2 className="size-4 animate-spin" /> : <Image className="size-4" />}
+              {exportingFormat === "png" ? <Loader2 className="size-4 animate-spin" /> : <ImageIcon className="size-4" aria-hidden="true" />}
               {exportingFormat === "png" ? tr.exporting : tr.downloadPng}
             </DropdownMenuItem>
           </DropdownMenuContent>
