@@ -2,11 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check, Loader2, FileDown, FileText, Image, Settings } from "lucide-react";
+import { ArrowLeft, Check, Loader2, FileDown, FileText, Image as ImageIcon, Settings } from "lucide-react";
 import type { ResumeTemplate, ResumeLanguage, ResumeContent } from "@/lib/types/resume";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { LanguageSwitcher } from "@/components/ui/language-switcher";
+import { useUILanguage } from "@/lib/ui-language";
+import { t } from "@/lib/translations";
 import {
   Dialog,
   DialogContent,
@@ -45,6 +48,8 @@ interface ToolbarProps {
 
 export function Toolbar({ title, template, language, content, saveStatus, onSettingsChange }: ToolbarProps) {
   const router = useRouter();
+  const { lang } = useUILanguage();
+  const tr = t[lang];
   const [exportingFormat, setExportingFormat] = useState<"pdf" | "png" | null>(null);
 
   /* ---- Settings dialog state ---- */
@@ -104,7 +109,7 @@ export function Toolbar({ title, template, language, content, saveStatus, onSett
           size="icon-sm"
           className="cursor-pointer"
           onClick={() => router.push("/workspace")}
-          aria-label="Back to workspace"
+          aria-label={tr.backToWorkspace}
         >
           <ArrowLeft className="size-4" />
         </Button>
@@ -128,37 +133,40 @@ export function Toolbar({ title, template, language, content, saveStatus, onSett
           {saveStatus === "saved" && (
             <>
               <Check className="size-3.5 text-emerald-500" />
-              <span>Saved</span>
+              <span>{tr.savedStatus}</span>
             </>
           )}
           {saveStatus === "saving" && (
             <>
               <Loader2 className="size-3.5 animate-spin" />
-              <span>Saving...</span>
+              <span>{tr.savingStatus}</span>
             </>
           )}
           {saveStatus === "unsaved" && (
-            <span className="text-amber-500">Unsaved changes</span>
+            <span className="text-amber-500">{tr.unsavedStatus}</span>
           )}
         </div>
 
         {/* Spacer */}
         <div className="flex-1" />
 
+        {/* Language switcher */}
+        <LanguageSwitcher />
+
         {/* Export dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger className="btn-hover-border inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 text-sm font-medium hover:bg-muted">
             <FileDown className="size-4" />
-            Export
+            {tr.exportLabel}
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" sideOffset={4} className="min-w-[160px]">
             <DropdownMenuItem className="cursor-pointer gap-2 whitespace-nowrap" onClick={() => handleExport("pdf")} disabled={exportingFormat !== null}>
               {exportingFormat === "pdf" ? <Loader2 className="size-4 animate-spin" /> : <FileText className="size-4" />}
-              {exportingFormat === "pdf" ? "Exporting..." : "Download PDF"}
+              {exportingFormat === "pdf" ? tr.exporting : tr.downloadPdf}
             </DropdownMenuItem>
             <DropdownMenuItem className="cursor-pointer gap-2 whitespace-nowrap" onClick={() => handleExport("png")} disabled={exportingFormat !== null}>
-              {exportingFormat === "png" ? <Loader2 className="size-4 animate-spin" /> : <Image className="size-4" />}
-              {exportingFormat === "png" ? "Exporting..." : "Download PNG"}
+              {exportingFormat === "png" ? <Loader2 className="size-4 animate-spin" /> : <ImageIcon className="size-4" aria-hidden="true" />}
+              {exportingFormat === "png" ? tr.exporting : tr.downloadPng}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -168,14 +176,14 @@ export function Toolbar({ title, template, language, content, saveStatus, onSett
       <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Resume Settings</DialogTitle>
+            <DialogTitle>{tr.editorResumeSettings}</DialogTitle>
           </DialogHeader>
 
           <div className="grid gap-4 py-2">
             {/* Title */}
             <div className="grid gap-1.5">
               <div className="flex items-center justify-between">
-                <Label htmlFor="settings-title">Title</Label>
+                <Label htmlFor="settings-title">{tr.titleLabel}</Label>
                 <span className={`text-xs ${titleTooLong ? "text-destructive" : "text-muted-foreground"}`}>
                   {draftTitle.length}/{TITLE_MAX}
                 </span>
@@ -189,13 +197,13 @@ export function Toolbar({ title, template, language, content, saveStatus, onSett
                 autoFocus
               />
               {titleTooLong && (
-                <p className="text-xs text-destructive">Title must be {TITLE_MAX} characters or fewer.</p>
+                <p className="text-xs text-destructive">{tr.titleTooLong(TITLE_MAX)}</p>
               )}
             </div>
 
             {/* Language picker */}
             <div className="grid gap-2">
-              <Label>Language</Label>
+              <Label>{tr.languageLabel}</Label>
               <div className="flex gap-2">
                 {LANGUAGE_OPTIONS.map((l) => (
                   <button
@@ -208,7 +216,7 @@ export function Toolbar({ title, template, language, content, saveStatus, onSett
                         : "border-border text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                     }`}
                   >
-                    {l.label}
+                    {l.value === "en" ? tr.langEnglish : tr.langChinese}
                   </button>
                 ))}
               </div>
@@ -216,20 +224,20 @@ export function Toolbar({ title, template, language, content, saveStatus, onSett
 
             {/* Template picker */}
             <div className="grid gap-2">
-              <Label>Template</Label>
+              <Label>{tr.templateLabel}</Label>
               <div className="flex gap-2">
-                {TEMPLATE_OPTIONS.map((t) => (
+                {TEMPLATE_OPTIONS.map((tmpl) => (
                   <button
-                    key={t.value}
+                    key={tmpl.value}
                     type="button"
-                    onClick={() => setDraftTemplate(t.value)}
+                    onClick={() => setDraftTemplate(tmpl.value)}
                     className={`cursor-pointer rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
-                      draftTemplate === t.value
-                        ? `${t.bg} ${t.text} border-current`
+                      draftTemplate === tmpl.value
+                        ? `${tmpl.bg} ${tmpl.text} border-current`
                         : "border-border text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                     }`}
                   >
-                    {t.label}
+                    {tr.templateGeneral}
                   </button>
                 ))}
               </div>
@@ -238,10 +246,10 @@ export function Toolbar({ title, template, language, content, saveStatus, onSett
 
           <DialogFooter>
             <Button variant="outline" className="btn-hover-border cursor-pointer" onClick={() => setSettingsOpen(false)}>
-              Cancel
+              {tr.cancel}
             </Button>
             <Button variant="outline" className="btn-hover-primary cursor-pointer" onClick={handleSettingsSave} disabled={!canSave}>
-              Save
+              {tr.save}
             </Button>
           </DialogFooter>
         </DialogContent>

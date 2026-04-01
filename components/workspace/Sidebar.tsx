@@ -6,6 +6,9 @@ import { Plus, LogOut, Settings } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { LanguageSwitcher } from "@/components/ui/language-switcher";
+import { useUILanguage } from "@/lib/ui-language";
+import { t } from "@/lib/translations";
 import { AccountSettingsDialog } from "./AccountSettingsDialog";
 
 interface SidebarProps {
@@ -18,6 +21,8 @@ interface SidebarProps {
 export function Sidebar({ userEmail, displayName, provider, onNewResume }: SidebarProps) {
   const router = useRouter();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const { lang } = useUILanguage();
+  const tr = t[lang];
 
   const label = displayName || userEmail.split("@")[0];
   const initials = label.slice(0, 2).toUpperCase();
@@ -47,12 +52,17 @@ export function Sidebar({ userEmail, displayName, provider, onNewResume }: Sideb
             onClick={onNewResume}
           >
             <Plus className="size-4" />
-            New Resume
+            {tr.newResume}
           </Button>
         </div>
 
         {/* Spacer */}
         <div className="flex-1" />
+
+        {/* Language switcher */}
+        <div className="px-5 pb-2">
+          <LanguageSwitcher />
+        </div>
 
         {/* User section — click to open account settings */}
         <div className="sidebar-inner-border flex items-center gap-3 border-t px-4 py-4">
@@ -61,7 +71,7 @@ export function Sidebar({ userEmail, displayName, provider, onNewResume }: Sideb
             type="button"
             className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-md px-1 py-1 text-left transition-colors hover:bg-muted"
             onClick={() => setSettingsOpen(true)}
-            aria-label="Account settings"
+            aria-label={tr.accountSettings}
           >
             <Avatar size="sm">
               <AvatarFallback>{initials}</AvatarFallback>
@@ -85,7 +95,7 @@ export function Sidebar({ userEmail, displayName, provider, onNewResume }: Sideb
             size="icon-xs"
             className="cursor-pointer shrink-0 text-muted-foreground hover:text-foreground"
             onClick={handleSignOut}
-            aria-label="Sign out"
+            aria-label={tr.signOut}
           >
             <LogOut className="size-4" />
           </Button>

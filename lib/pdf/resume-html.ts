@@ -108,10 +108,10 @@ function sectionTitle(type: SectionType, lang: ResumeLanguage, fontFamily: strin
 
 /* ---- section renderers ---- */
 
-function renderPersonalHeader(personal: ResumeContent["personal"], fontFamily: string): string {
+function renderPersonalHeader(personal: ResumeContent["personal"], fontFamily: string, language: ResumeLanguage): string {
   const contacts = personal.contacts ?? [];
   let html = `<div style="margin-bottom:8px;text-align:center">`;
-  html += `<h1 style="font-size:${NAME_SIZE};font-family:${fontFamily};font-weight:bold;line-height:1.1;margin:0">${esc(personal.fullName || "Your Name")}</h1>`;
+  html += `<h1 style="font-size:${NAME_SIZE};font-family:${fontFamily};font-weight:bold;line-height:1.1;margin:0">${esc(personal.fullName || (language === "zh" ? "姓名" : "Your Name"))}</h1>`;
   if (contacts.length > 0) {
     html += `<p style="font-size:${BODY_SIZE};margin:4px 0 0 0">${contacts.map(formatContact).join(" | ")}</p>`;
   }
@@ -231,7 +231,7 @@ export function renderResumeHTML(content: ResumeContent, language: ResumeLanguag
   const activeSections = content.sections ?? [];
 
   const body = [
-    renderPersonalHeader(content.personal, fontFamily),
+    renderPersonalHeader(content.personal, fontFamily, language),
     ...activeSections.map((type) => SECTION_RENDERERS[type](content, language, fontFamily)),
   ].join("\n");
 
