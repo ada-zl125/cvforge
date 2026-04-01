@@ -40,10 +40,10 @@ function makeSchemas(tr: typeof t.en | typeof t.zh) {
   return { displayNameSchema, emailSchema, passwordSchema };
 }
 
-const _schemas = makeSchemas(t.en);
-type DisplayNameValues = z.infer<typeof _schemas.displayNameSchema>;
-type EmailValues = z.infer<typeof _schemas.emailSchema>;
-type PasswordValues = z.infer<typeof _schemas.passwordSchema>;
+type _SchemasType = ReturnType<typeof makeSchemas>;
+type DisplayNameValues = z.infer<_SchemasType["displayNameSchema"]>;
+type EmailValues = z.infer<_SchemasType["emailSchema"]>;
+type PasswordValues = z.infer<_SchemasType["passwordSchema"]>;
 
 /* ------------------------------------------------------------------ */
 /*  Props                                                               */

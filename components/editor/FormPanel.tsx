@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { ChevronDown, ChevronUp, Plus, Trash2, GraduationCap, FolderOpen, Briefcase, Wrench, ChevronsUpDown, ChevronsDownUp, RotateCcw, Save, Check, Loader2 } from "lucide-react";
 import type { ResumeContent, SectionType, ResumeLanguage } from "@/lib/types/resume";
 import { useUILanguage } from "@/lib/ui-language";
@@ -57,7 +57,7 @@ interface FormPanelProps {
 export function FormPanel({ content, onChange, saveStatus, onSave, language }: FormPanelProps) {
   const { lang } = useUILanguage();
   const tr = t[lang];
-  const activeSections = content.sections ?? [];
+  const activeSections = useMemo(() => content.sections ?? [], [content.sections]);
   const availableSections = (Object.keys(SECTION_META) as SectionType[]).filter(
     (s) => !activeSections.includes(s),
   );
