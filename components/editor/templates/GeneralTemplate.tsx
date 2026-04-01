@@ -147,6 +147,44 @@ function PersonalHeader({ personal, fontFamily, language }: { personal: ResumeCo
     </h1>
   );
 
+  if (hasPhoto) {
+    // With photo: non-website contacts on first line, each website on its own line
+    const mainContacts = contacts.filter((c) => c.type !== "website");
+    const websites = contacts.filter((c) => c.type === "website");
+    const contactsEl = contacts.length > 0 && (
+      <div className="mt-1" style={{ fontSize: BODY_SIZE }}>
+        {mainContacts.length > 0 && (
+          <div>
+            {mainContacts.map((field, i) => (
+              <span key={field.id}>
+                {i > 0 && " | "}
+                {formatContact(field)}
+              </span>
+            ))}
+          </div>
+        )}
+        {websites.map((field) => (
+          <div key={field.id}>{formatContact(field)}</div>
+        ))}
+      </div>
+    );
+
+    return (
+      <div className="mb-1 flex items-start justify-between gap-4">
+        <div>
+          {nameEl}
+          {contactsEl}
+        </div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={personal.photo}
+          alt=""
+          style={{ width: "85px", height: "106px", objectFit: "cover", borderRadius: "2px", flexShrink: 0, marginTop: "-4px" }}
+        />
+      </div>
+    );
+  }
+
   const contactsEl = contacts.length > 0 && (
     <p className="mt-1" style={{ fontSize: BODY_SIZE }}>
       {contacts.map((field, i) => (
@@ -157,23 +195,6 @@ function PersonalHeader({ personal, fontFamily, language }: { personal: ResumeCo
       ))}
     </p>
   );
-
-  if (hasPhoto) {
-    return (
-      <div className="mb-2 flex items-start justify-between gap-4">
-        <div>
-          {nameEl}
-          {contactsEl}
-        </div>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={personal.photo}
-          alt=""
-          style={{ width: "85px", height: "106px", objectFit: "cover", borderRadius: "2px", flexShrink: 0 }}
-        />
-      </div>
-    );
-  }
 
   return (
     <div className="mb-2 text-center">
