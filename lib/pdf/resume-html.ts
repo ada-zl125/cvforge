@@ -130,7 +130,7 @@ function renderPersonalHeader(personal: ResumeContent["personal"], fontFamily: s
       }
       photoContactsHtml += `</div>`;
     }
-    return `<div style="margin-bottom:8px;position:relative;padding-right:101px;min-height:91px">${nameHtml}${photoContactsHtml}<img src="${personal.photo}" alt="" style="position:absolute;top:-15px;right:0;width:85px;height:106px;object-fit:cover;border-radius:2px" /></div>`;
+    return `<div style="margin-bottom:4px;position:relative;padding-right:101px;min-height:91px">${nameHtml}${photoContactsHtml}<img src="${personal.photo}" alt="" style="position:absolute;top:-15px;right:0;width:85px;height:106px;object-fit:cover;border-radius:2px" /></div>`;
   }
 
   return `<div style="margin-bottom:8px;text-align:center">${nameHtml}${contactsHtml}</div>`;

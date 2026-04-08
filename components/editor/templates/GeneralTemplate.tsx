@@ -177,7 +177,7 @@ function PersonalHeader({ personal, fontFamily, language }: { personal: ResumeCo
     );
 
     return (
-      <div className="relative mb-2" style={{ paddingRight: "101px", minHeight: "91px" }}>
+      <div className="relative mb-1" style={{ paddingRight: "101px", minHeight: "91px" }}>
         {nameEl}
         {contactsEl}
         {/* eslint-disable-next-line @next/next/no-img-element */}
