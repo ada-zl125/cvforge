@@ -1,6 +1,7 @@
 "use client";
 
-import { ChevronDown, ChevronUp, Plus, Trash2, Mail, Phone, MapPin, Globe } from "lucide-react";
+import { useRef, useState } from "react";
+import { ChevronDown, ChevronUp, Plus, Trash2, Mail, Phone, MapPin, Globe, Camera } from "lucide-react";
 import type { PersonalInfo, ContactField, ContactFieldType, ResumeLanguage } from "@/lib/types/resume";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +12,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
+import { PhotoCropDialog } from "@/components/editor/PhotoUpload";
 
 const CONTACT_META: Record<ContactFieldType, { icon: typeof Mail; label: string; labelZh: string; unique: boolean }> = {
   email:    { icon: Mail,   label: "Email",    labelZh: "邮箱", unique: true },
@@ -29,10 +31,19 @@ interface PersonalSectionProps {
 
 export function PersonalSection({ data: rawData, onChange, collapsed, onToggleCollapse, language }: PersonalSectionProps) {
   const data: PersonalInfo = { ...rawData, contacts: rawData.contacts ?? [] };
+  const photoFileRef = useRef<HTMLInputElement>(null);
+  const [photoCropSrc, setPhotoCropSrc] = useState<string | null>(null);
+  const [photoFieldAdded, setPhotoFieldAdded] = useState(!!rawData.photo);
+  const [photoFileName, setPhotoFileName] = useState<string>("");
+  const zh = language === "zh";
+
+  /* ---- name ---- */
 
   function updateName(fullName: string) {
     onChange({ ...data, fullName });
   }
+
+  /* ---- contact fields ---- */
 
   function updateContact(id: string, patch: Partial<ContactField>) {
     onChange({
@@ -64,85 +75,180 @@ export function PersonalSection({ data: rawData, onChange, collapsed, onToggleCo
     onChange({ ...data, contacts: next });
   }
 
-  // Hide unique field types that are already added
+  /* ---- photo ---- */
+
+  function onPhotoFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = () => setPhotoCropSrc(reader.result as string);
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  }
+
+  function triggerPhotoUpload() {
+    photoFileRef.current?.click();
+  }
+
+  function removePhotoField() {
+    onChange({ ...data, photo: undefined });
+    setPhotoFieldAdded(false);
+    setPhotoFileName("");
+  }
+
+  /* ---- addable types ---- */
+
   const addableTypes = (Object.keys(CONTACT_META) as ContactFieldType[]).filter((type) => {
     const meta = CONTACT_META[type];
     if (!meta.unique) return true;
     return !data.contacts.some((c) => c.type === type);
   });
 
-  const zh = language === "zh";
-
   return (
-    <section className="section-card rounded-lg border border-border">
-      {/* Section header — always visible */}
-      <button
-        type="button"
-        className="section-header flex w-full cursor-pointer items-center justify-between px-4 py-3 text-sm font-semibold tracking-tight"
-        onClick={onToggleCollapse}
-      >
-        {zh ? "个人信息" : "Personal Information"}
-        <ChevronDown className={`size-4 text-muted-foreground transition-transform duration-200 ${collapsed ? "-rotate-90" : ""}`} />
-      </button>
+    <>
+      {/* Hidden file input for photo */}
+      <input
+        ref={photoFileRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={onPhotoFileChange}
+      />
 
-      {/* Collapsible content */}
-      {!collapsed && (
-        <div className="border-t border-border px-4 pb-4 pt-3">
-          {/* Full Name — always present, not removable */}
-          <div className="mb-4 flex flex-col gap-1.5">
-            <Label htmlFor="fullName">{zh ? "姓名" : "Full Name"}</Label>
-            <Input
-              id="fullName"
-              value={data.fullName}
-              onChange={(e) => updateName(e.target.value)}
-              placeholder={zh ? "姓名" : "Your Name"}
-            />
-          </div>
+      {/* Crop dialog */}
+      <PhotoCropDialog
+        src={photoCropSrc}
+        onApply={(dataUrl) => { onChange({ ...data, photo: dataUrl }); setPhotoCropSrc(null); }}
+        onClose={() => setPhotoCropSrc(null)}
+        language={language}
+      />
 
-          {/* Dynamic contact fields */}
-          {data.contacts.length > 0 && (
-            <div className="mb-3 space-y-3">
-              {data.contacts.map((field, i) => (
-                <ContactFieldRow
-                  key={field.id}
-                  field={field}
-                  isFirst={i === 0}
-                  isLast={i === data.contacts.length - 1}
-                  onUpdate={(patch) => updateContact(field.id, patch)}
-                  onRemove={() => removeContact(field.id)}
-                  onMoveUp={() => moveContact(i, -1)}
-                  onMoveDown={() => moveContact(i, 1)}
-                  language={language}
-                />
-              ))}
+      <section className="section-card rounded-lg border border-border">
+        {/* Section header — always visible */}
+        <button
+          type="button"
+          className="section-header flex w-full cursor-pointer items-center justify-between px-4 py-3 text-sm font-semibold tracking-tight"
+          onClick={onToggleCollapse}
+        >
+          {zh ? "个人信息" : "Personal Information"}
+          <ChevronDown className={`size-4 text-muted-foreground transition-transform duration-200 ${collapsed ? "-rotate-90" : ""}`} />
+        </button>
+
+        {/* Collapsible content */}
+        {!collapsed && (
+          <div className="border-t border-border px-4 pb-4 pt-3">
+            {/* Full Name */}
+            <div className="mb-4 flex flex-col gap-1.5">
+              <Label htmlFor="fullName">{zh ? "姓名" : "Full Name"}</Label>
+              <Input
+                id="fullName"
+                value={data.fullName}
+                onChange={(e) => updateName(e.target.value)}
+                placeholder={zh ? "姓名" : "Your Name"}
+              />
             </div>
-          )}
 
-          {/* Add contact field dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger className="add-btn inline-flex h-7 cursor-pointer items-center gap-1 rounded-md px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
-              <Plus className="size-3" />
-              {zh ? "添加字段" : "Add field"}
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" sideOffset={4}>
-              {addableTypes.map((type) => {
-                const meta = CONTACT_META[type];
-                return (
+            {/* Dynamic contact fields */}
+            {data.contacts.length > 0 && (
+              <div className="mb-3 space-y-3">
+                {data.contacts.map((field, i) => (
+                  <ContactFieldRow
+                    key={field.id}
+                    field={field}
+                    isFirst={i === 0}
+                    isLast={i === data.contacts.length - 1}
+                    onUpdate={(patch) => updateContact(field.id, patch)}
+                    onRemove={() => removeContact(field.id)}
+                    onMoveUp={() => moveContact(i, -1)}
+                    onMoveDown={() => moveContact(i, 1)}
+                    language={language}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Photo field row */}
+            {photoFieldAdded && (
+              <div className="mb-3 flex items-end gap-2">
+                <div className="flex flex-1 flex-col gap-1">
+                  <Label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Camera className="size-3" />
+                    {zh ? "照片" : "Photo"}
+                  </Label>
+                  {data.photo ? (
+                    /* After upload: show filename + thumbnail */
+                    <div
+                      className="flex h-9 cursor-pointer items-center gap-2 rounded-md border border-input px-3 hover:bg-muted transition-colors"
+                      onClick={triggerPhotoUpload}
+                      title={photoFileName}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={data.photo} alt="" className="h-5 w-4 shrink-0 rounded-sm object-cover" />
+                      <span className="flex-1 truncate text-xs text-foreground">
+                        {photoFileName || (zh ? "已上传" : "Uploaded")}
+                      </span>
+                    </div>
+                  ) : (
+                    /* Before upload: upload button */
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-9 w-full cursor-pointer justify-start text-xs font-normal text-muted-foreground"
+                      onClick={triggerPhotoUpload}
+                    >
+                      {zh ? "上传照片" : "Upload Photo"}
+                    </Button>
+                  )}
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  className="mb-0.5 cursor-pointer text-muted-foreground hover:text-destructive"
+                  onClick={removePhotoField}
+                >
+                  <Trash2 className="size-3" />
+                </Button>
+              </div>
+            )}
+
+            {/* Add field dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger className="add-btn inline-flex h-7 cursor-pointer items-center gap-1 rounded-md px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+                <Plus className="size-3" />
+                {zh ? "添加字段" : "Add field"}
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" sideOffset={4}>
+                {addableTypes.map((type) => {
+                  const meta = CONTACT_META[type];
+                  return (
+                    <DropdownMenuItem
+                      key={type}
+                      className="cursor-pointer gap-2"
+                      onClick={() => addContact(type)}
+                    >
+                      <meta.icon className="size-4" />
+                      {zh ? meta.labelZh : meta.label}
+                    </DropdownMenuItem>
+                  );
+                })}
+                {/* Photo option — only when field not yet added */}
+                {!photoFieldAdded && (
                   <DropdownMenuItem
-                    key={type}
                     className="cursor-pointer gap-2"
-                    onClick={() => addContact(type)}
+                    onClick={() => setPhotoFieldAdded(true)}
                   >
-                    <meta.icon className="size-4" />
-                    {zh ? meta.labelZh : meta.label}
+                    <Camera className="size-4" />
+                    {zh ? "照片" : "Photo"}
                   </DropdownMenuItem>
-                );
-              })}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      )}
-    </section>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
+      </section>
+    </>
   );
 }
 
