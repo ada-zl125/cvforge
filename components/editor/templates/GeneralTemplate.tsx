@@ -177,16 +177,14 @@ function PersonalHeader({ personal, fontFamily, language }: { personal: ResumeCo
     );
 
     return (
-      <div className="mb-1 flex items-start justify-between gap-4">
-        <div>
-          {nameEl}
-          {contactsEl}
-        </div>
+      <div className="relative mb-1" style={{ paddingRight: "101px" }}>
+        {nameEl}
+        {contactsEl}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={personal.photo}
           alt=""
-          style={{ width: "85px", height: "106px", objectFit: "cover", borderRadius: "2px", flexShrink: 0, marginTop: "-15px" }}
+          style={{ position: "absolute", top: "-15px", right: 0, width: "85px", height: "106px", objectFit: "cover", borderRadius: "2px" }}
         />
       </div>
     );
