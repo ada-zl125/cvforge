@@ -10,14 +10,16 @@ interface AcademicTemplateProps {
 /* ------------------------------------------------------------------ */
 /*  A4 page: 210mm × 297mm ≈ 794px × 1123px at 96 DPI                */
 /*  Narrow margins: 1.27cm ≈ 48px                                     */
-/*  EN: Times New Roman, serif                                         */
-/*  ZH: SimSun for Chinese, Times New Roman for English                */
+/*  EN: Times New Roman, serif; bold = weight 700                      */
+/*  ZH body: Songti SC Regular (weight 400)                            */
+/*  ZH bold: Songti SC Black (weight 900) — section titles, row-1      */
 /*  Name: 20pt bold, everything else: 11pt                             */
 /* ------------------------------------------------------------------ */
 
 const FONT_EN = "'Times New Roman', SimSun, serif";
-const FONT_ZH = "'Times New Roman', SimSun, serif";
+const FONT_ZH = "'Times New Roman', 'Songti SC', serif";
 const BODY_SIZE = "11pt";
+const SECTION_TITLE_SIZE = "12pt";
 const NAME_SIZE = "20pt";
 
 /* ---- Chinese section title mapping ---- */
@@ -52,6 +54,15 @@ function getExtraFieldLabel(label: string, lang: ResumeLanguage): string {
 
 function getFontFamily(lang: ResumeLanguage): string {
   return lang === "zh" ? FONT_ZH : FONT_EN;
+}
+
+/** Returns fontFamily + fontWeight for bold elements.
+ *  ZH: Songti SC Black (900); EN: Times New Roman bold (700). */
+function boldFontStyle(lang: ResumeLanguage, fontFamily: string): React.CSSProperties {
+  return {
+    fontFamily: lang === "zh" ? FONT_ZH : fontFamily,
+    fontWeight: lang === "zh" ? 900 : 700,
+  };
 }
 
 /* ---- Shared style builders ---- */
@@ -91,8 +102,8 @@ function SectionTitle({ type, lang, fontFamily }: { type: SectionType; lang: Res
   return (
     <div className="mb-1">
       <h2
-        style={{ fontSize: BODY_SIZE, fontFamily }}
-        className={`font-bold tracking-normal ${lang === "en" ? "uppercase" : ""}`}
+        style={{ fontSize: SECTION_TITLE_SIZE, ...boldFontStyle(lang, fontFamily) }}
+        className={`tracking-normal ${lang === "en" ? "uppercase" : ""}`}
       >
         {title}
       </h2>
@@ -139,21 +150,73 @@ function formatContact(field: ContactField): React.ReactNode {
 
 function PersonalHeader({ personal, fontFamily, language }: { personal: ResumeContent["personal"]; fontFamily: string; language: ResumeLanguage }) {
   const contacts = personal.contacts ?? [];
+  const hasPhoto = !!personal.photo;
+
+  const nameEl = (
+    <h1 className="leading-tight" style={{ fontSize: NAME_SIZE, ...boldFontStyle(language, fontFamily) }}>
+      {personal.fullName || (language === "zh" ? "姓名" : "Your Name")}
+    </h1>
+  );
+
+  if (hasPhoto) {
+    // With photo: non-website contacts on first line, each website on its own line
+    const mainContacts = contacts.filter((c) => c.type !== "website");
+    const websites = contacts.filter((c) => c.type === "website");
+    const headerMinHeight = websites.length > 0 ? "88px" : "76px";
+    const contactsEl = contacts.length > 0 && (
+      <div className="mt-1" style={{ fontSize: BODY_SIZE }}>
+        {mainContacts.length > 0 && (
+          <div>
+            {mainContacts.map((field, i) => (
+              <span key={field.id}>
+                {i > 0 && " | "}
+                {formatContact(field)}
+              </span>
+            ))}
+          </div>
+        )}
+        {websites.length > 0 && (
+          <div>
+            {websites.map((field, i) => (
+              <span key={field.id}>
+                {i > 0 && " | "}
+                {formatContact(field)}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+
+    return (
+      <div className="relative mb-1" style={{ paddingRight: "90px", minHeight: headerMinHeight }}>
+        {nameEl}
+        {contactsEl}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={personal.photo}
+          alt=""
+          style={{ position: "absolute", top: "-10px", right: 0, width: "74px", height: "92px", objectFit: "cover", borderRadius: "2px" }}
+        />
+      </div>
+    );
+  }
+
+  const contactsEl = contacts.length > 0 && (
+    <p className="mt-1" style={{ fontSize: BODY_SIZE }}>
+      {contacts.map((field, i) => (
+        <span key={field.id}>
+          {i > 0 && " | "}
+          {formatContact(field)}
+        </span>
+      ))}
+    </p>
+  );
+
   return (
     <div className="mb-2 text-center">
-      <h1 className="font-bold leading-tight" style={{ fontSize: NAME_SIZE, fontFamily }}>
-        {personal.fullName || (language === "zh" ? "姓名" : "Your Name")}
-      </h1>
-      {contacts.length > 0 && (
-        <p className="mt-1" style={{ fontSize: BODY_SIZE }}>
-          {contacts.map((field, i) => (
-            <span key={field.id}>
-              {i > 0 && " | "}
-              {formatContact(field)}
-            </span>
-          ))}
-        </p>
-      )}
+      {nameEl}
+      {contactsEl}
     </div>
   );
 }
@@ -185,8 +248,8 @@ function EducationBlock({ items, lang, fontFamily }: { items: EducationItem[]; l
             <div key={edu.id}>
               {/* Row 1: Institution (left, bold) | Location (right, bold) */}
               <div className="flex items-baseline justify-between gap-2" style={{ ...LINE_STYLE, paddingLeft: 0 }}>
-                <span className="font-bold">{edu.institution}</span>
-                <span className="shrink-0 font-bold">{edu.location}</span>
+                <span style={boldFontStyle(lang, fontFamily)}>{edu.institution}</span>
+                <span className="shrink-0" style={boldFontStyle(lang, fontFamily)}>{edu.location}</span>
               </div>
               {/* Row 2: bullet • Degree info (left) | date range (right) */}
               {degreeLine && (
@@ -224,8 +287,8 @@ function ExperienceBlock({ items, lang, fontFamily }: { items: ExperienceItem[];
             <div key={exp.id}>
               {/* Row 1: Company (left, bold) | Location (right, bold) */}
               <div className="flex items-baseline justify-between gap-2" style={{ ...LINE_STYLE, paddingLeft: 0 }}>
-                <span className="font-bold">{exp.company}</span>
-                <span className="shrink-0 font-bold">{exp.location}</span>
+                <span style={boldFontStyle(lang, fontFamily)}>{exp.company}</span>
+                <span className="shrink-0" style={boldFontStyle(lang, fontFamily)}>{exp.location}</span>
               </div>
               {/* Row 2: Position (left) | date range (right) */}
               {exp.position && (
@@ -262,7 +325,7 @@ function ProjectsBlock({ items, lang, fontFamily }: { items: ProjectItem[]; lang
               {/* Row 1: Project Name [| Website] (left, bold) | date range (right) */}
               <div className="flex items-baseline justify-between gap-2" style={{ ...LINE_STYLE, paddingLeft: 0 }}>
                 <span>
-                  <span className="font-bold">{proj.name}</span>
+                  <span style={boldFontStyle(lang, fontFamily)}>{proj.name}</span>
                   {hasWebsite && (
                     <>
                       {" | "}
@@ -292,7 +355,7 @@ function SkillsBlock({ items, lang, fontFamily }: { items: SkillGroup[]; lang: R
       <div>
         {items.map((group) => (
           <div key={group.id} style={{ ...LINE_STYLE, paddingLeft: 0 }}>
-            <span className="font-bold">{group.category}:</span>{" "}
+            <span style={boldFontStyle(lang, fontFamily)}>{group.category}:</span>{" "}
             {group.items}
           </div>
         ))}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Trash2, Settings, MoreHorizontal, Copy } from "lucide-react";
 import { useUILanguage } from "@/lib/ui-language";
@@ -74,6 +74,12 @@ function timeAgo(dateStr: string, tr: Translations): string {
   if (days < 30) return tr.timeDay(days);
   const months = Math.floor(days / 30);
   return tr.timeMonth(months);
+}
+
+function TimeAgo({ dateStr, tr }: { dateStr: string; tr: Translations }) {
+  const [text, setText] = useState("");
+  useEffect(() => { setText(timeAgo(dateStr, tr)); }, [dateStr, tr]);
+  return <>{text}</>;
 }
 
 function truncateTitle(title: string): string {
@@ -216,7 +222,7 @@ export function ResumeCard({ resume }: ResumeCardProps) {
               {truncateTitle(resume.title)}
             </p>
             <p className="text-xs text-muted-foreground">
-              {tr.edited} {timeAgo(resume.updated_at, tr)}
+              {tr.edited} <TimeAgo dateStr={resume.updated_at} tr={tr} />
             </p>
           </div>
 

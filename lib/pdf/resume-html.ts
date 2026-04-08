@@ -17,7 +17,7 @@ import type {
 /* ---- constants ---- */
 
 const FONT_EN = "'Times New Roman', SimSun, serif";
-const FONT_ZH = "'Times New Roman', SimSun, serif";
+const FONT_ZH = "SimSun, 'Times New Roman', serif";
 const BODY_SIZE = "11pt";
 const NAME_SIZE = "20pt";
 const LINK_COLOR = "#1a4dc2";
@@ -110,13 +110,30 @@ function sectionTitle(type: SectionType, lang: ResumeLanguage, fontFamily: strin
 
 function renderPersonalHeader(personal: ResumeContent["personal"], fontFamily: string, language: ResumeLanguage): string {
   const contacts = personal.contacts ?? [];
-  let html = `<div style="margin-bottom:8px;text-align:center">`;
-  html += `<h1 style="font-size:${NAME_SIZE};font-family:${fontFamily};font-weight:bold;line-height:1.1;margin:0">${esc(personal.fullName || (language === "zh" ? "姓名" : "Your Name"))}</h1>`;
-  if (contacts.length > 0) {
-    html += `<p style="font-size:${BODY_SIZE};margin:4px 0 0 0">${contacts.map(formatContact).join(" | ")}</p>`;
+  const hasPhoto = !!personal.photo;
+  const nameHtml = `<h1 style="font-size:${NAME_SIZE};font-family:${fontFamily};font-weight:bold;line-height:1.1;margin:0">${esc(personal.fullName || (language === "zh" ? "姓名" : "Your Name"))}</h1>`;
+  const contactsHtml = contacts.length > 0
+    ? `<p style="font-size:${BODY_SIZE};margin:4px 0 0 0">${contacts.map(formatContact).join(" | ")}</p>`
+    : "";
+
+  if (hasPhoto) {
+    const mainContacts = contacts.filter((c) => c.type !== "website");
+    const websites = contacts.filter((c) => c.type === "website");
+    let photoContactsHtml = "";
+    if (contacts.length > 0) {
+      photoContactsHtml = `<div style="margin-top:4px">`;
+      if (mainContacts.length > 0) {
+        photoContactsHtml += `<div style="font-size:${BODY_SIZE}">${mainContacts.map(formatContact).join(" | ")}</div>`;
+      }
+      if (websites.length > 0) {
+        photoContactsHtml += `<div style="font-size:${BODY_SIZE}">${websites.map(formatContact).join(" | ")}</div>`;
+      }
+      photoContactsHtml += `</div>`;
+    }
+    return `<div style="margin-bottom:4px;position:relative;padding-right:101px;min-height:91px">${nameHtml}${photoContactsHtml}<img src="${personal.photo}" alt="" style="position:absolute;top:-15px;right:0;width:85px;height:106px;object-fit:cover;border-radius:2px" /></div>`;
   }
-  html += `</div>`;
-  return html;
+
+  return `<div style="margin-bottom:8px;text-align:center">${nameHtml}${contactsHtml}</div>`;
 }
 
 function renderEducation(items: EducationItem[], lang: ResumeLanguage, fontFamily: string): string {
