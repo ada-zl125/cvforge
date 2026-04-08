@@ -17,7 +17,7 @@ import type {
 /* ---- constants ---- */
 
 const FONT_EN = "'Times New Roman', SimSun, serif";
-const FONT_ZH = "'Times New Roman', SimSun, serif";
+const FONT_ZH = "SimSun, 'Times New Roman', serif";
 const BODY_SIZE = "11pt";
 const NAME_SIZE = "20pt";
 const LINK_COLOR = "#1a4dc2";

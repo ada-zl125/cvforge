@@ -16,7 +16,7 @@ interface AcademicTemplateProps {
 /* ------------------------------------------------------------------ */
 
 const FONT_EN = "'Times New Roman', SimSun, serif";
-const FONT_ZH = "'Times New Roman', SimSun, serif";
+const FONT_ZH = "SimSun, 'Times New Roman', serif";
 const BODY_SIZE = "11pt";
 const NAME_SIZE = "20pt";
 
@@ -151,6 +151,7 @@ function PersonalHeader({ personal, fontFamily, language }: { personal: ResumeCo
     // With photo: non-website contacts on first line, each website on its own line
     const mainContacts = contacts.filter((c) => c.type !== "website");
     const websites = contacts.filter((c) => c.type === "website");
+    const headerMinHeight = websites.length > 0 ? "88px" : "76px";
     const contactsEl = contacts.length > 0 && (
       <div className="mt-1" style={{ fontSize: BODY_SIZE }}>
         {mainContacts.length > 0 && (
@@ -177,14 +178,14 @@ function PersonalHeader({ personal, fontFamily, language }: { personal: ResumeCo
     );
 
     return (
-      <div className="relative mb-1" style={{ paddingRight: "101px", minHeight: "91px" }}>
+      <div className="relative mb-1" style={{ paddingRight: "90px", minHeight: headerMinHeight }}>
         {nameEl}
         {contactsEl}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={personal.photo}
           alt=""
-          style={{ position: "absolute", top: "-15px", right: 0, width: "85px", height: "106px", objectFit: "cover", borderRadius: "2px" }}
+          style={{ position: "absolute", top: "-10px", right: 0, width: "74px", height: "92px", objectFit: "cover", borderRadius: "2px" }}
         />
       </div>
     );
