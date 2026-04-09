@@ -114,6 +114,7 @@ export interface ResumeRow {
   template: ResumeTemplate;
   language: ResumeLanguage;
   content: ResumeContent;
+  is_starred: boolean;
   created_at: string;
   updated_at: string;
 }

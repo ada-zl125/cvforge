@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Trash2, Settings, MoreHorizontal, Copy } from "lucide-react";
+import { Pencil, Trash2, Settings, MoreHorizontal, Copy, Star } from "lucide-react";
 import { useUILanguage } from "@/lib/ui-language";
 import { t, type Translations } from "@/lib/translations";
 import { createClient } from "@/lib/supabase/client";
@@ -112,6 +112,17 @@ export function ResumeCard({ resume }: ResumeCardProps) {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
+  /* ---- Star toggle ---- */
+  async function handleToggleStar(e: React.MouseEvent) {
+    e.stopPropagation();
+    const supabase = createClient();
+    await supabase
+      .from("resumes")
+      .update({ is_starred: !resume.is_starred })
+      .eq("id", resume.id);
+    router.refresh();
+  }
+
   /* ---- Settings (title + template) ---- */
   async function handleSettingsSave() {
     const trimmed = settingsTitle.trim();
@@ -179,7 +190,7 @@ export function ResumeCard({ resume }: ResumeCardProps) {
 
         {/* Card body */}
         <div className="flex flex-col gap-3 px-4 py-3.5">
-          {/* Top row: badge + three-dot menu */}
+          {/* Top row: badge + star + three-dot menu */}
           <div className="flex items-start justify-between">
             <span
               className={`inline-flex items-center rounded px-1.5 py-0.5 text-[11px] font-medium ${colors.bg} ${colors.text}`}
@@ -187,7 +198,19 @@ export function ResumeCard({ resume }: ResumeCardProps) {
               {label}
             </span>
 
-            {/* Three-dot menu */}
+            <div className="flex items-center gap-0.5">
+              {/* Star button */}
+              <button
+                type="button"
+                onClick={handleToggleStar}
+                className={`flex size-7 cursor-pointer items-center justify-center rounded-md transition-colors hover:bg-muted ${
+                  resume.is_starred ? "text-yellow-400" : "text-muted-foreground hover:text-yellow-400"
+                }`}
+              >
+                <Star className={`size-4 ${resume.is_starred ? "fill-yellow-400" : ""}`} />
+              </button>
+
+              {/* Three-dot menu */}
             <DropdownMenu>
               <DropdownMenuTrigger
                 className="flex size-7 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
@@ -211,6 +234,7 @@ export function ResumeCard({ resume }: ResumeCardProps) {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            </div>
           </div>
 
           {/* Title + date */}
