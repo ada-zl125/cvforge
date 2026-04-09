@@ -346,7 +346,7 @@ function ContactFieldRow({
               field.type === "email"
                 ? "example@email.com"
                 : zh
-                ? "北京, 中国"
+                ? "中国, 北京"
                 : "London, UK"
             }
           />
