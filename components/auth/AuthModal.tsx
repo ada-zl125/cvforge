@@ -7,6 +7,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { useUILanguage } from "@/lib/ui-language";
+import { t } from "@/lib/translations";
 import {
   Dialog,
   DialogContent,
@@ -66,6 +68,8 @@ type Mode = "auth" | "verify-otp" | "forgot-password";
 
 export function AuthModal({ open, onOpenChange, defaultTab = "sign-in" }: AuthModalProps) {
   const router = useRouter();
+  const { lang } = useUILanguage();
+  const tr = t[lang];
   const [tab, setTab] = useState(defaultTab);
   const [mode, setMode] = useState<Mode>("auth");
   const [error, setError] = useState<string | null>(null);
@@ -545,8 +549,15 @@ export function AuthModal({ open, onOpenChange, defaultTab = "sign-in" }: AuthMo
                 )}
               </div>
               <Button type="submit" className="cursor-pointer" disabled={loading}>
-                {loading ? "Creating account..." : "Sign Up"}
+                {loading ? tr.creatingAccount : tr.authSignUp}
               </Button>
+              <p className="text-center text-xs text-muted-foreground">
+                {lang === "zh" ? (
+                  <>注册即表示您同意我们的<a href="/terms" className="underline underline-offset-2 hover:text-foreground">{tr.termsOfService}</a>和<a href="/privacy" className="underline underline-offset-2 hover:text-foreground">{tr.privacyPolicy}</a>。</>
+                ) : (
+                  <>By signing up, you agree to our <a href="/terms" className="underline underline-offset-2 hover:text-foreground">{tr.termsOfService}</a> and <a href="/privacy" className="underline underline-offset-2 hover:text-foreground">{tr.privacyPolicy}</a>.</>
+                )}
+              </p>
             </form>
           </TabsContent>
 
