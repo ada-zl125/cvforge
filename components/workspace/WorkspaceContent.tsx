@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import type { ResumeRow } from "@/lib/types/resume";
 import { useUILanguage } from "@/lib/ui-language";
 import { t } from "@/lib/translations";
@@ -27,17 +27,22 @@ interface WorkspaceContentProps {
 export function WorkspaceContent({ resumes, userEmail, displayName, provider }: WorkspaceContentProps) {
   const [createOpen, setCreateOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState<FilterKey>("all");
+  const [now, setNow] = useState<number | null>(null);
   const { lang } = useUILanguage();
   const tr = t[lang];
+
+  useEffect(() => {
+    setNow(Date.now());
+  }, []);
 
   const filtered = useMemo(() => {
     let list = [...resumes];
 
     if (activeFilter === "starred") {
       list = list.filter((r) => r.is_starred);
-    } else if (activeFilter in RECENT_DAYS) {
+    } else if (activeFilter in RECENT_DAYS && now !== null) {
       const days = RECENT_DAYS[activeFilter]!;
-      const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+      const cutoff = now - days * 24 * 60 * 60 * 1000;
       list = list.filter((r) => new Date(r.updated_at).getTime() > cutoff);
     }
 
@@ -49,7 +54,7 @@ export function WorkspaceContent({ resumes, userEmail, displayName, provider }: 
     }
 
     return list;
-  }, [resumes, activeFilter]);
+  }, [resumes, activeFilter, now]);
 
   const emptyMessage =
     activeFilter === "starred"
