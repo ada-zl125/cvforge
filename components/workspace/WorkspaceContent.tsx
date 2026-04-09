@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import type { ResumeRow } from "@/lib/types/resume";
 import { useUILanguage } from "@/lib/ui-language";
 import { t } from "@/lib/translations";
@@ -27,22 +27,23 @@ interface WorkspaceContentProps {
 export function WorkspaceContent({ resumes, userEmail, displayName, provider }: WorkspaceContentProps) {
   const [createOpen, setCreateOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState<FilterKey>("all");
-  const [now, setNow] = useState<number | null>(null);
+  const [filterChangedAt, setFilterChangedAt] = useState<number | null>(null);
   const { lang } = useUILanguage();
   const tr = t[lang];
 
-  useEffect(() => {
-    setNow(Date.now());
-  }, []);
+  const handleFilterChange = (nextFilter: FilterKey) => {
+    setActiveFilter(nextFilter);
+    setFilterChangedAt(nextFilter in RECENT_DAYS ? Date.now() : null);
+  };
 
   const filtered = useMemo(() => {
     let list = [...resumes];
 
     if (activeFilter === "starred") {
       list = list.filter((r) => r.is_starred);
-    } else if (activeFilter in RECENT_DAYS && now !== null) {
+    } else if (activeFilter in RECENT_DAYS && filterChangedAt !== null) {
       const days = RECENT_DAYS[activeFilter]!;
-      const cutoff = now - days * 24 * 60 * 60 * 1000;
+      const cutoff = filterChangedAt - days * 24 * 60 * 60 * 1000;
       list = list.filter((r) => new Date(r.updated_at).getTime() > cutoff);
     }
 
@@ -54,7 +55,7 @@ export function WorkspaceContent({ resumes, userEmail, displayName, provider }: 
     }
 
     return list;
-  }, [resumes, activeFilter, now]);
+  }, [resumes, activeFilter, filterChangedAt]);
 
   const emptyMessage =
     activeFilter === "starred"
@@ -71,7 +72,7 @@ export function WorkspaceContent({ resumes, userEmail, displayName, provider }: 
         provider={provider}
         onNewResume={() => setCreateOpen(true)}
         activeFilter={activeFilter}
-        onFilterChange={setActiveFilter}
+        onFilterChange={handleFilterChange}
       />
 
       <main className="flex flex-1 flex-col overflow-y-auto">
