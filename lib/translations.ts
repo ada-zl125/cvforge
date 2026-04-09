@@ -15,6 +15,10 @@ const t = {
     featuresTitle2: "Nothing you don't.",
     featuresSubtitle: "Three simple steps from blank page to polished resume.",
     footer: "© 2026 EasyCV. All rights reserved.",
+    privacyPolicy: "Privacy Policy",
+    termsOfService: "Terms of Service",
+    cookieBannerText: "We use cookies to keep you signed in. No tracking or advertising cookies are used.",
+    cookieAccept: "Got it",
 
     /* ---- Feature cards ---- */
     feature1Title: "Simple Form Input",
@@ -170,6 +174,10 @@ const t = {
     featuresTitle2: "我们来搞定排版",
     featuresSubtitle: "三步完成，从空白页到精美简历",
     footer: "© 2026 EasyCV. 保留所有权利。",
+    privacyPolicy: "隐私政策",
+    termsOfService: "服务条款",
+    cookieBannerText: "我们使用 Cookie 来保持你的登录状态，不使用任何追踪或广告 Cookie。",
+    cookieAccept: "知道了",
 
     /* ---- Feature cards ---- */
     feature1Title: "表单式填写",
