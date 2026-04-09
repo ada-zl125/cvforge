@@ -11,6 +11,7 @@ import type {
   ExperienceItem,
   ProjectItem,
   SkillGroup,
+  AwardItem,
   SectionType,
 } from "@/lib/types/resume";
 
@@ -28,6 +29,7 @@ const SECTION_TITLES_ZH: Record<SectionType, string> = {
   experience: "工作经历",
   projects: "项目经历",
   skills: "技能",
+  awards: "荣誉奖项",
 };
 
 const SECTION_TITLES_EN: Record<SectionType, string> = {
@@ -35,6 +37,7 @@ const SECTION_TITLES_EN: Record<SectionType, string> = {
   experience: "Experience",
   projects: "Projects",
   skills: "Skills",
+  awards: "Awards",
 };
 
 function getFontFamily(lang: ResumeLanguage): string {
@@ -232,6 +235,19 @@ function renderSkills(items: SkillGroup[], lang: ResumeLanguage, fontFamily: str
   return html;
 }
 
+function renderAwards(items: AwardItem[], lang: ResumeLanguage, fontFamily: string): string {
+  if (items.length === 0) return "";
+  let html = `<section style="margin-bottom:8px">${sectionTitle("awards", lang, fontFamily)}<div>`;
+  for (const item of items) {
+    html += `<div style="font-size:${BODY_SIZE};line-height:13pt;margin-top:0.15pt;margin-bottom:0;font-family:${fontFamily};display:flex;justify-content:space-between;gap:0.5em;letter-spacing:${LETTER_SPACING}">
+      <span>${esc(item.award)}</span>
+      ${item.date ? `<span style="flex-shrink:0">${esc(item.date)}</span>` : ""}
+    </div>`;
+  }
+  html += `</div></section>`;
+  return html;
+}
+
 /* ---- section dispatch ---- */
 
 const SECTION_RENDERERS: Record<SectionType, (content: ResumeContent, lang: ResumeLanguage, fontFamily: string) => string> = {
@@ -239,6 +255,7 @@ const SECTION_RENDERERS: Record<SectionType, (content: ResumeContent, lang: Resu
   experience: (c, l, f) => renderExperience(c.experience, l, f),
   projects: (c, l, f) => renderProjects(c.projects, l, f),
   skills: (c, l, f) => renderSkills(c.skills, l, f),
+  awards: (c, l, f) => renderAwards(c.awards ?? [], l, f),
 };
 
 /* ---- main export ---- */
