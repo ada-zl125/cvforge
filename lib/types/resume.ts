@@ -26,7 +26,7 @@ export interface PersonalInfo {
 
 /* ---- Section ordering ---- */
 
-export type SectionType = "education" | "projects" | "experience" | "skills";
+export type SectionType = "education" | "projects" | "experience" | "skills" | "awards";
 
 export interface DescriptionField {
   id: string;
@@ -64,6 +64,12 @@ export interface EducationItem {
   extraFields: EducationExtraField[];
 }
 
+export interface AwardItem {
+  id: string;
+  award: string;
+  date: string;
+}
+
 export interface SkillGroup {
   id: string;
   category: string;
@@ -89,6 +95,7 @@ export interface ResumeContent {
   education: EducationItem[];
   skills: SkillGroup[];
   projects: ProjectItem[];
+  awards: AwardItem[];
 }
 
 /* ------------------------------------------------------------------ */

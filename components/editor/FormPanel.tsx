@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
-import { ChevronDown, ChevronUp, Plus, Trash2, GraduationCap, FolderOpen, Briefcase, Wrench, ChevronsUpDown, ChevronsDownUp, RotateCcw, Save, Check, Loader2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Plus, Trash2, GraduationCap, FolderOpen, Briefcase, Wrench, Trophy, ChevronsUpDown, ChevronsDownUp, RotateCcw, Save, Check, Loader2 } from "lucide-react";
 import type { ResumeContent, SectionType, ResumeLanguage } from "@/lib/types/resume";
 import { useUILanguage } from "@/lib/ui-language";
 import { t } from "@/lib/translations";
@@ -27,12 +27,14 @@ import { EducationSection } from "./sections/EducationSection";
 import { ProjectsSection } from "./sections/ProjectsSection";
 import { ExperienceSection } from "./sections/ExperienceSection";
 import { SkillsSection } from "./sections/SkillsSection";
+import { AwardsSection } from "./sections/AwardsSection";
 
 const SECTION_META: Record<SectionType, { icon: typeof GraduationCap; label: string; labelZh: string }> = {
   education:  { icon: GraduationCap, label: "Education",  labelZh: "教育经历" },
   projects:   { icon: FolderOpen,    label: "Projects",   labelZh: "项目经历" },
   experience: { icon: Briefcase,     label: "Experience", labelZh: "工作经历" },
   skills:     { icon: Wrench,        label: "Skills",     labelZh: "技能" },
+  awards:     { icon: Trophy,        label: "Awards",     labelZh: "荣誉奖项" },
 };
 
 const EMPTY_CONTENT: ResumeContent = {
@@ -42,6 +44,7 @@ const EMPTY_CONTENT: ResumeContent = {
   education: [],
   skills: [],
   projects: [],
+  awards: [],
 };
 
 type SaveStatus = "saved" | "saving" | "unsaved";
@@ -311,6 +314,9 @@ function CollapsibleSection({
           )}
           {type === "skills" && (
             <SkillsSection items={content.skills} onChange={(skills) => onChange({ ...content, skills })} language={language} />
+          )}
+          {type === "awards" && (
+            <AwardsSection items={content.awards ?? []} onChange={(awards) => onChange({ ...content, awards })} language={language} />
           )}
         </div>
       )}

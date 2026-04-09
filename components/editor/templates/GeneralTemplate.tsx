@@ -1,6 +1,6 @@
 "use client";
 
-import type { ResumeContent, ResumeLanguage, ContactField, EducationItem, ExperienceItem, ProjectItem, SkillGroup, SectionType } from "@/lib/types/resume";
+import type { ResumeContent, ResumeLanguage, ContactField, EducationItem, ExperienceItem, ProjectItem, SkillGroup, AwardItem, SectionType } from "@/lib/types/resume";
 
 interface AcademicTemplateProps {
   content: ResumeContent;
@@ -29,6 +29,7 @@ const SECTION_TITLES_ZH: Record<SectionType, string> = {
   experience: "工作经历",
   projects: "项目经历",
   skills: "技能",
+  awards: "荣誉奖项",
 };
 
 const SECTION_TITLES_EN: Record<SectionType, string> = {
@@ -36,6 +37,7 @@ const SECTION_TITLES_EN: Record<SectionType, string> = {
   experience: "Experience",
   projects: "Projects",
   skills: "Skills",
+  awards: "Awards",
 };
 
 const EXTRA_FIELD_LABELS_ZH: Record<string, string> = {
@@ -364,6 +366,23 @@ function SkillsBlock({ items, lang, fontFamily }: { items: SkillGroup[]; lang: R
   );
 }
 
+function AwardsBlock({ items, lang, fontFamily }: { items: AwardItem[]; lang: ResumeLanguage; fontFamily: string }) {
+  if (items.length === 0) return null;
+  return (
+    <section className="mb-2">
+      <SectionTitle type="awards" lang={lang} fontFamily={fontFamily} />
+      <div className="space-y-0.5">
+        {items.map((item) => (
+          <div key={item.id} className="flex items-baseline justify-between gap-2" style={{ ...LINE_STYLE, paddingLeft: 0, fontFamily }}>
+            <span>{item.award}</span>
+            {item.date && <span className="shrink-0">{item.date}</span>}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 /* ---- Section renderer (respects content.sections order) ---- */
 
 type SectionRenderer = (content: ResumeContent, lang: ResumeLanguage, fontFamily: string) => React.ReactNode;
@@ -373,6 +392,7 @@ const SECTION_RENDERERS: Record<SectionType, SectionRenderer> = {
   experience: (c, l, f) => <ExperienceBlock key="experience" items={c.experience} lang={l} fontFamily={f} />,
   projects: (c, l, f) => <ProjectsBlock key="projects" items={c.projects} lang={l} fontFamily={f} />,
   skills: (c, l, f) => <SkillsBlock key="skills" items={c.skills} lang={l} fontFamily={f} />,
+  awards: (c, l, f) => <AwardsBlock key="awards" items={c.awards ?? []} lang={l} fontFamily={f} />,
 };
 
 /* ---- Main template ---- */
