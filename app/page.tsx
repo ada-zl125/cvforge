@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { PenLine, Eye, Download, MoveRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -317,10 +318,12 @@ export default function Home() {
 
       {/* Footer */}
       <Separator />
-      <footer className="flex h-16 items-center justify-center px-20 shadow-[0_-1px_3px_rgba(0,0,0,0.04)] transition-all duration-500 hover:bg-primary/[0.03] hover:shadow-[0_-2px_8px_rgba(0,0,0,0.06)]">
-        <p className="text-sm text-muted-foreground">
-          {tr.footer}
-        </p>
+      <footer className="flex h-16 items-center justify-center gap-4 px-20 shadow-[0_-1px_3px_rgba(0,0,0,0.04)] transition-all duration-500 hover:bg-primary/[0.03] hover:shadow-[0_-2px_8px_rgba(0,0,0,0.06)]">
+        <p className="text-sm text-muted-foreground">{tr.footer}</p>
+        <span className="text-muted-foreground/40">·</span>
+        <Link href="/privacy" className="text-sm text-muted-foreground hover:text-foreground transition-colors">{tr.privacyPolicy}</Link>
+        <span className="text-muted-foreground/40">·</span>
+        <Link href="/terms" className="text-sm text-muted-foreground hover:text-foreground transition-colors">{tr.termsOfService}</Link>
       </footer>
     </main>
   );
