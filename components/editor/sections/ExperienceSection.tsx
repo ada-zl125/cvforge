@@ -185,7 +185,7 @@ function ExperienceBlock({
             </div>
             <div className="flex flex-col gap-1">
               <Label className="text-xs">{zh ? "地点" : "Location"}</Label>
-              <Input value={exp.location} onChange={(e) => onUpdate("location", e.target.value)} placeholder={zh ? "北京, 中国" : "London, UK"} />
+              <Input value={exp.location} onChange={(e) => onUpdate("location", e.target.value)} placeholder={zh ? "中国, 北京" : "London, UK"} />
             </div>
             <div className="flex flex-col gap-1">
               <Label className="text-xs">{zh ? "开始时间" : "Start Date"}</Label>

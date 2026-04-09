@@ -148,8 +148,7 @@ function renderEducation(items: EducationItem[], lang: ResumeLanguage, fontFamil
 
     let degreeLine: string;
     if (lang === "zh") {
-      const combined = [edu.degree, edu.field].filter(Boolean).join(", ");
-      degreeLine = combined ? `学位: ${combined}` : "";
+      degreeLine = [edu.field, edu.degree].filter(Boolean).join("");
     } else {
       const combined = [edu.degree, edu.field].filter(Boolean).join(" ");
       degreeLine = combined ? `Degree: ${combined}` : "";
