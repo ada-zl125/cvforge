@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, LogOut, Settings } from "lucide-react";
+import { Plus, LogOut, Settings, LayoutList, Star, Clock, ChevronRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -10,17 +10,21 @@ import { LanguageSwitcher } from "@/components/ui/language-switcher";
 import { useUILanguage } from "@/lib/ui-language";
 import { t } from "@/lib/translations";
 import { AccountSettingsDialog } from "./AccountSettingsDialog";
+import type { FilterKey } from "./WorkspaceContent";
 
 interface SidebarProps {
   userEmail: string;
   displayName: string | null;
   provider: string;
   onNewResume: () => void;
+  activeFilter: FilterKey;
+  onFilterChange: (f: FilterKey) => void;
 }
 
-export function Sidebar({ userEmail, displayName, provider, onNewResume }: SidebarProps) {
+export function Sidebar({ userEmail, displayName, provider, onNewResume, activeFilter, onFilterChange }: SidebarProps) {
   const router = useRouter();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [recentOpen, setRecentOpen] = useState(activeFilter.startsWith("recent-"));
   const { lang } = useUILanguage();
   const tr = t[lang];
 
@@ -32,6 +36,24 @@ export function Sidebar({ userEmail, displayName, provider, onNewResume }: Sideb
     await supabase.auth.signOut();
     router.push("/");
     router.refresh();
+  }
+
+  function navItem(filter: FilterKey) {
+    const isActive = activeFilter === filter;
+    return `flex w-full cursor-pointer items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors ${
+      isActive
+        ? "bg-accent text-accent-foreground font-medium"
+        : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+    }`;
+  }
+
+  function subNavItem(filter: FilterKey) {
+    const isActive = activeFilter === filter;
+    return `flex w-full cursor-pointer items-center gap-2.5 rounded-md py-1.5 pl-9 pr-3 text-sm transition-colors ${
+      isActive
+        ? "bg-accent text-accent-foreground font-medium"
+        : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+    }`;
   }
 
   return (
@@ -55,6 +77,56 @@ export function Sidebar({ userEmail, displayName, provider, onNewResume }: Sideb
             {tr.newResume}
           </Button>
         </div>
+
+        {/* Nav items */}
+        <nav className="flex flex-col gap-0.5 px-3">
+          {/* All */}
+          <button type="button" className={navItem("all")} onClick={() => onFilterChange("all")}>
+            <LayoutList className="size-4 shrink-0" />
+            {tr.filterAll}
+          </button>
+
+          {/* Starred */}
+          <button type="button" className={navItem("starred")} onClick={() => onFilterChange("starred")}>
+            <Star className="size-4 shrink-0" />
+            {tr.filterStarred}
+          </button>
+
+          {/* Recent — expandable */}
+          <button
+            type="button"
+            className={`flex w-full cursor-pointer items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors ${
+              activeFilter.startsWith("recent-")
+                ? "bg-accent text-accent-foreground font-medium"
+                : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+            }`}
+            onClick={() => {
+              setRecentOpen((o) => !o);
+              if (!activeFilter.startsWith("recent-")) onFilterChange("recent-week");
+            }}
+          >
+            <Clock className="size-4 shrink-0" />
+            <span className="flex-1 text-left">{tr.filterRecent}</span>
+            <ChevronRight
+              className={`size-3.5 shrink-0 transition-transform duration-150 ${recentOpen ? "rotate-90" : ""}`}
+            />
+          </button>
+
+          {/* Recent sub-items */}
+          {recentOpen && (
+            <div className="flex flex-col gap-0.5">
+              <button type="button" className={subNavItem("recent-week")} onClick={() => onFilterChange("recent-week")}>
+                {tr.filterRecentWeek}
+              </button>
+              <button type="button" className={subNavItem("recent-month")} onClick={() => onFilterChange("recent-month")}>
+                {tr.filterRecentMonth}
+              </button>
+              <button type="button" className={subNavItem("recent-year")} onClick={() => onFilterChange("recent-year")}>
+                {tr.filterRecentYear}
+              </button>
+            </div>
+          )}
+        </nav>
 
         {/* Spacer */}
         <div className="flex-1" />

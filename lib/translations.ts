@@ -158,6 +158,16 @@ const t = {
     resetTitle: "Reset all content?",
     resetDesc: "This will clear all sections and personal information. This action cannot be undone.",
     resetConfirm: "Reset",
+
+    /* ---- Workspace sidebar filters ---- */
+    filterAll: "All",
+    filterStarred: "Starred",
+    filterRecent: "Recent",
+    filterRecentWeek: "Past week",
+    filterRecentMonth: "Past month",
+    filterRecentYear: "Past year",
+    filterEmptyStarred: "No starred resumes",
+    filterEmptyRecent: "No resumes in this period",
   },
 
   zh: {
@@ -317,6 +327,16 @@ const t = {
     resetTitle: "重置所有内容？",
     resetDesc: "这将清除所有模块和个人信息，此操作无法撤销。",
     resetConfirm: "重置",
+
+    /* ---- Workspace sidebar filters ---- */
+    filterAll: "全部",
+    filterStarred: "已收藏",
+    filterRecent: "最近编辑",
+    filterRecentWeek: "过去一周",
+    filterRecentMonth: "过去一个月",
+    filterRecentYear: "过去一年",
+    filterEmptyStarred: "暂无收藏的简历",
+    filterEmptyRecent: "该时间段内没有简历",
   },
 } as const;
 
