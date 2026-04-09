@@ -106,7 +106,7 @@ function TermsZH() {
       </Section>
 
       <Section title="2. 服务说明">
-        <p>EasyCV 是一款帮助您创建、编辑和导出专业简历的在线工具。本服务在公测阶段以"现状"提供，可能随时更新或变更。</p>
+        <p>EasyCV 是一款帮助您创建、编辑和导出专业简历的在线工具。本服务在公测阶段以&ldquo;现状&rdquo;提供，可能随时更新或变更。</p>
       </Section>
 
       <Section title="3. 您的内容">
@@ -134,7 +134,7 @@ function TermsZH() {
       </Section>
 
       <Section title="7. 免责声明">
-        <p>本服务以"现状"提供，不附带任何明示或暗示的保证，包括但不限于适销性、特定用途适用性或不侵权的保证。</p>
+        <p>本服务以&ldquo;现状&rdquo;提供，不附带任何明示或暗示的保证，包括但不限于适销性、特定用途适用性或不侵权的保证。</p>
       </Section>
 
       <Section title="8. 责任限制">
