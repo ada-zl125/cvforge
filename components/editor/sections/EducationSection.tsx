@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Plus, Trash2, ChevronUp, ChevronDown, ChevronRight } from "lucide-react";
 import type { EducationItem, EducationExtraField, EducationExtraFieldType, ResumeLanguage } from "@/lib/types/resume";
+import { defaultDate } from "@/lib/defaults";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,14 +20,6 @@ const EXTRA_FIELD_META: Record<EducationExtraFieldType, { label: string; labelZh
   custom: { label: "Custom Field", labelZh: "自定义字段", unique: false },
 };
 
-const EN_MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-
-function defaultDate(yearsOffset: number, lang: ResumeLanguage): string {
-  const d = new Date();
-  d.setFullYear(d.getFullYear() + yearsOffset);
-  if (lang === "zh") return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, "0")}`;
-  return `${EN_MONTHS[d.getMonth()]} ${d.getFullYear()}`;
-}
 
 interface EducationSectionProps {
   items: EducationItem[];
@@ -215,11 +208,11 @@ function EducationBlock({
         </div>
         <div className="flex flex-col gap-1">
           <Label className="text-xs">{zh ? "开始时间" : "Start Date"}</Label>
-          <Input value={edu.startDate} onChange={(e) => onUpdate("startDate", e.target.value)} placeholder={defaultDate(-4, language)} />
+          <Input value={edu.startDate} onChange={(e) => onUpdate("startDate", e.target.value)} placeholder={defaultDate(language, -4)} />
         </div>
         <div className="flex flex-col gap-1">
           <Label className="text-xs">{zh ? "结束时间" : "End Date"}</Label>
-          <Input value={edu.endDate} onChange={(e) => onUpdate("endDate", e.target.value)} placeholder={defaultDate(0, language)} />
+          <Input value={edu.endDate} onChange={(e) => onUpdate("endDate", e.target.value)} placeholder={defaultDate(language)} />
         </div>
       </div>
 

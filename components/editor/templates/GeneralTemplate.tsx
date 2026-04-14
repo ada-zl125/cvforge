@@ -25,6 +25,7 @@ const NAME_SIZE = "20pt";
 /* ---- Chinese section title mapping ---- */
 
 const SECTION_TITLES_ZH: Record<SectionType, string> = {
+  summary: "个人简介",
   education: "教育经历",
   experience: "工作经历",
   projects: "项目经历",
@@ -33,6 +34,7 @@ const SECTION_TITLES_ZH: Record<SectionType, string> = {
 };
 
 const SECTION_TITLES_EN: Record<SectionType, string> = {
+  summary: "Summary",
   education: "Education",
   experience: "Experience",
   projects: "Projects",
@@ -111,6 +113,16 @@ function SectionTitle({ type, lang, fontFamily }: { type: SectionType; lang: Res
       </h2>
       <div className="mt-0.5 border-t border-black" />
     </div>
+  );
+}
+
+function SummaryBlock({ summary, lang, fontFamily }: { summary: string; lang: ResumeLanguage; fontFamily: string }) {
+  if (!summary.trim()) return null;
+  return (
+    <section className="mb-2">
+      <SectionTitle type="summary" lang={lang} fontFamily={fontFamily} />
+      <p style={{ ...LINE_STYLE, paddingLeft: 0 }}>{summary}</p>
+    </section>
   );
 }
 
@@ -387,6 +399,7 @@ function AwardsBlock({ items, lang, fontFamily }: { items: AwardItem[]; lang: Re
 type SectionRenderer = (content: ResumeContent, lang: ResumeLanguage, fontFamily: string) => React.ReactNode;
 
 const SECTION_RENDERERS: Record<SectionType, SectionRenderer> = {
+  summary: (c, l, f) => <SummaryBlock key="summary" summary={c.summary ?? ""} lang={l} fontFamily={f} />,
   education: (c, l, f) => <EducationBlock key="education" items={c.education} lang={l} fontFamily={f} />,
   experience: (c, l, f) => <ExperienceBlock key="experience" items={c.experience} lang={l} fontFamily={f} />,
   projects: (c, l, f) => <ProjectsBlock key="projects" items={c.projects} lang={l} fontFamily={f} />,
