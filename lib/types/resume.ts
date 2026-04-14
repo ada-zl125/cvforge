@@ -26,7 +26,7 @@ export interface PersonalInfo {
 
 /* ---- Section ordering ---- */
 
-export type SectionType = "education" | "projects" | "experience" | "skills" | "awards";
+export type SectionType = "summary" | "education" | "projects" | "experience" | "skills" | "awards";
 
 export interface DescriptionField {
   id: string;
@@ -89,6 +89,8 @@ export interface ProjectItem {
 
 export interface ResumeContent {
   personal: PersonalInfo;
+  /** Optional summary paragraph shown at the top of the resume */
+  summary?: string;
   /** Ordered list of active sections (user-addable/removable) */
   sections: SectionType[];
   experience: ExperienceItem[];
@@ -98,23 +100,6 @@ export interface ResumeContent {
   awards: AwardItem[];
 }
 
-/* ------------------------------------------------------------------ */
-/*  Database row type – matches the `resumes` table schema             */
-/* ------------------------------------------------------------------ */
-
-export type ResumeTemplate =
-  | "general";
+export type ResumeTemplate = "general";
 
 export type ResumeLanguage = "en" | "zh";
-
-export interface ResumeRow {
-  id: string;
-  user_id: string;
-  title: string;
-  template: ResumeTemplate;
-  language: ResumeLanguage;
-  content: ResumeContent;
-  is_starred: boolean;
-  created_at: string;
-  updated_at: string;
-}
