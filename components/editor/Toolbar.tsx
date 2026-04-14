@@ -1,9 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check, Loader2, FileDown, FileText, Image as ImageIcon, Settings } from "lucide-react";
-import type { ResumeTemplate, ResumeLanguage, ResumeContent } from "@/lib/types/resume";
+import { ArrowLeft, ChevronDown, FileDown, FileImage, Loader2, Settings } from "lucide-react";
+import { exportResume, type ExportFormat } from "@/lib/export";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { TITLE_MAX } from "@/lib/defaults";
+import type { ResumeTemplate, ResumeLanguage } from "@/lib/types/resume";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,40 +25,35 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from "@/components/ui/dropdown-menu";
-
-type SaveStatus = "saved" | "saving" | "unsaved";
 
 const TEMPLATE_OPTIONS: { value: ResumeTemplate; label: string; bg: string; text: string }[] = [
   { value: "general", label: "General", bg: "bg-blue-50", text: "text-blue-600" },
 ];
 
-const LANGUAGE_OPTIONS: { value: ResumeLanguage; label: string }[] = [
-  { value: "en", label: "English" },
-  { value: "zh", label: "Chinese" },
-];
-
-const TITLE_MAX = 50;
 
 interface ToolbarProps {
   title: string;
   template: ResumeTemplate;
   language: ResumeLanguage;
-  content: ResumeContent;
-  saveStatus: SaveStatus;
   onSettingsChange: (title: string, language: ResumeLanguage, template: ResumeTemplate) => void;
 }
 
-export function Toolbar({ title, template, language, content, saveStatus, onSettingsChange }: ToolbarProps) {
+export function Toolbar({ title, template, language, onSettingsChange }: ToolbarProps) {
   const router = useRouter();
   const { lang } = useUILanguage();
   const tr = t[lang];
-  const [exportingFormat, setExportingFormat] = useState<"pdf" | "png" | null>(null);
+
+  /* ---- Export state ---- */
+  const [exporting, setExporting] = useState(false);
+
+  async function handleExport(format: ExportFormat) {
+    setExporting(true);
+    try {
+      await exportResume(format, title || "resume");
+    } finally {
+      setExporting(false);
+    }
+  }
 
   /* ---- Settings dialog state ---- */
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -58,14 +61,12 @@ export function Toolbar({ title, template, language, content, saveStatus, onSett
   const [draftLanguage, setDraftLanguage] = useState<ResumeLanguage>(language);
   const [draftTemplate, setDraftTemplate] = useState<ResumeTemplate>(template);
 
-  // Sync drafts when dialog opens
-  useEffect(() => {
-    if (settingsOpen) {
-      setDraftTitle(title);
-      setDraftLanguage(language);
-      setDraftTemplate(template);
-    }
-  }, [settingsOpen, title, language, template]);
+  function openSettings() {
+    setDraftTitle(title);
+    setDraftLanguage(language);
+    setDraftTemplate(template);
+    setSettingsOpen(true);
+  }
 
   const titleTooLong = draftTitle.length > TITLE_MAX;
   const canSave = draftTitle.trim().length > 0 && !titleTooLong;
@@ -76,30 +77,6 @@ export function Toolbar({ title, template, language, content, saveStatus, onSett
     setSettingsOpen(false);
   }
 
-  /* ---- Export ---- */
-  async function handleExport(format: "pdf" | "png") {
-    setExportingFormat(format);
-    try {
-      const res = await fetch(`/api/export/${format}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content, title, language }),
-      });
-      if (!res.ok) throw new Error(`${format.toUpperCase()} export failed`);
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${title || "resume"}.${format}`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error(`${format.toUpperCase()} export error:`, err);
-    } finally {
-      setExportingFormat(null);
-    }
-  }
-
   return (
     <>
       <header className="editor-toolbar flex h-14 shrink-0 items-center gap-3 border-b border-border bg-card px-4">
@@ -108,8 +85,8 @@ export function Toolbar({ title, template, language, content, saveStatus, onSett
           variant="ghost"
           size="icon-sm"
           className="cursor-pointer"
-          onClick={() => router.push("/workspace")}
-          aria-label={tr.backToWorkspace}
+          onClick={() => router.push("/")}
+          aria-label={tr.backToHome}
         >
           <ArrowLeft className="size-4" />
         </Button>
@@ -122,30 +99,11 @@ export function Toolbar({ title, template, language, content, saveStatus, onSett
           variant="ghost"
           size="icon-sm"
           className="cursor-pointer shrink-0 text-muted-foreground hover:text-foreground"
-          onClick={() => setSettingsOpen(true)}
+          onClick={openSettings}
           aria-label="Resume settings"
         >
           <Settings className="size-4" />
         </Button>
-
-        {/* Save status */}
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          {saveStatus === "saved" && (
-            <>
-              <Check className="size-3.5 text-emerald-500" />
-              <span>{tr.savedStatus}</span>
-            </>
-          )}
-          {saveStatus === "saving" && (
-            <>
-              <Loader2 className="size-3.5 animate-spin" />
-              <span>{tr.savingStatus}</span>
-            </>
-          )}
-          {saveStatus === "unsaved" && (
-            <span className="text-amber-500">{tr.unsavedStatus}</span>
-          )}
-        </div>
 
         {/* Spacer */}
         <div className="flex-1" />
@@ -155,18 +113,27 @@ export function Toolbar({ title, template, language, content, saveStatus, onSett
 
         {/* Export dropdown */}
         <DropdownMenu>
-          <DropdownMenuTrigger className="btn-hover-border inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 text-sm font-medium hover:bg-muted">
-            <FileDown className="size-4" />
-            {tr.exportLabel}
+          <DropdownMenuTrigger asChild>
+            <Button
+              className="btn-hover-primary h-8 cursor-pointer gap-1.5 rounded-lg px-3 text-sm font-medium"
+              variant="outline"
+              disabled={exporting}
+            >
+              {exporting
+                ? <Loader2 className="size-4 animate-spin" />
+                : <FileDown className="size-4" />}
+              {exporting ? tr.exporting : tr.exportLabel}
+              {!exporting && <ChevronDown className="size-3 opacity-60" />}
+            </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" sideOffset={4} className="min-w-[160px]">
-            <DropdownMenuItem className="cursor-pointer gap-2 whitespace-nowrap" onClick={() => handleExport("pdf")} disabled={exportingFormat !== null}>
-              {exportingFormat === "pdf" ? <Loader2 className="size-4 animate-spin" /> : <FileText className="size-4" />}
-              {exportingFormat === "pdf" ? tr.exporting : tr.downloadPdf}
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem className="cursor-pointer gap-2" onClick={() => handleExport("pdf")}>
+              <FileDown className="size-4 text-muted-foreground" />
+              {tr.exportPdf}
             </DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer gap-2 whitespace-nowrap" onClick={() => handleExport("png")} disabled={exportingFormat !== null}>
-              {exportingFormat === "png" ? <Loader2 className="size-4 animate-spin" /> : <ImageIcon className="size-4" aria-hidden="true" />}
-              {exportingFormat === "png" ? tr.exporting : tr.downloadPng}
+            <DropdownMenuItem className="cursor-pointer gap-2" onClick={() => handleExport("png")}>
+              <FileImage className="size-4 text-muted-foreground" />
+              {tr.exportPng}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -205,18 +172,18 @@ export function Toolbar({ title, template, language, content, saveStatus, onSett
             <div className="grid gap-2">
               <Label>{tr.languageLabel}</Label>
               <div className="flex gap-2">
-                {LANGUAGE_OPTIONS.map((l) => (
+                {(["en", "zh"] as const).map((lang) => (
                   <button
-                    key={l.value}
+                    key={lang}
                     type="button"
-                    onClick={() => setDraftLanguage(l.value)}
+                    onClick={() => setDraftLanguage(lang)}
                     className={`cursor-pointer rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
-                      draftLanguage === l.value
+                      draftLanguage === lang
                         ? "border-foreground bg-foreground/5 text-foreground"
                         : "border-border text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                     }`}
                   >
-                    {l.value === "en" ? tr.langEnglish : tr.langChinese}
+                    {lang === "en" ? tr.langEnglish : tr.langChinese}
                   </button>
                 ))}
               </div>
