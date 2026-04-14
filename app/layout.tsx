@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { UILanguageProvider } from "@/lib/ui-language";
-import { CookieBanner } from "@/components/CookieBanner";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -34,7 +33,6 @@ export default function RootLayout({
           <UILanguageProvider>
             <TooltipProvider>
               {children}
-              <CookieBanner />
             </TooltipProvider>
           </UILanguageProvider>
         </body>

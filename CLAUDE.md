@@ -4,7 +4,11 @@
 
 ## Product
 
-Online resume generation tool for job seekers and academics. Users fill in content; the app handles professional layout. V1.0 supports 3 pages: Landing/Auth, Workspace, Resume Editor.
+A stateless online resume builder for job seekers and academics. No accounts, no database — visitors use it as a tool and export when done. Two pages only:
+- **Entry page**: visitor creates a new CV (picks title, language, template), then jumps to the editor
+- **Editor page**: full resume editing with live A4 preview and export (PDF/PNG)
+
+Resume state is stored in `localStorage` for session persistence. No server-side data storage.
 
 ## Tech Stack
 
@@ -15,9 +19,7 @@ Online resume generation tool for job seekers and academics. Users fill in conte
 | Styling | Tailwind CSS v4 (`@import "tailwindcss"` syntax) |
 | Components | shadcn/ui (primary UI library) |
 | Design | shadcn/ui-based, clean & modern, light mode only |
-| Database | Supabase (PostgreSQL) |
-| Auth | Supabase Auth (email/password + Google OAuth) |
-| Deployment | Vercel |
+| Deployment | Vercel (or GitHub Pages with static export) |
 
 ## Key Next.js 16 Notes
 
@@ -31,46 +33,22 @@ Online resume generation tool for job seekers and academics. Users fill in conte
 npm run dev          # Start dev server (Turbopack)
 npm run build        # Production build
 npm run lint         # ESLint check
-supabase db push     # Push local migrations to remote Supabase
-supabase db diff     # Generate migration from schema changes
 ```
 
 ## Project Structure
 
 ```
 app/
-  page.tsx                  # Landing page + Auth
-  workspace/page.tsx        # Workspace (resume list)
-  editor/[id]/page.tsx      # Resume editor (form + A4 preview)
-  auth/callback/route.ts    # Supabase OAuth callback
+  page.tsx                  # Entry page (create CV action + config dialog)
+  editor/page.tsx           # Resume editor (form + A4 preview)
   api/export/
-    pdf/route.ts
-    docx/route.ts
+    pdf/route.ts            # PDF export (Puppeteer, server-side)
+    png/route.ts            # PNG export (Puppeteer, server-side)
 components/
-  auth/                     # AuthModal
-  workspace/                # ResumeCard, CreateResumeModal, etc.
   editor/                   # FormPanel, PreviewPanel, templates/
   ui/                       # shadcn/ui generated components
 lib/
-  supabase/
-    client.ts               # Browser client (createBrowserClient)
-    server.ts               # Server client (createServerClient + cookies)
   types/resume.ts           # ResumeContent TypeScript types
-supabase/migrations/        # SQL migrations (never edit manually)
-proxy.ts                    # Route protection (Next.js 16 proxy, replaces middleware.ts)
-```
-
-## Database
-
-Table: `resumes` (id, user_id, title, template, content jsonb, created_at, updated_at)
-RLS enabled — users can only access their own resumes.
-Supabase project ref: `tcivruueyqbgpwlniawz` (eu-west-1)
-
-## Environment Variables
-
-```
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
 ```
 
 ## GitHub Workflow

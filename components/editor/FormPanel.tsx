@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
-import { ChevronDown, ChevronUp, Plus, Trash2, GraduationCap, FolderOpen, Briefcase, Wrench, Trophy, ChevronsUpDown, ChevronsDownUp, RotateCcw, Save, Check, Loader2 } from "lucide-react";
+import { AlignLeft, ChevronDown, ChevronUp, Plus, Trash2, GraduationCap, FolderOpen, Briefcase, Wrench, Trophy, ChevronsUpDown, ChevronsDownUp, RotateCcw } from "lucide-react";
 import type { ResumeContent, SectionType, ResumeLanguage } from "@/lib/types/resume";
+import { defaultResumeContent } from "@/lib/defaults";
 import { useUILanguage } from "@/lib/ui-language";
 import { t } from "@/lib/translations";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { PersonalSection } from "./sections/PersonalSection";
+import { SummarySection } from "./sections/SummarySection";
 import { EducationSection } from "./sections/EducationSection";
 import { ProjectsSection } from "./sections/ProjectsSection";
 import { ExperienceSection } from "./sections/ExperienceSection";
@@ -30,6 +32,7 @@ import { SkillsSection } from "./sections/SkillsSection";
 import { AwardsSection } from "./sections/AwardsSection";
 
 const SECTION_META: Record<SectionType, { icon: typeof GraduationCap; label: string; labelZh: string }> = {
+  summary:    { icon: AlignLeft,     label: "Summary",    labelZh: "个人简介" },
   education:  { icon: GraduationCap, label: "Education",  labelZh: "教育经历" },
   projects:   { icon: FolderOpen,    label: "Projects",   labelZh: "项目经历" },
   experience: { icon: Briefcase,     label: "Experience", labelZh: "工作经历" },
@@ -37,27 +40,14 @@ const SECTION_META: Record<SectionType, { icon: typeof GraduationCap; label: str
   awards:     { icon: Trophy,        label: "Awards",     labelZh: "荣誉奖项" },
 };
 
-const EMPTY_CONTENT: ResumeContent = {
-  personal: { fullName: "", contacts: [] },
-  sections: [],
-  experience: [],
-  education: [],
-  skills: [],
-  projects: [],
-  awards: [],
-};
-
-type SaveStatus = "saved" | "saving" | "unsaved";
 
 interface FormPanelProps {
   content: ResumeContent;
   onChange: (content: ResumeContent) => void;
-  saveStatus: SaveStatus;
-  onSave: () => void;
   language: ResumeLanguage;
 }
 
-export function FormPanel({ content, onChange, saveStatus, onSave, language }: FormPanelProps) {
+export function FormPanel({ content, onChange, language }: FormPanelProps) {
   const { lang } = useUILanguage();
   const tr = t[lang];
   const activeSections = useMemo(() => content.sections ?? [], [content.sections]);
@@ -108,7 +98,7 @@ export function FormPanel({ content, onChange, saveStatus, onSave, language }: F
   }
 
   function handleReset() {
-    onChange(EMPTY_CONTENT);
+    onChange(defaultResumeContent);
     setPersonalCollapsed(true);
     setSectionCollapsed({});
     setResetOpen(false);
@@ -138,18 +128,6 @@ export function FormPanel({ content, onChange, saveStatus, onSave, language }: F
           {tr.resetBtn}
         </Button>
 
-        <div className="flex-1" />
-
-        <Button
-          variant="outline"
-          size="sm"
-          className="btn-hover-border cursor-pointer gap-1.5 text-xs"
-          onClick={onSave}
-          disabled={saveStatus !== "unsaved"}
-        >
-          {saveStatus === "saving" ? <Loader2 className="size-3.5 animate-spin" /> : saveStatus === "saved" ? <Check className="size-3.5 text-emerald-500" /> : <Save className="size-3.5" />}
-          {saveStatus === "saving" ? tr.savingStatus : saveStatus === "saved" ? tr.savedStatus : tr.saveBtn}
-        </Button>
       </div>
 
       {/* Personal Information — fixed, cannot be removed */}
@@ -303,6 +281,12 @@ function CollapsibleSection({
       {/* Content */}
       {!collapsed && (
         <div className="border-t border-border px-4 pb-4 pt-3">
+          {type === "summary" && (
+            <SummarySection
+              value={content.summary ?? ""}
+              onChange={(summary) => onChange({ ...content, summary })}
+            />
+          )}
           {type === "education" && (
             <EducationSection items={content.education} onChange={(education) => onChange({ ...content, education })} language={language} />
           )}
