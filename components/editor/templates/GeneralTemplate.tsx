@@ -29,7 +29,7 @@ const SECTION_TITLES_ZH: Record<SectionType, string> = {
   education: "教育经历",
   experience: "工作经历",
   projects: "项目经历",
-  skills: "技能",
+  skills: "专业技能",
   awards: "荣誉奖项",
 };
 
@@ -38,7 +38,7 @@ const SECTION_TITLES_EN: Record<SectionType, string> = {
   education: "Education",
   experience: "Experience",
   projects: "Projects",
-  skills: "Skills",
+  skills: "Technical Skills",
   awards: "Awards",
 };
 
@@ -104,14 +104,14 @@ const BULLET_DOT_STYLE: React.CSSProperties = {
 function SectionTitle({ type, lang, fontFamily }: { type: SectionType; lang: ResumeLanguage; fontFamily: string }) {
   const title = getSectionTitle(type, lang);
   return (
-    <div className="mb-1">
+    <div className="mb-0.5">
       <h2
-        style={{ fontSize: SECTION_TITLE_SIZE, ...boldFontStyle(lang, fontFamily) }}
-        className={`tracking-normal ${lang === "en" ? "uppercase" : ""}`}
+        style={{ fontSize: SECTION_TITLE_SIZE, letterSpacing: "-0.03em", ...boldFontStyle(lang, fontFamily) }}
+        className={`${lang === "en" ? "uppercase" : ""}`}
       >
         {title}
       </h2>
-      <div className="mt-0.5 border-t border-black" />
+      <div className="border-t border-black" />
     </div>
   );
 }
@@ -275,9 +275,11 @@ function EducationBlock({ items, lang, fontFamily }: { items: EducationItem[]; l
                 </div>
               )}
               {/* Extra fields as bullet list */}
-              {extraFields.map((ef) => (
-                <BulletItem key={ef.id} >{getExtraFieldLabel(ef.label, lang)}: {ef.value}</BulletItem>
-              ))}
+              {extraFields.map((ef) => {
+                if (!ef.value) return null;
+                const label = getExtraFieldLabel(ef.label, lang);
+                return <BulletItem key={ef.id}>{label ? `${label}: ` : ""}{ef.value}</BulletItem>;
+              })}
             </div>
           );
         })}
@@ -368,7 +370,7 @@ function SkillsBlock({ items, lang, fontFamily }: { items: SkillGroup[]; lang: R
       <div>
         {items.map((group) => (
           <div key={group.id} style={{ ...LINE_STYLE, paddingLeft: 0 }}>
-            <span style={boldFontStyle(lang, fontFamily)}>{group.category}:</span>{" "}
+            {group.category && <><span style={boldFontStyle(lang, fontFamily)}>{group.category}:</span>{" "}</>}
             {group.items}
           </div>
         ))}
