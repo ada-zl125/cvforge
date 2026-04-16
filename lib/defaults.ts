@@ -1,4 +1,5 @@
 import type { ResumeContent, ResumeLanguage } from "./types/resume";
+import type { AcademicCVContent } from "./types/academic-cv";
 
 export const RESUME_STORAGE_KEY = "easycv_resume";
 export const ACADEMIC_CV_STORAGE_KEY = "easycv_academic";
@@ -12,6 +13,22 @@ export const defaultResumeContent: ResumeContent = {
   skills: [],
   projects: [],
   awards: [],
+};
+
+export const defaultAcademicCVContent: AcademicCVContent = {
+  personal: { fullName: "", contacts: [] },
+  sections: [],
+  education: [],
+  researchExperience: [],
+  teachingExperience: [],
+  industryExperience: [],
+  publications: [],
+  manuscriptsUnderReview: [],
+  conferencePresentations: [],
+  grantsAndAwards: [],
+  professionalService: [],
+  technicalSkills: [],
+  references: [],
 };
 
 /* ---- Date helpers used by section form components ---- */

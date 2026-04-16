@@ -1,9 +1,13 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
-import { AlignLeft, ChevronDown, ChevronUp, Plus, Trash2, GraduationCap, FolderOpen, Briefcase, Wrench, Trophy, ChevronsUpDown, ChevronsDownUp, RotateCcw } from "lucide-react";
-import type { ResumeContent, SectionType, ResumeLanguage } from "@/lib/types/resume";
-import { defaultResumeContent } from "@/lib/defaults";
+import {
+  Search, GraduationCap, FlaskConical, BookOpen, Briefcase, BookMarked,
+  FileText, Mic, Award, Users, Wrench, UserCheck,
+  ChevronDown, ChevronUp, Plus, Trash2, ChevronsUpDown, ChevronsDownUp, RotateCcw,
+} from "lucide-react";
+import type { AcademicCVContent, AcademicSectionType, ResumeLanguage } from "@/lib/types/academic-cv";
+import { defaultAcademicCVContent } from "@/lib/defaults";
 import { useUILanguage } from "@/lib/ui-language";
 import { t } from "@/lib/translations";
 import { Button } from "@/components/ui/button";
@@ -23,27 +27,36 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
-import { PersonalSection } from "./sections/PersonalSection";
-import { SummarySection } from "./sections/SummarySection";
-import { EducationSection } from "./sections/EducationSection";
-import { ProjectsSection } from "./sections/ProjectsSection";
-import { ExperienceSection } from "./sections/ExperienceSection";
-import { SkillsSection } from "./sections/SkillsSection";
-import { AwardsSection } from "./sections/AwardsSection";
+import { PersonalSection } from "@/components/editor/sections/PersonalSection";
+import { SkillsSection } from "@/components/editor/sections/SkillsSection";
+import { ResearchInterestsSection } from "./sections/ResearchInterestsSection";
+import { AcademicEducationSection } from "./sections/AcademicEducationSection";
+import { AcademicExperienceSection } from "./sections/AcademicExperienceSection";
+import { TeachingSection } from "./sections/TeachingSection";
+import { PublicationsSection } from "./sections/PublicationsSection";
+import { PresentationsSection } from "./sections/PresentationsSection";
+import { GrantsAwardsSection } from "./sections/GrantsAwardsSection";
+import { ServiceSection } from "./sections/ServiceSection";
+import { ReferencesSection } from "./sections/ReferencesSection";
 
-const SECTION_META: Record<SectionType, { icon: typeof GraduationCap; label: string; labelZh: string }> = {
-  summary:    { icon: AlignLeft,     label: "Summary",    labelZh: "个人简介" },
-  education:  { icon: GraduationCap, label: "Education",  labelZh: "教育经历" },
-  projects:   { icon: FolderOpen,    label: "Projects",   labelZh: "项目经历" },
-  experience: { icon: Briefcase,     label: "Experience", labelZh: "工作经历" },
-  skills:     { icon: Wrench,        label: "Technical Skills", labelZh: "专业技能" },
-  awards:     { icon: Trophy,        label: "Awards",     labelZh: "荣誉奖项" },
+const SECTION_META: Record<AcademicSectionType, { icon: typeof GraduationCap; label: string; labelZh: string }> = {
+  researchInterests:       { icon: Search,        label: "Research Interests",        labelZh: "研究兴趣" },
+  education:               { icon: GraduationCap, label: "Education",                 labelZh: "教育经历" },
+  researchExperience:      { icon: FlaskConical,  label: "Research Experience",       labelZh: "科研经历" },
+  teachingExperience:      { icon: BookOpen,      label: "Teaching Experience",       labelZh: "教学经历" },
+  industryExperience:      { icon: Briefcase,     label: "Industry Experience",       labelZh: "工业界经历" },
+  publications:            { icon: BookMarked,    label: "Publications",              labelZh: "已发表论文" },
+  manuscriptsUnderReview:  { icon: FileText,      label: "Manuscripts under Review",  labelZh: "在投论文" },
+  conferencePresentations: { icon: Mic,           label: "Conference Presentations",  labelZh: "会议报告" },
+  grantsAndAwards:         { icon: Award,         label: "Grants & Awards",           labelZh: "科研资助与荣誉" },
+  professionalService:     { icon: Users,         label: "Professional Service",      labelZh: "学术服务" },
+  technicalSkills:         { icon: Wrench,        label: "Technical Skills",          labelZh: "技术技能" },
+  references:              { icon: UserCheck,     label: "Referees",                  labelZh: "推荐人" },
 };
 
-
 interface FormPanelProps {
-  content: ResumeContent;
-  onChange: (content: ResumeContent) => void;
+  content: AcademicCVContent;
+  onChange: (content: AcademicCVContent) => void;
   language: ResumeLanguage;
 }
 
@@ -51,11 +64,10 @@ export function FormPanel({ content, onChange, language }: FormPanelProps) {
   const { lang } = useUILanguage();
   const tr = t[lang];
   const activeSections = useMemo(() => content.sections ?? [], [content.sections]);
-  const availableSections = (Object.keys(SECTION_META) as SectionType[]).filter(
+  const availableSections = (Object.keys(SECTION_META) as AcademicSectionType[]).filter(
     (s) => !activeSections.includes(s),
   );
 
-  // Collapse state: personal + each dynamic section. Default all to collapsed.
   const [personalCollapsed, setPersonalCollapsed] = useState(true);
   const [sectionCollapsed, setSectionCollapsed] = useState<Record<string, boolean>>(() => {
     const map: Record<string, boolean> = {};
@@ -76,16 +88,16 @@ export function FormPanel({ content, onChange, language }: FormPanelProps) {
     });
   }, [allCollapsed, activeSections]);
 
-  function setSectionCollapse(type: SectionType, collapsed: boolean) {
+  function setSectionCollapse(type: AcademicSectionType, collapsed: boolean) {
     setSectionCollapsed((prev) => ({ ...prev, [type]: collapsed }));
   }
 
-  function addSection(type: SectionType) {
+  function addSection(type: AcademicSectionType) {
     onChange({ ...content, sections: [...activeSections, type] });
     setSectionCollapsed((prev) => ({ ...prev, [type]: false }));
   }
 
-  function removeSection(type: SectionType) {
+  function removeSection(type: AcademicSectionType) {
     onChange({ ...content, sections: activeSections.filter((s) => s !== type) });
   }
 
@@ -98,7 +110,7 @@ export function FormPanel({ content, onChange, language }: FormPanelProps) {
   }
 
   function handleReset() {
-    onChange(defaultResumeContent);
+    onChange(defaultAcademicCVContent);
     setPersonalCollapsed(true);
     setSectionCollapsed({});
     setResetOpen(false);
@@ -106,7 +118,7 @@ export function FormPanel({ content, onChange, language }: FormPanelProps) {
 
   return (
     <div className="flex flex-col gap-4 p-5">
-      {/* Form toolbar: Collapse All / Reset */}
+      {/* Form toolbar */}
       <div className="flex items-center gap-1.5">
         <Button
           variant="outline"
@@ -127,7 +139,6 @@ export function FormPanel({ content, onChange, language }: FormPanelProps) {
           <RotateCcw className="size-3.5" />
           {tr.resetBtn}
         </Button>
-
       </div>
 
       {/* Personal Information — fixed, cannot be removed */}
@@ -208,7 +219,7 @@ export function FormPanel({ content, onChange, language }: FormPanelProps) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Collapsible section wrapper for dynamic sections                    */
+/*  Collapsible section wrapper                                          */
 /* ------------------------------------------------------------------ */
 
 function CollapsibleSection({
@@ -224,9 +235,9 @@ function CollapsibleSection({
   onToggleCollapse,
   language,
 }: {
-  type: SectionType;
-  content: ResumeContent;
-  onChange: (content: ResumeContent) => void;
+  type: AcademicSectionType;
+  content: AcademicCVContent;
+  onChange: (content: AcademicCVContent) => void;
   onRemove: () => void;
   isFirst: boolean;
   isLast: boolean;
@@ -281,26 +292,91 @@ function CollapsibleSection({
       {/* Content */}
       {!collapsed && (
         <div className="border-t border-border px-4 pb-4 pt-3">
-          {type === "summary" && (
-            <SummarySection
-              value={content.summary ?? ""}
-              onChange={(summary) => onChange({ ...content, summary })}
+          {type === "researchInterests" && (
+            <ResearchInterestsSection
+              value={content.researchInterests ?? ""}
+              onChange={(v) => onChange({ ...content, researchInterests: v })}
             />
           )}
           {type === "education" && (
-            <EducationSection items={content.education} onChange={(education) => onChange({ ...content, education })} language={language} />
+            <AcademicEducationSection
+              items={content.education}
+              onChange={(education) => onChange({ ...content, education })}
+              language={language}
+            />
           )}
-          {type === "projects" && (
-            <ProjectsSection items={content.projects} onChange={(projects) => onChange({ ...content, projects })} language={language} />
+          {type === "researchExperience" && (
+            <AcademicExperienceSection
+              items={content.researchExperience}
+              onChange={(items) => onChange({ ...content, researchExperience: items })}
+              language={language}
+              orgPlaceholder={language === "zh" ? "清华大学" : "MIT CSAIL"}
+            />
           )}
-          {type === "experience" && (
-            <ExperienceSection items={content.experience} onChange={(experience) => onChange({ ...content, experience })} language={language} />
+          {type === "industryExperience" && (
+            <AcademicExperienceSection
+              items={content.industryExperience}
+              onChange={(items) => onChange({ ...content, industryExperience: items })}
+              language={language}
+              orgPlaceholder={language === "zh" ? "谷歌公司" : "Google"}
+              optionalFields={["department", "descriptions"]}
+            />
           )}
-          {type === "skills" && (
-            <SkillsSection items={content.skills} onChange={(skills) => onChange({ ...content, skills })} language={language} />
+          {type === "teachingExperience" && (
+            <TeachingSection
+              items={content.teachingExperience}
+              onChange={(items) => onChange({ ...content, teachingExperience: items })}
+              language={language}
+            />
           )}
-          {type === "awards" && (
-            <AwardsSection items={content.awards ?? []} onChange={(awards) => onChange({ ...content, awards })} language={language} />
+          {type === "publications" && (
+            <PublicationsSection
+              items={content.publications}
+              onChange={(items) => onChange({ ...content, publications: items })}
+              language={language}
+            />
+          )}
+          {type === "manuscriptsUnderReview" && (
+            <PublicationsSection
+              items={content.manuscriptsUnderReview}
+              onChange={(items) => onChange({ ...content, manuscriptsUnderReview: items })}
+              language={language}
+            />
+          )}
+          {type === "conferencePresentations" && (
+            <PresentationsSection
+              items={content.conferencePresentations}
+              onChange={(items) => onChange({ ...content, conferencePresentations: items })}
+              language={language}
+            />
+          )}
+          {type === "grantsAndAwards" && (
+            <GrantsAwardsSection
+              items={content.grantsAndAwards}
+              onChange={(items) => onChange({ ...content, grantsAndAwards: items })}
+              language={language}
+            />
+          )}
+          {type === "professionalService" && (
+            <ServiceSection
+              items={content.professionalService}
+              onChange={(items) => onChange({ ...content, professionalService: items })}
+              language={language}
+            />
+          )}
+          {type === "technicalSkills" && (
+            <SkillsSection
+              items={content.technicalSkills}
+              onChange={(items) => onChange({ ...content, technicalSkills: items })}
+              language={language}
+            />
+          )}
+          {type === "references" && (
+            <ReferencesSection
+              items={content.references}
+              onChange={(items) => onChange({ ...content, references: items })}
+              language={language}
+            />
           )}
         </div>
       )}
