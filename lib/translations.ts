@@ -57,6 +57,34 @@ const t = {
     summaryLabel: "Summary",
     summaryPlaceholder: "A brief overview of your background, skills, and career goals…",
 
+    /* ---- Cover Letter ---- */
+    createCoverLetter: "Cover Letter",
+    createCoverLetterDesc: "Write a professional cover letter for any application.",
+    createNewCoverLetter: "Create New Cover Letter",
+    createNewCoverLetterDesc: "Give your cover letter a title.",
+    coverLetterTitlePlaceholder: "e.g. Faculty Application Cover Letter",
+    coverLetter: {
+      editorSettings:          "Cover Letter Settings",
+      sectionSender:           "Your Info",
+      sectionRecipient:        "Date & Recipient",
+      sectionParagraphs:       "Body Paragraphs",
+      senderName:              "Your Name",
+      senderAddress1:          "Address Line 1",
+      senderAddress2:          "City, State Zip",
+      date:                    "Date",
+      recipientName:           "Recipient / Organization",
+      salutation:              "Salutation (Dear…)",
+      department:              "Department",
+      institution:             "Institution",
+      addressLine1:            "Address Line 1",
+      addressLine2:            "City, State Zip",
+      addField:                "Add field",
+      addParagraph:            "Add Paragraph",
+      paragraphPlaceholder:    "Write your paragraph here…",
+      resetTitle:              "Reset cover letter?",
+      resetDesc:               "This will clear all fields. This action cannot be undone.",
+    },
+
     /* ---- Academic CV ---- */
     academicCv: {
       sectionResearchInterests:       "Research Interests",
@@ -156,6 +184,34 @@ const t = {
     /* ---- Summary section ---- */
     summaryLabel: "个人简介",
     summaryPlaceholder: "简要介绍您的背景、技能和职业目标…",
+
+    /* ---- Cover Letter ---- */
+    createCoverLetter: "求职信",
+    createCoverLetterDesc: "为各类申请撰写专业求职信。",
+    createNewCoverLetter: "新建求职信",
+    createNewCoverLetterDesc: "为求职信起个名字。",
+    coverLetterTitlePlaceholder: "例：教职申请求职信",
+    coverLetter: {
+      editorSettings:          "求职信设置",
+      sectionSender:           "发件人信息",
+      sectionRecipient:        "日期与收件人",
+      sectionParagraphs:       "正文段落",
+      senderName:              "姓名",
+      senderAddress1:          "地址第一行",
+      senderAddress2:          "城市、州/省、邮编",
+      date:                    "日期",
+      recipientName:           "收件人 / 机构",
+      salutation:              "称谓（Dear…）",
+      department:              "院系",
+      institution:             "机构",
+      addressLine1:            "地址第一行",
+      addressLine2:            "城市、州/省、邮编",
+      addField:                "添加字段",
+      addParagraph:            "添加段落",
+      paragraphPlaceholder:    "在此输入段落内容…",
+      resetTitle:              "重置求职信？",
+      resetDesc:               "这将清除所有内容，此操作无法撤销。",
+    },
 
     /* ---- Academic CV ---- */
     academicCv: {

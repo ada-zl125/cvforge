@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { FilePlus, GraduationCap, FileText } from "lucide-react";
+import { FilePlus, GraduationCap, FileText, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,8 +20,10 @@ import { useUILanguage } from "@/lib/ui-language";
 import { t } from "@/lib/translations";
 import {
   defaultResumeContent,
+  defaultCoverLetterContent,
   RESUME_STORAGE_KEY,
   ACADEMIC_CV_STORAGE_KEY,
+  COVER_LETTER_STORAGE_KEY,
   TITLE_MAX,
 } from "@/lib/defaults";
 import type { ResumeTemplate, ResumeLanguage } from "@/lib/types/resume";
@@ -30,6 +32,88 @@ const LANGUAGE_OPTIONS: { value: ResumeLanguage; label: string }[] = [
   { value: "en", label: "English" },
   { value: "zh", label: "中文" },
 ];
+
+/* ---- Cover letter create dialog (English-only, no language picker) ---- */
+
+interface CreateCoverLetterDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onCreate: (title: string) => void;
+}
+
+function CreateCoverLetterDialog({ open, onOpenChange, onCreate }: CreateCoverLetterDialogProps) {
+  const { lang } = useUILanguage();
+  const tr = t[lang];
+
+  const [docTitle, setDocTitle] = useState("");
+  const titleTooLong = docTitle.length > TITLE_MAX;
+  const canCreate = docTitle.trim().length > 0 && !titleTooLong;
+
+  function handleOpenChange(next: boolean) {
+    if (next) setDocTitle("");
+    onOpenChange(next);
+  }
+
+  function handleCreate() {
+    if (!canCreate) return;
+    onCreate(docTitle.trim());
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+              <Mail className="h-4 w-4 text-primary" />
+            </div>
+            <div>
+              <DialogTitle>{tr.createNewCoverLetter}</DialogTitle>
+              <DialogDescription className="mt-0.5">{tr.createNewCoverLetterDesc}</DialogDescription>
+            </div>
+          </div>
+        </DialogHeader>
+
+        <div className="grid gap-4 py-1">
+          <div className="grid gap-1.5">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="doc-title">{tr.titleLabel}</Label>
+              <span className={`text-xs ${titleTooLong ? "text-destructive" : "text-muted-foreground"}`}>
+                {docTitle.length}/{TITLE_MAX}
+              </span>
+            </div>
+            <Input
+              id="doc-title"
+              value={docTitle}
+              onChange={(e) => setDocTitle(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") handleCreate(); }}
+              placeholder={tr.coverLetterTitlePlaceholder}
+              className={titleTooLong ? "border-destructive" : ""}
+              autoFocus
+            />
+            {titleTooLong && (
+              <p className="text-xs text-destructive">{tr.titleTooLong(TITLE_MAX)}</p>
+            )}
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" className="btn-hover-border cursor-pointer" onClick={() => onOpenChange(false)}>
+            {tr.cancel}
+          </Button>
+          <Button
+            variant="outline"
+            className="btn-hover-primary cursor-pointer"
+            onClick={handleCreate}
+            disabled={!canCreate}
+          >
+            {tr.create}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 /* ---- Shared create dialog ---- */
 
@@ -161,6 +245,7 @@ export default function EntryPage() {
 
   const [resumeOpen, setResumeOpen] = useState(false);
   const [academicOpen, setAcademicOpen] = useState(false);
+  const [coverLetterOpen, setCoverLetterOpen] = useState(false);
 
   const template: ResumeTemplate = "general";
 
@@ -182,6 +267,16 @@ export default function EntryPage() {
       );
     } catch { /* ignore quota errors */ }
     router.push("/academic-cv");
+  }
+
+  function handleCreateCoverLetter(title: string) {
+    try {
+      localStorage.setItem(
+        COVER_LETTER_STORAGE_KEY,
+        JSON.stringify({ title, template: "classic", content: defaultCoverLetterContent }),
+      );
+    } catch { /* ignore quota errors */ }
+    router.push("/cover-letter");
   }
 
   return (
@@ -234,6 +329,21 @@ export default function EntryPage() {
                 <p className="text-xs text-muted-foreground leading-relaxed">{tr.createAcademicCvDesc}</p>
               </div>
             </button>
+
+            {/* Cover Letter card */}
+            <button
+              type="button"
+              onClick={() => setCoverLetterOpen(true)}
+              className="group flex flex-col gap-4 rounded-xl border border-border bg-card p-6 text-left transition-all duration-200 hover:border-primary/40 hover:shadow-md hover:shadow-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 transition-colors group-hover:bg-primary/15">
+                <Mail className="h-5 w-5 text-primary" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-medium">{tr.createCoverLetter}</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">{tr.createCoverLetterDesc}</p>
+              </div>
+            </button>
           </div>
         </div>
       </main>
@@ -273,6 +383,13 @@ export default function EntryPage() {
         description={tr.createNewAcademicCvDesc}
         placeholder={tr.academicCvTitlePlaceholder}
         onCreate={handleCreateAcademicCv}
+      />
+
+      {/* Create Cover Letter dialog */}
+      <CreateCoverLetterDialog
+        open={coverLetterOpen}
+        onOpenChange={setCoverLetterOpen}
+        onCreate={handleCreateCoverLetter}
       />
     </div>
   );
