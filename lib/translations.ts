@@ -3,18 +3,25 @@ const t = {
   en: {
     /* ---- Entry page ---- */
     appName: "EasyCV",
-    appTagline: "Free online resume builder",
-    createCv: "New CV",
+    appTagline: "Free online CV builder",
+    createCv: "New Resume",
     createCvDesc: "Create a professional resume in minutes.",
+    createAcademicCv: "Academic CV",
+    createAcademicCvDesc: "Build a detailed CV for academic and research positions.",
     footer: "© 2026 EasyCV. All rights reserved.",
     privacyPolicy: "Privacy Policy",
     termsOfService: "Terms of Service",
     getStarted: "Get Started",
 
-    /* ---- Create CV dialog ---- */
-    createNewResume: "Create New CV",
+    /* ---- Create Resume dialog ---- */
+    createNewResume: "Create New Resume",
     createNewResumeDesc: "Give your resume a title and pick a language.",
     resumeTitlePlaceholder: "e.g. Software Engineer Resume",
+
+    /* ---- Create Academic CV dialog ---- */
+    createNewAcademicCv: "Create New Academic CV",
+    createNewAcademicCvDesc: "Give your CV a title and pick a language.",
+    academicCvTitlePlaceholder: "e.g. Research CV",
     creating: "Creating...",
     create: "Create",
 
@@ -54,18 +61,25 @@ const t = {
   zh: {
     /* ---- Entry page ---- */
     appName: "EasyCV",
-    appTagline: "免费在线简历制作工具",
+    appTagline: "免费在线 CV 制作工具",
     createCv: "新建简历",
     createCvDesc: "几分钟内制作一份专业简历。",
+    createAcademicCv: "学术简历",
+    createAcademicCvDesc: "为学术和科研岗位制作详细的学术简历。",
     footer: "© 2026 EasyCV. 保留所有权利。",
     privacyPolicy: "隐私政策",
     termsOfService: "服务条款",
     getStarted: "开始使用",
 
-    /* ---- Create CV dialog ---- */
+    /* ---- Create Resume dialog ---- */
     createNewResume: "新建简历",
     createNewResumeDesc: "为简历起个名字，并选择语言。",
     resumeTitlePlaceholder: "例：软件工程师简历",
+
+    /* ---- Create Academic CV dialog ---- */
+    createNewAcademicCv: "新建学术简历",
+    createNewAcademicCvDesc: "为学术简历起个名字，并选择语言。",
+    academicCvTitlePlaceholder: "例：研究员学术简历",
     creating: "创建中…",
     create: "创建",
 

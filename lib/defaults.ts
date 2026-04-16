@@ -1,6 +1,7 @@
 import type { ResumeContent, ResumeLanguage } from "./types/resume";
 
 export const RESUME_STORAGE_KEY = "easycv_resume";
+export const ACADEMIC_CV_STORAGE_KEY = "easycv_academic";
 export const TITLE_MAX = 50;
 
 export const defaultResumeContent: ResumeContent = {
