@@ -1,8 +1,10 @@
 import type { ResumeContent, ResumeLanguage } from "./types/resume";
 import type { AcademicCVContent } from "./types/academic-cv";
+import type { CoverLetterContent } from "./types/cover-letter";
 
 export const RESUME_STORAGE_KEY = "easycv_resume";
 export const ACADEMIC_CV_STORAGE_KEY = "easycv_academic";
+export const COVER_LETTER_STORAGE_KEY = "easycv_cover_letter";
 export const TITLE_MAX = 50;
 
 export const defaultResumeContent: ResumeContent = {
@@ -29,6 +31,13 @@ export const defaultAcademicCVContent: AcademicCVContent = {
   professionalService: [],
   technicalSkills: [],
   references: [],
+};
+
+export const defaultCoverLetterContent: CoverLetterContent = {
+  sender: { name: "", addressLine1: "", addressLine2: "" },
+  date: "",
+  recipient: { name: "" },
+  paragraphs: [],
 };
 
 /* ---- Date helpers used by section form components ---- */
