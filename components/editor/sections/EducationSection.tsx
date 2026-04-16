@@ -189,30 +189,34 @@ function EducationBlock({
       {!collapsed && (
       <div className="border-t border-border px-3 pb-3 pt-2">
       {/* Fixed fields */}
-      <div className="grid grid-cols-2 gap-x-3 gap-y-2">
-        <div className="col-span-2 flex flex-col gap-1">
+      <div className="grid gap-2">
+        <div className="grid gap-1.5">
           <Label className="text-xs">{zh ? "学校" : "Institution"}</Label>
           <Input value={edu.institution} onChange={(e) => onUpdate("institution", e.target.value)} placeholder={zh ? "你的学校" : "University of..."} />
         </div>
-        <div className="flex flex-col gap-1">
-          <Label className="text-xs">{zh ? "学位" : "Degree"}</Label>
-          <Input value={edu.degree} onChange={(e) => onUpdate("degree", e.target.value)} placeholder={zh ? "理学学士 / 理学硕士 / 博士" : "BSc / MSc / PhD"} />
+        <div className="grid grid-cols-2 gap-2">
+          <div className="grid gap-1.5">
+            <Label className="text-xs">{zh ? "学位" : "Degree"}</Label>
+            <Input value={edu.degree} onChange={(e) => onUpdate("degree", e.target.value)} placeholder={zh ? "理学学士 / 理学硕士 / 博士" : "BSc / MSc / PhD"} />
+          </div>
+          <div className="grid gap-1.5">
+            <Label className="text-xs">{zh ? "专业" : "Field of Study"}</Label>
+            <Input value={edu.field} onChange={(e) => onUpdate("field", e.target.value)} placeholder={zh ? "计算机科学与技术" : "Computer Science"} />
+          </div>
         </div>
-        <div className="flex flex-col gap-1">
-          <Label className="text-xs">{zh ? "专业" : "Field of Study"}</Label>
-          <Input value={edu.field} onChange={(e) => onUpdate("field", e.target.value)} placeholder={zh ? "计算机科学与技术" : "Computer Science"} />
-        </div>
-        <div className="flex flex-col gap-1">
-          <Label className="text-xs">{zh ? "地点" : "Location"}</Label>
-          <Input value={edu.location} onChange={(e) => onUpdate("location", e.target.value)} placeholder={zh ? "中国, 北京" : "London, UK"} />
-        </div>
-        <div className="flex flex-col gap-1">
-          <Label className="text-xs">{zh ? "开始时间" : "Start Date"}</Label>
-          <Input value={edu.startDate} onChange={(e) => onUpdate("startDate", e.target.value)} placeholder={defaultDate(language, -4)} />
-        </div>
-        <div className="flex flex-col gap-1">
-          <Label className="text-xs">{zh ? "结束时间" : "End Date"}</Label>
-          <Input value={edu.endDate} onChange={(e) => onUpdate("endDate", e.target.value)} placeholder={defaultDate(language)} />
+        <div className="grid grid-cols-3 gap-2">
+          <div className="grid gap-1.5">
+            <Label className="text-xs">{zh ? "地点" : "Location"}</Label>
+            <Input value={edu.location} onChange={(e) => onUpdate("location", e.target.value)} placeholder={zh ? "中国, 北京" : "London, UK"} />
+          </div>
+          <div className="grid gap-1.5">
+            <Label className="text-xs">{zh ? "开始" : "Start"}</Label>
+            <Input value={edu.startDate} onChange={(e) => onUpdate("startDate", e.target.value)} placeholder={defaultDate(language, -4)} />
+          </div>
+          <div className="grid gap-1.5">
+            <Label className="text-xs">{zh ? "结束" : "End"}</Label>
+            <Input value={edu.endDate} onChange={(e) => onUpdate("endDate", e.target.value)} placeholder={defaultDate(language)} />
+          </div>
         </div>
       </div>
 

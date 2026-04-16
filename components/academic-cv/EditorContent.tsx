@@ -1,8 +1,8 @@
 "use client";
 
 import { useReducer, useCallback, useEffect } from "react";
-import type { ResumeContent, ResumeTemplate, ResumeLanguage } from "@/lib/types/resume";
-import { defaultResumeContent, RESUME_STORAGE_KEY } from "@/lib/defaults";
+import type { AcademicCVContent, AcademicCVTemplate, ResumeLanguage } from "@/lib/types/academic-cv";
+import { defaultAcademicCVContent, ACADEMIC_CV_STORAGE_KEY } from "@/lib/defaults";
 import { Toolbar } from "./Toolbar";
 import { FormPanel } from "./FormPanel";
 import { PreviewPanel } from "./PreviewPanel";
@@ -11,24 +11,24 @@ import { PreviewPanel } from "./PreviewPanel";
 
 interface EditorState {
   title: string;
-  template: ResumeTemplate;
+  template: AcademicCVTemplate;
   language: ResumeLanguage;
-  content: ResumeContent;
+  content: AcademicCVContent;
   hydrated: boolean;
 }
 
 const initialState: EditorState = {
-  title: "My Resume",
-  template: "general",
+  title: "My Academic CV",
+  template: "academic",
   language: "en",
-  content: defaultResumeContent,
+  content: defaultAcademicCVContent,
   hydrated: false,
 };
 
 type EditorAction =
   | { type: "HYDRATE"; payload: Omit<EditorState, "hydrated"> }
-  | { type: "SET_CONTENT"; content: ResumeContent }
-  | { type: "SET_SETTINGS"; title: string; language: ResumeLanguage; template: ResumeTemplate };
+  | { type: "SET_CONTENT"; content: AcademicCVContent }
+  | { type: "SET_SETTINGS"; title: string; language: ResumeLanguage; template: AcademicCVTemplate };
 
 function reducer(state: EditorState, action: EditorAction): EditorState {
   switch (action.type) {
@@ -46,11 +46,13 @@ function reducer(state: EditorState, action: EditorAction): EditorState {
 function loadFromStorage(): Omit<EditorState, "hydrated"> | null {
   if (typeof window === "undefined") return null;
   try {
-    const raw = localStorage.getItem(RESUME_STORAGE_KEY);
+    const raw = localStorage.getItem(ACADEMIC_CV_STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
+    // Normalize content: merge with defaults so all required array fields are present.
+    // Guards against old localStorage data and partial saves.
     if (parsed?.content) {
-      parsed.content = { ...defaultResumeContent, ...parsed.content };
+      parsed.content = { ...defaultAcademicCVContent, ...parsed.content };
     }
     return parsed;
   } catch {
@@ -60,7 +62,7 @@ function loadFromStorage(): Omit<EditorState, "hydrated"> | null {
 
 function saveToStorage(state: Omit<EditorState, "hydrated">) {
   try {
-    localStorage.setItem(RESUME_STORAGE_KEY, JSON.stringify(state));
+    localStorage.setItem(ACADEMIC_CV_STORAGE_KEY, JSON.stringify(state));
   } catch {
     // Storage quota exceeded — silently ignore
   }
@@ -68,10 +70,9 @@ function saveToStorage(state: Omit<EditorState, "hydrated">) {
 
 /* ---- Component ---- */
 
-export function EditorContent() {
+export function AcademicEditorContent() {
   const [state, dispatch] = useReducer(reducer, initialState);
 
-  // Hydrate from localStorage on mount — single dispatch, no cascading setState
   useEffect(() => {
     const stored = loadFromStorage();
     dispatch({
@@ -89,12 +90,12 @@ export function EditorContent() {
     saveToStorage(next);
   }, []);
 
-  function handleContentChange(newContent: ResumeContent) {
+  function handleContentChange(newContent: AcademicCVContent) {
     dispatch({ type: "SET_CONTENT", content: newContent });
     persist({ title: state.title, template: state.template, language: state.language, content: newContent });
   }
 
-  function handleSettingsChange(newTitle: string, newLanguage: ResumeLanguage, newTemplate: ResumeTemplate) {
+  function handleSettingsChange(newTitle: string, newLanguage: ResumeLanguage, newTemplate: AcademicCVTemplate) {
     dispatch({ type: "SET_SETTINGS", title: newTitle, language: newLanguage, template: newTemplate });
     persist({ title: newTitle, template: newTemplate, language: newLanguage, content: state.content });
   }

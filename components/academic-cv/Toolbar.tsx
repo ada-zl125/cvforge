@@ -1,0 +1,225 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, ChevronDown, FileDown, FileImage, Loader2, Settings } from "lucide-react";
+import { exportResume, type ExportFormat } from "@/lib/export";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { TITLE_MAX } from "@/lib/defaults";
+import type { AcademicCVTemplate, ResumeLanguage } from "@/lib/types/academic-cv";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { LanguageSwitcher } from "@/components/ui/language-switcher";
+import { useUILanguage } from "@/lib/ui-language";
+import { t } from "@/lib/translations";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+
+const TEMPLATE_OPTIONS: { value: AcademicCVTemplate; label: string; bg: string; text: string }[] = [
+  { value: "academic", label: "Academic", bg: "bg-emerald-50", text: "text-emerald-600" },
+];
+
+interface ToolbarProps {
+  title: string;
+  template: AcademicCVTemplate;
+  language: ResumeLanguage;
+  onSettingsChange: (title: string, language: ResumeLanguage, template: AcademicCVTemplate) => void;
+}
+
+export function Toolbar({ title, template, language, onSettingsChange }: ToolbarProps) {
+  const router = useRouter();
+  const { lang } = useUILanguage();
+  const tr = t[lang];
+
+  /* ---- Export state ---- */
+  const [exporting, setExporting] = useState(false);
+
+  async function handleExport(format: ExportFormat) {
+    setExporting(true);
+    try {
+      await exportResume(format, title || "academic-cv");
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  /* ---- Settings dialog state ---- */
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [draftTitle, setDraftTitle] = useState(title);
+  const [draftLanguage, setDraftLanguage] = useState<ResumeLanguage>(language);
+  const [draftTemplate, setDraftTemplate] = useState<AcademicCVTemplate>(template);
+
+  function openSettings() {
+    setDraftTitle(title);
+    setDraftLanguage(language);
+    setDraftTemplate(template);
+    setSettingsOpen(true);
+  }
+
+  const titleTooLong = draftTitle.length > TITLE_MAX;
+  const canSave = draftTitle.trim().length > 0 && !titleTooLong;
+
+  function handleSettingsSave() {
+    if (!canSave) return;
+    onSettingsChange(draftTitle.trim(), draftLanguage, draftTemplate);
+    setSettingsOpen(false);
+  }
+
+  return (
+    <>
+      <header className="editor-toolbar flex h-14 shrink-0 items-center gap-3 border-b border-border bg-card px-4">
+        {/* Back button */}
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="cursor-pointer"
+          onClick={() => router.push("/")}
+          aria-label={tr.backToHome}
+        >
+          <ArrowLeft className="size-4" />
+        </Button>
+
+        {/* Title (static) */}
+        <span className="truncate text-sm font-medium text-foreground">{title}</span>
+
+        {/* Settings button */}
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="cursor-pointer shrink-0 text-muted-foreground hover:text-foreground"
+          onClick={openSettings}
+          aria-label="Academic CV settings"
+        >
+          <Settings className="size-4" />
+        </Button>
+
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* Language switcher */}
+        <LanguageSwitcher />
+
+        {/* Export dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              className="btn-hover-primary h-8 cursor-pointer gap-1.5 rounded-lg px-3 text-sm font-medium"
+              variant="outline"
+              disabled={exporting}
+            >
+              {exporting
+                ? <Loader2 className="size-4 animate-spin" />
+                : <FileDown className="size-4" />}
+              {exporting ? tr.exporting : tr.exportLabel}
+              {!exporting && <ChevronDown className="size-3 opacity-60" />}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem className="cursor-pointer gap-2" onClick={() => handleExport("pdf")}>
+              <FileDown className="size-4 text-muted-foreground" />
+              {tr.exportPdf}
+            </DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer gap-2" onClick={() => handleExport("png")}>
+              <FileImage className="size-4 text-muted-foreground" />
+              {tr.exportPng}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </header>
+
+      {/* Settings Dialog */}
+      <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{tr.academicCv.editorSettings}</DialogTitle>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-2">
+            {/* Title */}
+            <div className="grid gap-1.5">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="settings-title">{tr.titleLabel}</Label>
+                <span className={`text-xs ${titleTooLong ? "text-destructive" : "text-muted-foreground"}`}>
+                  {draftTitle.length}/{TITLE_MAX}
+                </span>
+              </div>
+              <Input
+                id="settings-title"
+                value={draftTitle}
+                onChange={(e) => setDraftTitle(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") handleSettingsSave(); }}
+                className={titleTooLong ? "border-destructive focus:border-destructive" : ""}
+                autoFocus
+              />
+              {titleTooLong && (
+                <p className="text-xs text-destructive">{tr.titleTooLong(TITLE_MAX)}</p>
+              )}
+            </div>
+
+            {/* Language picker */}
+            <div className="grid gap-2">
+              <Label>{tr.languageLabel}</Label>
+              <div className="flex gap-2">
+                {(["en", "zh"] as const).map((l) => (
+                  <button
+                    key={l}
+                    type="button"
+                    onClick={() => setDraftLanguage(l)}
+                    className={`cursor-pointer rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                      draftLanguage === l
+                        ? "border-foreground bg-foreground/5 text-foreground"
+                        : "border-border text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                    }`}
+                  >
+                    {l === "en" ? tr.langEnglish : tr.langChinese}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Template picker */}
+            <div className="grid gap-2">
+              <Label>{tr.templateLabel}</Label>
+              <div className="flex gap-2">
+                {TEMPLATE_OPTIONS.map((tmpl) => (
+                  <button
+                    key={tmpl.value}
+                    type="button"
+                    onClick={() => setDraftTemplate(tmpl.value)}
+                    className={`cursor-pointer rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                      draftTemplate === tmpl.value
+                        ? `${tmpl.bg} ${tmpl.text} border-current`
+                        : "border-border text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                    }`}
+                  >
+                    {tmpl.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" className="btn-hover-border cursor-pointer" onClick={() => setSettingsOpen(false)}>
+              {tr.cancel}
+            </Button>
+            <Button variant="outline" className="btn-hover-primary cursor-pointer" onClick={handleSettingsSave} disabled={!canSave}>
+              {tr.save}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
