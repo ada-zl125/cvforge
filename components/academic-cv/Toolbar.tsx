@@ -147,15 +147,25 @@ export function Toolbar({ title, template, language, content, onSettingsChange, 
         {/* Language switcher */}
         <LanguageSwitcher />
 
-        {/* Import button */}
-        <Button
-          className="btn-hover-border h-8 cursor-pointer gap-1.5 rounded-lg px-3 text-sm font-medium"
-          variant="outline"
-          onClick={() => fileInputRef.current?.click()}
-        >
-          <FileUp className="size-4" />
-          {tr.importJson}
-        </Button>
+        {/* Import dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              className="btn-hover-border h-8 cursor-pointer gap-1.5 rounded-lg px-3 text-sm font-medium"
+              variant="outline"
+            >
+              <FileUp className="size-4" />
+              {tr.importLabel}
+              <ChevronDown className="size-3 opacity-60" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-44">
+            <DropdownMenuItem className="cursor-pointer gap-2" onClick={() => fileInputRef.current?.click()}>
+              <FileUp className="size-4 text-muted-foreground" />
+              {tr.importJson}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         {/* Export dropdown */}
         <DropdownMenu>
