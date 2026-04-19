@@ -56,3 +56,7 @@ lib/
 - Branch naming: `feature/issue-{N}-short-description`
 - PR description must include `Closes #{N}` to auto-close the linked issue
 - GitHub Project: https://github.com/users/ada-zl125/projects/
+
+## Coding Style
+
+Simplicity is the foundation of reliability. Keep implementations concise, clear, and efficient, while ensuring the system is well-engineered and robust.
