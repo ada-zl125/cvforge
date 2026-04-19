@@ -194,15 +194,9 @@ function EducationBlock({
           <Label className="text-xs">{zh ? "学校" : "Institution"}</Label>
           <Input value={edu.institution} onChange={(e) => onUpdate("institution", e.target.value)} placeholder={zh ? "你的学校" : "University of..."} />
         </div>
-        <div className="grid grid-cols-2 gap-2">
-          <div className="grid gap-1.5">
-            <Label className="text-xs">{zh ? "学位" : "Degree"}</Label>
-            <Input value={edu.degree} onChange={(e) => onUpdate("degree", e.target.value)} placeholder={zh ? "理学学士 / 理学硕士 / 博士" : "BSc / MSc / PhD"} />
-          </div>
-          <div className="grid gap-1.5">
-            <Label className="text-xs">{zh ? "专业" : "Field of Study"}</Label>
-            <Input value={edu.field} onChange={(e) => onUpdate("field", e.target.value)} placeholder={zh ? "计算机科学与技术" : "Computer Science"} />
-          </div>
+        <div className="grid gap-1.5">
+          <Label className="text-xs">{zh ? "学位与专业" : "Degree and Field of Study"}</Label>
+          <Input value={edu.degree} onChange={(e) => onUpdate("degree", e.target.value)} placeholder={zh ? "理学硕士 计算机科学" : "MSc in Computer Science"} />
         </div>
         <div className="grid grid-cols-3 gap-2">
           <div className="grid gap-1.5">

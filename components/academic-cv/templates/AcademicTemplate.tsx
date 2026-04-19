@@ -4,7 +4,7 @@ import { PageBreakAvoid } from "@/components/shared/PageBreakAvoid";
 import { BulletItem } from "@/components/shared/BulletItem";
 import {
   BODY_SIZE, SECTION_TITLE_SIZE, NAME_SIZE,
-  LINE_STYLE, BULLET_ROW_STYLE, BULLET_DOT_STYLE,
+  LINE_STYLE,
   getFontFamily, boldFontStyle,
 } from "@/lib/template-styles";
 import type {
@@ -157,13 +157,9 @@ function AcademicEducationBlock({ items, lang, fontFamily }: { items: AcademicEd
     <section className="mb-2">
       {items.map((edu, index) => {
         const dateText = [edu.startDate, edu.endDate].filter(Boolean).join(" – ");
-        let degreeLine: string;
-        if (lang === "zh") {
-          degreeLine = [edu.field, edu.degree].filter(Boolean).join("");
-        } else {
-          const combined = [edu.degree, edu.field].filter(Boolean).join(" ");
-          degreeLine = combined ? `Degree: ${combined}` : "";
-        }
+        const degreeLine = lang === "zh"
+          ? [edu.field, edu.degree].filter(Boolean).join("")
+          : [edu.degree, edu.field].filter(Boolean).join(" ");
         return (
           <PageBreakAvoid key={edu.id} style={index > 0 ? { marginTop: "6px" } : undefined}>
             {index === 0 && <SectionTitle type="education" lang={lang} fontFamily={fontFamily} />}
@@ -173,12 +169,9 @@ function AcademicEducationBlock({ items, lang, fontFamily }: { items: AcademicEd
                 <span className="shrink-0" style={boldFontStyle(lang, fontFamily)}>{edu.location}</span>
               </div>
               {degreeLine && (
-                <div style={BULLET_ROW_STYLE}>
-                  <span style={BULLET_DOT_STYLE}>●</span>
-                  <span style={{ flex: 1, display: "flex", justifyContent: "space-between", gap: "0.5em" }}>
-                    <span>{degreeLine}</span>
-                    {dateText && <span className="shrink-0">{dateText}</span>}
-                  </span>
+                <div className="flex items-baseline justify-between gap-2" style={{ ...LINE_STYLE, paddingLeft: 0 }}>
+                  <span>{degreeLine}</span>
+                  {dateText && <span className="shrink-0">{dateText}</span>}
                 </div>
               )}
               {(edu.extraFields ?? []).map(ef => {
@@ -438,7 +431,7 @@ export function AcademicTemplate({ content, language = "en" }: AcademicTemplateP
     <div
       data-cv-root
       className="relative bg-white text-black"
-      style={{ width: "794px", minHeight: "1123px", padding: "48px", fontFamily }}
+      style={{ width: "794px", minHeight: "1123px", paddingTop: "30px", paddingRight: "48px", paddingBottom: "48px", paddingLeft: "48px", fontFamily }}
     >
       <PersonalHeader personal={content.personal} fontFamily={fontFamily} language={language} />
 

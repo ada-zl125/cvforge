@@ -5,7 +5,7 @@ import { PageBreakAvoid } from "@/components/shared/PageBreakAvoid";
 import { BulletItem } from "@/components/shared/BulletItem";
 import {
   BODY_SIZE, SECTION_TITLE_SIZE, NAME_SIZE,
-  LINE_STYLE, BULLET_ROW_STYLE, BULLET_DOT_STYLE,
+  LINE_STYLE,
   getFontFamily, boldFontStyle,
 } from "@/lib/template-styles";
 
@@ -183,13 +183,9 @@ function EducationBlock({ items, lang, fontFamily }: { items: EducationItem[]; l
         const extraFields = edu.extraFields ?? [];
         const dateText = [edu.startDate, edu.endDate].filter(Boolean).join(" – ");
 
-        let degreeLine: string;
-        if (lang === "zh") {
-          degreeLine = [edu.field, edu.degree].filter(Boolean).join("");
-        } else {
-          const combined = [edu.degree, edu.field].filter(Boolean).join(" ");
-          degreeLine = combined ? `Degree: ${combined}` : "";
-        }
+        const degreeLine = lang === "zh"
+          ? [edu.field, edu.degree].filter(Boolean).join("")
+          : [edu.degree, edu.field].filter(Boolean).join(" ");
 
         return (
           <PageBreakAvoid key={edu.id} style={index > 0 ? { marginTop: "6px" } : undefined}>
@@ -200,12 +196,9 @@ function EducationBlock({ items, lang, fontFamily }: { items: EducationItem[]; l
                 <span className="shrink-0" style={boldFontStyle(lang, fontFamily)}>{edu.location}</span>
               </div>
               {degreeLine && (
-                <div style={BULLET_ROW_STYLE}>
-                  <span style={BULLET_DOT_STYLE}>●</span>
-                  <span style={{ flex: 1, display: "flex", justifyContent: "space-between", gap: "0.5em" }}>
-                    <span>{degreeLine}</span>
-                    {dateText && <span className="shrink-0">{dateText}</span>}
-                  </span>
+                <div className="flex items-baseline justify-between gap-2" style={{ ...LINE_STYLE, paddingLeft: 0 }}>
+                  <span>{degreeLine}</span>
+                  {dateText && <span className="shrink-0">{dateText}</span>}
                 </div>
               )}
               {extraFields.map((ef) => {
@@ -351,7 +344,10 @@ export function GeneralTemplate({ content, language = "en" }: AcademicTemplatePr
       style={{
         width: "794px",
         minHeight: "1123px",
-        padding: "48px",
+        paddingTop: "30px",
+        paddingRight: "48px",
+        paddingBottom: "48px",
+        paddingLeft: "48px",
         fontFamily,
       }}
     >

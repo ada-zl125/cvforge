@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(node -e \"JSON.parse\\(require\\('fs'\\).readFileSync\\('package.json', 'utf8'\\)\\)\")",
+      "Bash(npx tsc *)"
+    ]
+  }
+}

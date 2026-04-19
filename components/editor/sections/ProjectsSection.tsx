@@ -34,7 +34,7 @@ function emptyProject(): ProjectItem {
     websiteUrl: "",
     startDate: "",
     endDate: "",
-    descriptions: [emptyDescription()],
+    descriptions: [],
   };
 }
 
@@ -241,16 +241,14 @@ function ProjectBlock({
                 {zh ? "添加字段" : "Add field"}
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" sideOffset={4}>
-                {descriptions.length === 0 && (
-                  <DropdownMenuItem className="cursor-pointer" onClick={addDesc}>
-                    {zh ? "描述" : "Description"}
-                  </DropdownMenuItem>
-                )}
                 {!websiteVisible && (
                   <DropdownMenuItem className="cursor-pointer" onClick={() => setWebsiteVisible(true)}>
                     {zh ? "网站" : "Website"}
                   </DropdownMenuItem>
                 )}
+                <DropdownMenuItem className="cursor-pointer" onClick={addDesc}>
+                  {zh ? "描述" : "Description"}
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -261,13 +259,6 @@ function ProjectBlock({
               <Label className="text-xs text-muted-foreground">{zh ? "项目描述" : "Descriptions"}</Label>
               {descriptions.map((desc, di) => (
                 <div key={desc.id} className="flex items-start gap-1">
-                  <Textarea
-                    className="flex-1 resize-y text-xs"
-                    rows={2}
-                    value={desc.value}
-                    onChange={(e) => updateDesc(desc.id, e.target.value)}
-                    placeholder={zh ? "描述项目特性、技术栈或成果..." : "Describe a feature, technology, or outcome..."}
-                  />
                   <div className="flex flex-col gap-0.5 pt-0.5">
                     <Button
                       variant="ghost" size="icon-xs"
@@ -293,16 +284,15 @@ function ProjectBlock({
                       <Trash2 className="size-3" />
                     </Button>
                   </div>
+                  <Textarea
+                    className="flex-1 resize-y text-xs"
+                    rows={2}
+                    value={desc.value}
+                    onChange={(e) => updateDesc(desc.id, e.target.value)}
+                    placeholder={zh ? "描述项目特性、技术栈或成果..." : "Describe a feature, technology, or outcome..."}
+                  />
                 </div>
               ))}
-              <button
-                type="button"
-                className="add-btn inline-flex h-7 cursor-pointer items-center gap-1 rounded-md px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                onClick={addDesc}
-              >
-                <Plus className="size-3" />
-                {zh ? "添加描述" : "Add description"}
-              </button>
             </div>
           )}
         </div>
