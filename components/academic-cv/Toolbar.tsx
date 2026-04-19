@@ -147,11 +147,21 @@ export function Toolbar({ title, template, language, content, onSettingsChange, 
         {/* Language switcher */}
         <LanguageSwitcher />
 
+        {/* Import button */}
+        <Button
+          className="btn-hover-border h-8 cursor-pointer gap-1.5 rounded-lg px-3 text-sm font-medium"
+          variant="outline"
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <FileUp className="size-4" />
+          {tr.importJson}
+        </Button>
+
         {/* Export dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
-              className="btn-hover-primary h-8 cursor-pointer gap-1.5 rounded-lg px-3 text-sm font-medium"
+              className="btn-hover-border h-8 cursor-pointer gap-1.5 rounded-lg px-3 text-sm font-medium"
               variant="outline"
               disabled={exporting}
             >
@@ -162,7 +172,7 @@ export function Toolbar({ title, template, language, content, onSettingsChange, 
               {!exporting && <ChevronDown className="size-3 opacity-60" />}
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent align="end" className="min-w-44">
             <DropdownMenuItem className="cursor-pointer gap-2" onClick={() => handleExport("pdf")}>
               <FileDown className="size-4 text-muted-foreground" />
               {tr.exportPdf}
@@ -174,10 +184,6 @@ export function Toolbar({ title, template, language, content, onSettingsChange, 
             <DropdownMenuItem className="cursor-pointer gap-2" onClick={handleExportJson}>
               <FileJson className="size-4 text-muted-foreground" />
               {tr.exportJson}
-            </DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer gap-2" onClick={() => fileInputRef.current?.click()}>
-              <FileUp className="size-4 text-muted-foreground" />
-              {tr.importJson}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
