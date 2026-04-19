@@ -1,28 +1,20 @@
 "use client";
 
 import type { ResumeContent, ResumeLanguage, ContactField, EducationItem, ExperienceItem, ProjectItem, SkillGroup, AwardItem, SectionType } from "@/lib/types/resume";
+import { PageBreakAvoid } from "@/components/shared/PageBreakAvoid";
+import { BulletItem } from "@/components/shared/BulletItem";
+import {
+  BODY_SIZE, SECTION_TITLE_SIZE, NAME_SIZE,
+  LINE_STYLE, BULLET_ROW_STYLE, BULLET_DOT_STYLE,
+  getFontFamily, boldFontStyle,
+} from "@/lib/template-styles";
 
 interface AcademicTemplateProps {
   content: ResumeContent;
   language?: ResumeLanguage;
 }
 
-/* ------------------------------------------------------------------ */
-/*  A4 page: 210mm × 297mm ≈ 794px × 1123px at 96 DPI                */
-/*  Narrow margins: 1.27cm ≈ 48px                                     */
-/*  EN: Times New Roman, serif; bold = weight 700                      */
-/*  ZH body: Songti SC Regular (weight 400)                            */
-/*  ZH bold: Songti SC Black (weight 900) — section titles, row-1      */
-/*  Name: 20pt bold, everything else: 11pt                             */
-/* ------------------------------------------------------------------ */
-
-const FONT_EN = "'Times New Roman', SimSun, serif";
-const FONT_ZH = "'Times New Roman', 'Songti SC', serif";
-const BODY_SIZE = "11pt";
-const SECTION_TITLE_SIZE = "12pt";
-const NAME_SIZE = "20pt";
-
-/* ---- Chinese section title mapping ---- */
+/* ---- Section title maps ---- */
 
 const SECTION_TITLES_ZH: Record<SectionType, string> = {
   summary: "个人简介",
@@ -56,51 +48,6 @@ function getExtraFieldLabel(label: string, lang: ResumeLanguage): string {
   return label;
 }
 
-function getFontFamily(lang: ResumeLanguage): string {
-  return lang === "zh" ? FONT_ZH : FONT_EN;
-}
-
-/** Returns fontFamily + fontWeight for bold elements.
- *  ZH: Songti SC Black (900); EN: Times New Roman bold (700). */
-function boldFontStyle(lang: ResumeLanguage, fontFamily: string): React.CSSProperties {
-  return {
-    fontFamily: lang === "zh" ? FONT_ZH : fontFamily,
-    fontWeight: lang === "zh" ? 900 : 700,
-  };
-}
-
-/* ---- Shared style builders ---- */
-
-const LINE_STYLE: React.CSSProperties = {
-  fontSize: BODY_SIZE,
-  lineHeight: "13pt",
-  marginTop: "0.15pt",
-  marginBottom: 0,
-  paddingLeft: "0.2cm",
-  paddingRight: 0,
-  letterSpacing: "-0.01em",
-};
-
-const BULLET_ROW_STYLE: React.CSSProperties = {
-  fontSize: BODY_SIZE,
-  lineHeight: "13pt",
-  marginTop: "0.15pt",
-  marginBottom: 0,
-  display: "flex",
-  alignItems: "baseline",
-  letterSpacing: "-0.01em",
-};
-
-/** Bullet dot: sits at 0.2cm, occupies 0.4cm width so text starts at 0.6cm */
-const BULLET_DOT_STYLE: React.CSSProperties = {
-  marginLeft: "0.2cm",
-  width: "0.4cm",
-  flexShrink: 0,
-  fontSize: "11pt",
-};
-
-/* ---- Shared helpers ---- */
-
 function SectionTitle({ type, lang, fontFamily }: { type: SectionType; lang: ResumeLanguage; fontFamily: string }) {
   const title = getSectionTitle(type, lang);
   return (
@@ -119,19 +66,10 @@ function SectionTitle({ type, lang, fontFamily }: { type: SectionType; lang: Res
 function SummaryBlock({ summary, lang, fontFamily }: { summary: string; lang: ResumeLanguage; fontFamily: string }) {
   if (!summary.trim()) return null;
   return (
-    <section className="mb-2">
+    <PageBreakAvoid className="mb-2">
       <SectionTitle type="summary" lang={lang} fontFamily={fontFamily} />
       <p style={{ ...LINE_STYLE, paddingLeft: 0 }}>{summary}</p>
-    </section>
-  );
-}
-
-function BulletItem({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={BULLET_ROW_STYLE}>
-      <span style={BULLET_DOT_STYLE}>●</span>
-      <span style={{ flex: 1 }}>{children}</span>
-    </div>
+    </PageBreakAvoid>
   );
 }
 
@@ -241,30 +179,26 @@ function EducationBlock({ items, lang, fontFamily }: { items: EducationItem[]; l
   if (items.length === 0) return null;
   return (
     <section className="mb-2">
-      <SectionTitle type="education" lang={lang} fontFamily={fontFamily} />
-      <div className="space-y-1.5">
-        {items.map((edu) => {
-          const extraFields = edu.extraFields ?? [];
-          const dateText = [edu.startDate, edu.endDate].filter(Boolean).join(" – ");
+      {items.map((edu, index) => {
+        const extraFields = edu.extraFields ?? [];
+        const dateText = [edu.startDate, edu.endDate].filter(Boolean).join(" – ");
 
-          // Chinese: "{field}{degree}" e.g. "计算机科学与技术工学博士"
-          // English: "Degree: {degree} {field}" e.g. "Degree: BSc Computer Science"
-          let degreeLine: string;
-          if (lang === "zh") {
-            degreeLine = [edu.field, edu.degree].filter(Boolean).join("");
-          } else {
-            const combined = [edu.degree, edu.field].filter(Boolean).join(" ");
-            degreeLine = combined ? `Degree: ${combined}` : "";
-          }
+        let degreeLine: string;
+        if (lang === "zh") {
+          degreeLine = [edu.field, edu.degree].filter(Boolean).join("");
+        } else {
+          const combined = [edu.degree, edu.field].filter(Boolean).join(" ");
+          degreeLine = combined ? `Degree: ${combined}` : "";
+        }
 
-          return (
-            <div key={edu.id}>
-              {/* Row 1: Institution (left, bold) | Location (right, bold) */}
+        return (
+          <PageBreakAvoid key={edu.id} style={index > 0 ? { marginTop: "6px" } : undefined}>
+            {index === 0 && <SectionTitle type="education" lang={lang} fontFamily={fontFamily} />}
+            <div>
               <div className="flex items-baseline justify-between gap-2" style={{ ...LINE_STYLE, paddingLeft: 0 }}>
                 <span style={boldFontStyle(lang, fontFamily)}>{edu.institution}</span>
                 <span className="shrink-0" style={boldFontStyle(lang, fontFamily)}>{edu.location}</span>
               </div>
-              {/* Row 2: bullet • Degree info (left) | date range (right) */}
               {degreeLine && (
                 <div style={BULLET_ROW_STYLE}>
                   <span style={BULLET_DOT_STYLE}>●</span>
@@ -274,16 +208,15 @@ function EducationBlock({ items, lang, fontFamily }: { items: EducationItem[]; l
                   </span>
                 </div>
               )}
-              {/* Extra fields as bullet list */}
               {extraFields.map((ef) => {
                 if (!ef.value) return null;
                 const label = getExtraFieldLabel(ef.label, lang);
                 return <BulletItem key={ef.id}>{label ? `${label}: ` : ""}{ef.value}</BulletItem>;
               })}
             </div>
-          );
-        })}
-      </div>
+          </PageBreakAvoid>
+        );
+      })}
     </section>
   );
 }
@@ -292,34 +225,31 @@ function ExperienceBlock({ items, lang, fontFamily }: { items: ExperienceItem[];
   if (items.length === 0) return null;
   return (
     <section className="mb-2">
-      <SectionTitle type="experience" lang={lang} fontFamily={fontFamily} />
-      <div className="space-y-1.5">
-        {items.map((exp) => {
-          const descriptions = exp.descriptions ?? [];
-          const dateText = [exp.startDate, exp.endDate].filter(Boolean).join(" – ");
+      {items.map((exp, index) => {
+        const descriptions = exp.descriptions ?? [];
+        const dateText = [exp.startDate, exp.endDate].filter(Boolean).join(" – ");
 
-          return (
-            <div key={exp.id}>
-              {/* Row 1: Company (left, bold) | Location (right, bold) */}
+        return (
+          <PageBreakAvoid key={exp.id} style={index > 0 ? { marginTop: "6px" } : undefined}>
+            {index === 0 && <SectionTitle type="experience" lang={lang} fontFamily={fontFamily} />}
+            <div>
               <div className="flex items-baseline justify-between gap-2" style={{ ...LINE_STYLE, paddingLeft: 0 }}>
                 <span style={boldFontStyle(lang, fontFamily)}>{exp.company}</span>
                 <span className="shrink-0" style={boldFontStyle(lang, fontFamily)}>{exp.location}</span>
               </div>
-              {/* Row 2: Position (left) | date range (right) */}
               {exp.position && (
                 <div className="flex items-baseline justify-between gap-2" style={{ ...LINE_STYLE, paddingLeft: 0 }}>
                   <span>{exp.position}</span>
                   {dateText && <span className="shrink-0">{dateText}</span>}
                 </div>
               )}
-              {/* Description bullet items */}
               {descriptions.map((desc) =>
-                desc.value ? <BulletItem key={desc.id} >{desc.value}</BulletItem> : null
+                desc.value ? <BulletItem key={desc.id}>{desc.value}</BulletItem> : null
               )}
             </div>
-          );
-        })}
-      </div>
+          </PageBreakAvoid>
+        );
+      })}
     </section>
   );
 }
@@ -328,16 +258,15 @@ function ProjectsBlock({ items, lang, fontFamily }: { items: ProjectItem[]; lang
   if (items.length === 0) return null;
   return (
     <section className="mb-2">
-      <SectionTitle type="projects" lang={lang} fontFamily={fontFamily} />
-      <div className="space-y-1.5">
-        {items.map((proj) => {
-          const descriptions = proj.descriptions ?? [];
-          const dateText = [proj.startDate, proj.endDate].filter(Boolean).join(" – ");
-          const hasWebsite = proj.websiteLabel && proj.websiteUrl;
+      {items.map((proj, index) => {
+        const descriptions = proj.descriptions ?? [];
+        const dateText = [proj.startDate, proj.endDate].filter(Boolean).join(" – ");
+        const hasWebsite = proj.websiteLabel && proj.websiteUrl;
 
-          return (
-            <div key={proj.id}>
-              {/* Row 1: Project Name [| Website] (left, bold) | date range (right) */}
+        return (
+          <PageBreakAvoid key={proj.id} style={index > 0 ? { marginTop: "6px" } : undefined}>
+            {index === 0 && <SectionTitle type="projects" lang={lang} fontFamily={fontFamily} />}
+            <div>
               <div className="flex items-baseline justify-between gap-2" style={{ ...LINE_STYLE, paddingLeft: 0 }}>
                 <span>
                   <span style={boldFontStyle(lang, fontFamily)}>{proj.name}</span>
@@ -350,14 +279,13 @@ function ProjectsBlock({ items, lang, fontFamily }: { items: ProjectItem[]; lang
                 </span>
                 {dateText && <span className="shrink-0">{dateText}</span>}
               </div>
-              {/* Description bullet items */}
               {descriptions.map((desc) =>
-                desc.value ? <BulletItem key={desc.id} >{desc.value}</BulletItem> : null
+                desc.value ? <BulletItem key={desc.id}>{desc.value}</BulletItem> : null
               )}
             </div>
-          );
-        })}
-      </div>
+          </PageBreakAvoid>
+        );
+      })}
     </section>
   );
 }
@@ -366,15 +294,15 @@ function SkillsBlock({ items, lang, fontFamily }: { items: SkillGroup[]; lang: R
   if (items.length === 0) return null;
   return (
     <section className="mb-2">
-      <SectionTitle type="skills" lang={lang} fontFamily={fontFamily} />
-      <div>
-        {items.map((group) => (
-          <div key={group.id} style={{ ...LINE_STYLE, paddingLeft: 0 }}>
+      {items.map((group, index) => (
+        <PageBreakAvoid key={group.id}>
+          {index === 0 && <SectionTitle type="skills" lang={lang} fontFamily={fontFamily} />}
+          <div style={{ ...LINE_STYLE, paddingLeft: 0 }}>
             {group.category && <><span style={boldFontStyle(lang, fontFamily)}>{group.category}:</span>{" "}</>}
             {group.items}
           </div>
-        ))}
-      </div>
+        </PageBreakAvoid>
+      ))}
     </section>
   );
 }
@@ -383,15 +311,15 @@ function AwardsBlock({ items, lang, fontFamily }: { items: AwardItem[]; lang: Re
   if (items.length === 0) return null;
   return (
     <section className="mb-2">
-      <SectionTitle type="awards" lang={lang} fontFamily={fontFamily} />
-      <div className="space-y-0.5">
-        {items.map((item) => (
-          <div key={item.id} className="flex items-baseline justify-between gap-2" style={{ ...LINE_STYLE, paddingLeft: 0, fontFamily }}>
+      {items.map((item, index) => (
+        <PageBreakAvoid key={item.id} style={index > 0 ? { marginTop: "2px" } : undefined}>
+          {index === 0 && <SectionTitle type="awards" lang={lang} fontFamily={fontFamily} />}
+          <div className="flex items-baseline justify-between gap-2" style={{ ...LINE_STYLE, paddingLeft: 0, fontFamily }}>
             <span>{item.award}</span>
             {item.date && <span className="shrink-0">{item.date}</span>}
           </div>
-        ))}
-      </div>
+        </PageBreakAvoid>
+      ))}
     </section>
   );
 }
@@ -418,6 +346,7 @@ export function GeneralTemplate({ content, language = "en" }: AcademicTemplatePr
 
   return (
     <div
+      data-cv-root
       className="relative bg-white text-black"
       style={{
         width: "794px",

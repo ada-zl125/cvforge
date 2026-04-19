@@ -3,11 +3,7 @@
 import { useRef, useState, useLayoutEffect } from "react";
 import type { AcademicCVContent, ResumeLanguage } from "@/lib/types/academic-cv";
 import { AcademicTemplate } from "./templates/AcademicTemplate";
-
-const PAGE_H = 1123;
-const TOP = 36;
-const BOTTOM = 48;
-const CONTENT_H = PAGE_H - TOP - BOTTOM;
+import { PAGE_H, TOP, BOTTOM, CONTENT_H } from "@/lib/page-constants";
 
 interface PreviewPanelProps {
   content: AcademicCVContent;

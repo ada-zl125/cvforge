@@ -3,6 +3,7 @@
 import { useReducer, useCallback, useEffect } from "react";
 import type { AcademicCVContent, AcademicCVTemplate, ResumeLanguage } from "@/lib/types/academic-cv";
 import { defaultAcademicCVContent, ACADEMIC_CV_STORAGE_KEY } from "@/lib/defaults";
+import { readEditorState, writeEditorState } from "@/lib/storage";
 import { Toolbar } from "./Toolbar";
 import { FormPanel } from "./FormPanel";
 import { PreviewPanel } from "./PreviewPanel";
@@ -41,40 +42,13 @@ function reducer(state: EditorState, action: EditorAction): EditorState {
   }
 }
 
-/* ---- Storage ---- */
-
-function loadFromStorage(): Omit<EditorState, "hydrated"> | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = localStorage.getItem(ACADEMIC_CV_STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    // Normalize content: merge with defaults so all required array fields are present.
-    // Guards against old localStorage data and partial saves.
-    if (parsed?.content) {
-      parsed.content = { ...defaultAcademicCVContent, ...parsed.content };
-    }
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-
-function saveToStorage(state: Omit<EditorState, "hydrated">) {
-  try {
-    localStorage.setItem(ACADEMIC_CV_STORAGE_KEY, JSON.stringify(state));
-  } catch {
-    // Storage quota exceeded — silently ignore
-  }
-}
-
 /* ---- Component ---- */
 
 export function AcademicEditorContent() {
   const [state, dispatch] = useReducer(reducer, initialState);
 
   useEffect(() => {
-    const stored = loadFromStorage();
+    const stored = readEditorState<EditorState, AcademicCVContent>(ACADEMIC_CV_STORAGE_KEY, defaultAcademicCVContent);
     dispatch({
       type: "HYDRATE",
       payload: stored ?? {
@@ -87,7 +61,7 @@ export function AcademicEditorContent() {
   }, []);
 
   const persist = useCallback((next: Omit<EditorState, "hydrated">) => {
-    saveToStorage(next);
+    writeEditorState(ACADEMIC_CV_STORAGE_KEY, next);
   }, []);
 
   function handleContentChange(newContent: AcademicCVContent) {

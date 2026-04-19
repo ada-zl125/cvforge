@@ -15,9 +15,9 @@ import {
 import { PhotoCropDialog } from "@/components/editor/PhotoUpload";
 
 const CONTACT_META: Record<ContactFieldType, { icon: typeof Mail; label: string; labelZh: string; unique: boolean }> = {
-  email:    { icon: Mail,   label: "Email",    labelZh: "邮箱", unique: true },
-  phone:    { icon: Phone,  label: "Phone",    labelZh: "电话", unique: true },
   location: { icon: MapPin, label: "Location", labelZh: "地点", unique: true },
+  phone:    { icon: Phone,  label: "Phone",    labelZh: "电话", unique: true },
+  email:    { icon: Mail,   label: "Email",    labelZh: "邮箱", unique: true },
   website:  { icon: Globe,  label: "Website",  labelZh: "网站", unique: false },
 };
 

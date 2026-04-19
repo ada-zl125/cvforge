@@ -32,12 +32,12 @@ import { SkillsSection } from "./sections/SkillsSection";
 import { AwardsSection } from "./sections/AwardsSection";
 
 const SECTION_META: Record<SectionType, { icon: typeof GraduationCap; label: string; labelZh: string }> = {
-  summary:    { icon: AlignLeft,     label: "Summary",    labelZh: "个人简介" },
-  education:  { icon: GraduationCap, label: "Education",  labelZh: "教育经历" },
-  projects:   { icon: FolderOpen,    label: "Projects",   labelZh: "项目经历" },
-  experience: { icon: Briefcase,     label: "Experience", labelZh: "工作经历" },
+  summary:    { icon: AlignLeft,     label: "Summary",         labelZh: "个人简介" },
+  education:  { icon: GraduationCap, label: "Education",       labelZh: "教育经历" },
+  experience: { icon: Briefcase,     label: "Experience",      labelZh: "工作经历" },
+  projects:   { icon: FolderOpen,    label: "Projects",        labelZh: "项目经历" },
+  awards:     { icon: Trophy,        label: "Awards",          labelZh: "荣誉奖项" },
   skills:     { icon: Wrench,        label: "Technical Skills", labelZh: "专业技能" },
-  awards:     { icon: Trophy,        label: "Awards",     labelZh: "荣誉奖项" },
 };
 
 
@@ -85,8 +85,21 @@ export function FormPanel({ content, onChange, language }: FormPanelProps) {
     setSectionCollapsed((prev) => ({ ...prev, [type]: false }));
   }
 
+  const SECTION_DEFAULTS: Partial<ResumeContent> = {
+    summary: "",
+    education: [],
+    experience: [],
+    projects: [],
+    skills: [],
+    awards: [],
+  };
+
   function removeSection(type: SectionType) {
-    onChange({ ...content, sections: activeSections.filter((s) => s !== type) });
+    onChange({
+      ...content,
+      sections: activeSections.filter((s) => s !== type),
+      ...{ [type]: SECTION_DEFAULTS[type] },
+    });
   }
 
   function moveSection(index: number, direction: -1 | 1) {
