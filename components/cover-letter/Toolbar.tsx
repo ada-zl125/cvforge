@@ -1,15 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ChevronDown, FileDown, FileImage, Loader2, Settings } from "lucide-react";
-import { exportResume, type ExportFormat } from "@/lib/export";
+import { ArrowLeft, ChevronDown, FileDown, FileImage, FileJson, FileUp, Loader2, Settings } from "lucide-react";
+import { exportResume, exportJson, type ExportFormat } from "@/lib/export";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import type { CoverLetterTemplate, CoverLetterContent } from "@/lib/types/cover-letter";
 import { TITLE_MAX } from "@/lib/defaults";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,17 +26,27 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 
-interface ToolbarProps {
+interface ImportedCoverLetterState {
   title: string;
-  onTitleChange: (title: string) => void;
+  template: CoverLetterTemplate;
+  content: CoverLetterContent;
 }
 
-export function Toolbar({ title, onTitleChange }: ToolbarProps) {
+interface ToolbarProps {
+  title: string;
+  content: CoverLetterContent;
+  template: CoverLetterTemplate;
+  onTitleChange: (title: string) => void;
+  onImport: (state: ImportedCoverLetterState) => void;
+}
+
+export function Toolbar({ title, content, template, onTitleChange, onImport }: ToolbarProps) {
   const router = useRouter();
   const { lang } = useUILanguage();
   const tr = t[lang];
 
   const [exporting, setExporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function handleExport(format: ExportFormat) {
     setExporting(true);
@@ -44,6 +55,32 @@ export function Toolbar({ title, onTitleChange }: ToolbarProps) {
     } finally {
       setExporting(false);
     }
+  }
+
+  function handleExportJson() {
+    exportJson({ _type: "easycv-cover-letter", title, template, content }, title || "cover-letter");
+  }
+
+  function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(reader.result as string);
+        if (
+          parsed._type !== "easycv-cover-letter" ||
+          typeof parsed.content !== "object" ||
+          !parsed.content?.sender ||
+          !Array.isArray(parsed.content?.paragraphs)
+        ) throw new Error("invalid");
+        onImport({ title: parsed.title, template: parsed.template, content: parsed.content });
+      } catch {
+        alert(tr.importJsonError);
+      }
+    };
+    reader.readAsText(file);
   }
 
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -65,6 +102,7 @@ export function Toolbar({ title, onTitleChange }: ToolbarProps) {
 
   return (
     <>
+      <input ref={fileInputRef} type="file" accept=".json" className="hidden" onChange={handleImportFile} />
       <header className="editor-toolbar flex h-14 shrink-0 items-center gap-3 border-b border-border bg-card px-4">
         <Button
           variant="ghost"
@@ -114,6 +152,14 @@ export function Toolbar({ title, onTitleChange }: ToolbarProps) {
             <DropdownMenuItem className="cursor-pointer gap-2" onClick={() => handleExport("png")}>
               <FileImage className="size-4 text-muted-foreground" />
               {tr.exportPng}
+            </DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer gap-2" onClick={handleExportJson}>
+              <FileJson className="size-4 text-muted-foreground" />
+              {tr.exportJson}
+            </DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer gap-2" onClick={() => fileInputRef.current?.click()}>
+              <FileUp className="size-4 text-muted-foreground" />
+              {tr.importJson}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

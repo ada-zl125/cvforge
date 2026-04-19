@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ChevronDown, FileDown, FileImage, Loader2, Settings } from "lucide-react";
-import { exportResume, type ExportFormat } from "@/lib/export";
+import { ArrowLeft, ChevronDown, FileDown, FileImage, FileJson, FileUp, Loader2, Settings } from "lucide-react";
+import { exportResume, exportJson, type ExportFormat } from "@/lib/export";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { TITLE_MAX } from "@/lib/defaults";
-import type { ResumeTemplate, ResumeLanguage } from "@/lib/types/resume";
+import type { ResumeTemplate, ResumeLanguage, ResumeContent } from "@/lib/types/resume";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,20 +31,30 @@ const TEMPLATE_OPTIONS: { value: ResumeTemplate; label: string; bg: string; text
 ];
 
 
+interface ImportedResumeState {
+  title: string;
+  template: ResumeTemplate;
+  language: ResumeLanguage;
+  content: ResumeContent;
+}
+
 interface ToolbarProps {
   title: string;
   template: ResumeTemplate;
   language: ResumeLanguage;
+  content: ResumeContent;
   onSettingsChange: (title: string, language: ResumeLanguage, template: ResumeTemplate) => void;
+  onImport: (state: ImportedResumeState) => void;
 }
 
-export function Toolbar({ title, template, language, onSettingsChange }: ToolbarProps) {
+export function Toolbar({ title, template, language, content, onSettingsChange, onImport }: ToolbarProps) {
   const router = useRouter();
   const { lang } = useUILanguage();
   const tr = t[lang];
 
   /* ---- Export state ---- */
   const [exporting, setExporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function handleExport(format: ExportFormat) {
     setExporting(true);
@@ -53,6 +63,32 @@ export function Toolbar({ title, template, language, onSettingsChange }: Toolbar
     } finally {
       setExporting(false);
     }
+  }
+
+  function handleExportJson() {
+    exportJson({ _type: "easycv-resume", title, template, language, content }, title || "resume");
+  }
+
+  function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(reader.result as string);
+        if (
+          parsed._type !== "easycv-resume" ||
+          typeof parsed.content !== "object" ||
+          !parsed.content?.personal ||
+          !Array.isArray(parsed.content?.sections)
+        ) throw new Error("invalid");
+        onImport({ title: parsed.title, template: parsed.template, language: parsed.language, content: parsed.content });
+      } catch {
+        alert(tr.importJsonError);
+      }
+    };
+    reader.readAsText(file);
   }
 
   /* ---- Settings dialog state ---- */
@@ -79,6 +115,7 @@ export function Toolbar({ title, template, language, onSettingsChange }: Toolbar
 
   return (
     <>
+      <input ref={fileInputRef} type="file" accept=".json" className="hidden" onChange={handleImportFile} />
       <header className="editor-toolbar flex h-14 shrink-0 items-center gap-3 border-b border-border bg-card px-4">
         {/* Back button */}
         <Button
@@ -134,6 +171,14 @@ export function Toolbar({ title, template, language, onSettingsChange }: Toolbar
             <DropdownMenuItem className="cursor-pointer gap-2" onClick={() => handleExport("png")}>
               <FileImage className="size-4 text-muted-foreground" />
               {tr.exportPng}
+            </DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer gap-2" onClick={handleExportJson}>
+              <FileJson className="size-4 text-muted-foreground" />
+              {tr.exportJson}
+            </DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer gap-2" onClick={() => fileInputRef.current?.click()}>
+              <FileUp className="size-4 text-muted-foreground" />
+              {tr.importJson}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

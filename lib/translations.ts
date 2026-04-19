@@ -41,6 +41,9 @@ const t = {
     exportLabel: "Export",
     exportPdf: "Save as PDF",
     exportPng: "Save as PNG",
+    exportJson: "Save as JSON",
+    importJson: "Import from JSON",
+    importJsonError: "Invalid file. Make sure you are importing a compatible EasyCV JSON file.",
     exporting: "Exporting…",
     editorResumeSettings: "Resume Settings",
 
@@ -169,6 +172,9 @@ const t = {
     exportLabel: "导出",
     exportPdf: "保存为 PDF",
     exportPng: "保存为 PNG",
+    exportJson: "保存为 JSON",
+    importJson: "从 JSON 导入",
+    importJsonError: "文件无效，请确认导入的是兼容的 EasyCV JSON 文件。",
     exporting: "导出中…",
     editorResumeSettings: "简历设置",
 

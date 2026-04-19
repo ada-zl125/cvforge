@@ -75,6 +75,11 @@ export function EditorContent() {
     persist({ title: newTitle, template: newTemplate, language: newLanguage, content: state.content });
   }
 
+  function handleImport(imported: { title: string; template: ResumeTemplate; language: ResumeLanguage; content: ResumeContent }) {
+    dispatch({ type: "HYDRATE", payload: imported });
+    persist(imported);
+  }
+
   if (!state.hydrated) return null;
 
   return (
@@ -83,7 +88,9 @@ export function EditorContent() {
         title={state.title}
         template={state.template}
         language={state.language}
+        content={state.content}
         onSettingsChange={handleSettingsChange}
+        onImport={handleImport}
       />
 
       <div className="flex flex-1 overflow-hidden">

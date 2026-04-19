@@ -71,11 +71,22 @@ export function CoverLetterEditorContent() {
     persist({ title: newTitle, template: state.template, content: state.content });
   }
 
+  function handleImport(imported: { title: string; template: CoverLetterTemplate; content: CoverLetterContent }) {
+    dispatch({ type: "HYDRATE", payload: imported });
+    persist(imported);
+  }
+
   if (!state.hydrated) return null;
 
   return (
     <div className="flex h-screen flex-col">
-      <Toolbar title={state.title} onTitleChange={handleTitleChange} />
+      <Toolbar
+        title={state.title}
+        content={state.content}
+        template={state.template}
+        onTitleChange={handleTitleChange}
+        onImport={handleImport}
+      />
 
       <div className="flex flex-1 overflow-hidden">
         {/* Left: Form panel (40%) */}
