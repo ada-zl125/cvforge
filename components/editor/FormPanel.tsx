@@ -298,6 +298,7 @@ function CollapsibleSection({
             <SummarySection
               value={content.summary ?? ""}
               onChange={(summary) => onChange({ ...content, summary })}
+              language={language}
             />
           )}
           {type === "education" && (

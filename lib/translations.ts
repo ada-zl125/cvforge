@@ -45,6 +45,11 @@ const t = {
     importLabel: "Import",
     importJson: "Import from JSON",
     importJsonError: "Invalid file. Make sure you are importing a compatible EasyCV JSON file.",
+    loadExample: "Example",
+    loadExampleDialogTitle: "Load example resume?",
+    loadExampleDialogDesc: "The example is for reference only and the content is not guaranteed to be professional.",
+    loadExampleDialogWarn: "Any unsaved changes will be lost.",
+    loadExampleConfirm: "Load Example",
     exporting: "Exporting…",
     editorResumeSettings: "Resume Settings",
 
@@ -177,6 +182,11 @@ const t = {
     importLabel: "导入",
     importJson: "从 JSON 导入",
     importJsonError: "文件无效，请确认导入的是兼容的 EasyCV JSON 文件。",
+    loadExample: "示例",
+    loadExampleDialogTitle: "加载示例简历？",
+    loadExampleDialogDesc: "示例仅供参考，内容不保证专业性。",
+    loadExampleDialogWarn: "加载后当前所有内容将丢失。",
+    loadExampleConfirm: "加载示例",
     exporting: "导出中…",
     editorResumeSettings: "简历设置",
 
@@ -191,7 +201,7 @@ const t = {
 
     /* ---- Summary section ---- */
     summaryLabel: "个人简介",
-    summaryPlaceholder: "简要介绍您的背景、技能和职业目标…",
+    summaryPlaceholder: "简单介绍你的背景, 技能, 个人兴趣与职业目标等...",
 
     /* ---- Cover Letter ---- */
     createCoverLetter: "求职信",

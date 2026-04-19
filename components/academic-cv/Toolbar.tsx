@@ -4,6 +4,8 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ChevronDown, FileDown, FileImage, FileJson, FileUp, Loader2, Settings } from "lucide-react";
 import { exportResume, exportJson, type ExportFormat } from "@/lib/export";
+import { withId } from "@/lib/json-utils";
+import { defaultAcademicCVContent } from "@/lib/defaults";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,9 +28,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 
-const TEMPLATE_OPTIONS: { value: AcademicCVTemplate; label: string; bg: string; text: string }[] = [
-  { value: "academic", label: "Academic", bg: "bg-emerald-50", text: "text-emerald-600" },
-];
 
 interface ImportedAcademicState {
   title: string;
@@ -65,7 +64,9 @@ export function Toolbar({ title, template, language, content, onSettingsChange, 
   }
 
   function handleExportJson() {
-    exportJson({ _type: "easycv-academic-cv", title, template, language, content }, title || "academic-cv");
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { photo: _photo, ...personal } = content.personal;
+    exportJson({ _type: "easycv-academic-cv", title, template, language, content: { ...content, personal } }, title || "academic-cv");
   }
 
   function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -82,7 +83,25 @@ export function Toolbar({ title, template, language, content, onSettingsChange, 
           !parsed.content?.personal ||
           !Array.isArray(parsed.content?.sections)
         ) throw new Error("invalid");
-        onImport({ title: parsed.title, template: parsed.template, language: parsed.language, content: parsed.content });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const raw: any = parsed.content;
+        const merged: AcademicCVContent = {
+          ...defaultAcademicCVContent,
+          ...raw,
+          personal: { ...defaultAcademicCVContent.personal, ...raw.personal },
+          education: withId(raw.education).map((ed) => ({ ...ed, extraFields: withId(ed.extraFields) })),
+          researchExperience: withId(raw.researchExperience).map((e) => ({ ...e, descriptions: withId(e.descriptions ?? []) })),
+          teachingExperience: withId(raw.teachingExperience).map((e) => ({ ...e, descriptions: withId(e.descriptions ?? []) })),
+          industryExperience: withId(raw.industryExperience).map((e) => ({ ...e, descriptions: withId(e.descriptions ?? []) })),
+          publications: withId(raw.publications),
+          manuscriptsUnderReview: withId(raw.manuscriptsUnderReview),
+          conferencePresentations: withId(raw.conferencePresentations),
+          grantsAndAwards: withId(raw.grantsAndAwards),
+          professionalService: withId(raw.professionalService),
+          technicalSkills: withId(raw.technicalSkills),
+          references: withId(raw.references),
+        };
+        onImport({ title: parsed.title, template: parsed.template, language: parsed.language, content: merged });
       } catch {
         alert(tr.importJsonError);
       }
@@ -94,12 +113,10 @@ export function Toolbar({ title, template, language, content, onSettingsChange, 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [draftTitle, setDraftTitle] = useState(title);
   const [draftLanguage, setDraftLanguage] = useState<ResumeLanguage>(language);
-  const [draftTemplate, setDraftTemplate] = useState<AcademicCVTemplate>(template);
 
   function openSettings() {
     setDraftTitle(title);
     setDraftLanguage(language);
-    setDraftTemplate(template);
     setSettingsOpen(true);
   }
 
@@ -108,7 +125,7 @@ export function Toolbar({ title, template, language, content, onSettingsChange, 
 
   function handleSettingsSave() {
     if (!canSave) return;
-    onSettingsChange(draftTitle.trim(), draftLanguage, draftTemplate);
+    onSettingsChange(draftTitle.trim(), draftLanguage, template);
     setSettingsOpen(false);
   }
 
@@ -249,26 +266,7 @@ export function Toolbar({ title, template, language, content, onSettingsChange, 
               </div>
             </div>
 
-            {/* Template picker */}
-            <div className="grid gap-2">
-              <Label>{tr.templateLabel}</Label>
-              <div className="flex gap-2">
-                {TEMPLATE_OPTIONS.map((tmpl) => (
-                  <button
-                    key={tmpl.value}
-                    type="button"
-                    onClick={() => setDraftTemplate(tmpl.value)}
-                    className={`cursor-pointer rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
-                      draftTemplate === tmpl.value
-                        ? `${tmpl.bg} ${tmpl.text} border-current`
-                        : "border-border text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-                    }`}
-                  >
-                    {tmpl.label}
-                  </button>
-                ))}
-              </div>
-            </div>
+
           </div>
 
           <DialogFooter>

@@ -69,11 +69,11 @@ export function SkillsSection({ items, onChange, language }: SkillsSectionProps)
             <div className="grid flex-1 grid-cols-[120px_1fr] gap-2">
               <div className="flex flex-col gap-1">
                 <Label className="text-xs">{zh ? "分类" : "Category"}</Label>
-                <Input value={group.category} onChange={(e) => update(i, "category", e.target.value)} placeholder={zh ? "编程语言" : "Languages"} />
+                <Input value={group.category} onChange={(e) => update(i, "category", e.target.value)} placeholder={zh ? "技术栈" : "Tech Stack"} />
               </div>
               <div className="flex flex-col gap-1">
                 <Label className="text-xs">{zh ? "技能" : "Skills"}</Label>
-                <Input value={group.items} onChange={(e) => update(i, "items", e.target.value)} placeholder="Python, JavaScript, Go" />
+                <Input value={group.items} onChange={(e) => update(i, "items", e.target.value)} placeholder="FastAPI, LangChain, LangGraph, LlamaIndex" />
               </div>
             </div>
 

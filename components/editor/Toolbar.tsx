@@ -2,8 +2,12 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ChevronDown, FileDown, FileImage, FileJson, FileUp, Loader2, Settings } from "lucide-react";
+import { ArrowLeft, ChevronDown, FileDown, FileImage, FileJson, FileUp, Loader2, Settings, Sparkles } from "lucide-react";
 import { exportResume, exportJson, type ExportFormat } from "@/lib/export";
+import { withId } from "@/lib/json-utils";
+import { defaultResumeContent } from "@/lib/defaults";
+import resumeExampleEn from "@/examples/resume-example-en.json";
+import resumeExampleCn from "@/examples/resume-example-cn.json";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,10 +29,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-
-const TEMPLATE_OPTIONS: { value: ResumeTemplate; label: string; bg: string; text: string }[] = [
-  { value: "general", label: "General", bg: "bg-blue-50", text: "text-blue-600" },
-];
 
 
 interface ImportedResumeState {
@@ -54,6 +54,7 @@ export function Toolbar({ title, template, language, content, onSettingsChange, 
 
   /* ---- Export state ---- */
   const [exporting, setExporting] = useState(false);
+  const [exampleDialogOpen, setExampleDialogOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function handleExport(format: ExportFormat) {
@@ -65,8 +66,27 @@ export function Toolbar({ title, template, language, content, onSettingsChange, 
     }
   }
 
+  function handleLoadExample() {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const raw: any = (language === "zh" ? resumeExampleCn : resumeExampleEn).content;
+    const example = language === "zh" ? resumeExampleCn : resumeExampleEn;
+    const merged: ResumeContent = {
+      ...defaultResumeContent,
+      ...raw,
+      personal: { ...defaultResumeContent.personal, ...raw.personal },
+      experience: withId(raw.experience).map((e) => ({ ...e, descriptions: withId(e.descriptions) })),
+      education: withId(raw.education).map((ed) => ({ ...ed, extraFields: withId(ed.extraFields) })),
+      skills: withId(raw.skills),
+      projects: withId(raw.projects).map((p) => ({ ...p, descriptions: withId(p.descriptions) })),
+      awards: withId(raw.awards),
+    };
+    onImport({ title: example.title, template: example.template as ResumeTemplate, language: example.language as ResumeLanguage, content: merged });
+  }
+
   function handleExportJson() {
-    exportJson({ _type: "easycv-resume", title, template, language, content }, title || "resume");
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { photo: _photo, ...personal } = content.personal;
+    exportJson({ _type: "easycv-resume", title, template, language, content: { ...content, personal } }, title || "resume");
   }
 
   function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -83,7 +103,19 @@ export function Toolbar({ title, template, language, content, onSettingsChange, 
           !parsed.content?.personal ||
           !Array.isArray(parsed.content?.sections)
         ) throw new Error("invalid");
-        onImport({ title: parsed.title, template: parsed.template, language: parsed.language, content: parsed.content });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const raw: any = parsed.content;
+        const merged: ResumeContent = {
+          ...defaultResumeContent,
+          ...raw,
+          personal: { ...defaultResumeContent.personal, ...raw.personal },
+          experience: withId(raw.experience).map((e) => ({ ...e, descriptions: withId(e.descriptions) })),
+          education: withId(raw.education).map((ed) => ({ ...ed, extraFields: withId(ed.extraFields) })),
+          skills: withId(raw.skills),
+          projects: withId(raw.projects).map((p) => ({ ...p, descriptions: withId(p.descriptions) })),
+          awards: withId(raw.awards),
+        };
+        onImport({ title: parsed.title, template: parsed.template, language: parsed.language, content: merged });
       } catch {
         alert(tr.importJsonError);
       }
@@ -95,12 +127,10 @@ export function Toolbar({ title, template, language, content, onSettingsChange, 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [draftTitle, setDraftTitle] = useState(title);
   const [draftLanguage, setDraftLanguage] = useState<ResumeLanguage>(language);
-  const [draftTemplate, setDraftTemplate] = useState<ResumeTemplate>(template);
 
   function openSettings() {
     setDraftTitle(title);
     setDraftLanguage(language);
-    setDraftTemplate(template);
     setSettingsOpen(true);
   }
 
@@ -109,7 +139,7 @@ export function Toolbar({ title, template, language, content, onSettingsChange, 
 
   function handleSettingsSave() {
     if (!canSave) return;
-    onSettingsChange(draftTitle.trim(), draftLanguage, draftTemplate);
+    onSettingsChange(draftTitle.trim(), draftLanguage, template);
     setSettingsOpen(false);
   }
 
@@ -142,11 +172,21 @@ export function Toolbar({ title, template, language, content, onSettingsChange, 
           <Settings className="size-4" />
         </Button>
 
+        {/* Language switcher */}
+        <LanguageSwitcher />
+
         {/* Spacer */}
         <div className="flex-1" />
 
-        {/* Language switcher */}
-        <LanguageSwitcher />
+        {/* Example button */}
+        <Button
+          className="btn-hover-border h-8 cursor-pointer gap-1.5 rounded-lg px-3 text-sm font-medium"
+          variant="outline"
+          onClick={() => setExampleDialogOpen(true)}
+        >
+          <Sparkles className="size-4" />
+          {tr.loadExample}
+        </Button>
 
         {/* Import dropdown */}
         <DropdownMenu>
@@ -200,6 +240,40 @@ export function Toolbar({ title, template, language, content, onSettingsChange, 
         </DropdownMenu>
       </header>
 
+      {/* Example confirmation dialog */}
+      <Dialog open={exampleDialogOpen} onOpenChange={setExampleDialogOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
+                <Sparkles className="h-4 w-4 text-foreground" />
+              </div>
+              <DialogTitle>{tr.loadExampleDialogTitle}</DialogTitle>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground text-justify leading-relaxed">
+                {tr.loadExampleDialogDesc}
+              </p>
+              <p className="text-sm font-medium text-foreground">
+                {tr.loadExampleDialogWarn}
+              </p>
+            </div>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" className="btn-hover-border cursor-pointer" onClick={() => setExampleDialogOpen(false)}>
+              {tr.cancel}
+            </Button>
+            <Button
+              variant="outline"
+              className="btn-hover-border cursor-pointer"
+              onClick={() => { handleLoadExample(); setExampleDialogOpen(false); }}
+            >
+              {tr.loadExampleConfirm}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Settings Dialog */}
       <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
         <DialogContent className="sm:max-w-sm">
@@ -250,26 +324,7 @@ export function Toolbar({ title, template, language, content, onSettingsChange, 
               </div>
             </div>
 
-            {/* Template picker */}
-            <div className="grid gap-2">
-              <Label>{tr.templateLabel}</Label>
-              <div className="flex gap-2">
-                {TEMPLATE_OPTIONS.map((tmpl) => (
-                  <button
-                    key={tmpl.value}
-                    type="button"
-                    onClick={() => setDraftTemplate(tmpl.value)}
-                    className={`cursor-pointer rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
-                      draftTemplate === tmpl.value
-                        ? `${tmpl.bg} ${tmpl.text} border-current`
-                        : "border-border text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-                    }`}
-                  >
-                    {tr.templateGeneral}
-                  </button>
-                ))}
-              </div>
-            </div>
+
           </div>
 
           <DialogFooter>

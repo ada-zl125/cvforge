@@ -68,7 +68,7 @@ function SummaryBlock({ summary, lang, fontFamily }: { summary: string; lang: Re
   return (
     <PageBreakAvoid className="mb-2">
       <SectionTitle type="summary" lang={lang} fontFamily={fontFamily} />
-      <p style={{ ...LINE_STYLE, paddingLeft: 0 }}>{summary}</p>
+      <p style={{ ...LINE_STYLE, paddingLeft: 0, textAlign: "justify" }}>{summary}</p>
     </PageBreakAvoid>
   );
 }
@@ -344,7 +344,7 @@ export function GeneralTemplate({ content, language = "en" }: AcademicTemplatePr
       style={{
         width: "794px",
         minHeight: "1123px",
-        paddingTop: "30px",
+        paddingTop: "32px",
         paddingRight: "48px",
         paddingBottom: "48px",
         paddingLeft: "48px",

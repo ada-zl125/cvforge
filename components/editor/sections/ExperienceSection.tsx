@@ -206,21 +206,6 @@ function ExperienceBlock({
             </div>
           </div>
 
-          {/* Add field dropdown */}
-          <div className="mt-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger className="add-btn inline-flex h-7 cursor-pointer items-center gap-1 rounded-md px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
-                <Plus className="size-3" />
-                {zh ? "添加字段" : "Add field"}
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" sideOffset={4}>
-                <DropdownMenuItem className="cursor-pointer" onClick={addDesc}>
-                  {zh ? "描述" : "Description"}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-
           {/* Description fields */}
           {descriptions.length > 0 && (
             <div className="mt-3 space-y-2">
@@ -244,13 +229,6 @@ function ExperienceBlock({
                     >
                       <ChevronDown className="size-3" />
                     </Button>
-                    <Button
-                      variant="ghost" size="icon-xs"
-                      className="cursor-pointer text-muted-foreground hover:text-destructive"
-                      onClick={() => removeDesc(desc.id)}
-                    >
-                      <Trash2 className="size-3" />
-                    </Button>
                   </div>
                   <Textarea
                     className="flex-1 resize-y text-xs"
@@ -259,10 +237,32 @@ function ExperienceBlock({
                     onChange={(e) => updateDesc(desc.id, e.target.value)}
                     placeholder={zh ? "描述一项职责或成就..." : "Describe a responsibility or achievement..."}
                   />
+                  <Button
+                    variant="ghost" size="icon-xs"
+                    className="mt-0.5 cursor-pointer text-muted-foreground hover:text-destructive"
+                    onClick={() => removeDesc(desc.id)}
+                  >
+                    <Trash2 className="size-3" />
+                  </Button>
                 </div>
               ))}
             </div>
           )}
+
+          {/* Add field dropdown — always at bottom */}
+          <div className="mt-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger className="add-btn inline-flex h-7 cursor-pointer items-center gap-1 rounded-md px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+                <Plus className="size-3" />
+                {zh ? "添加字段" : "Add field"}
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" sideOffset={4}>
+                <DropdownMenuItem className="cursor-pointer" onClick={addDesc}>
+                  {zh ? "描述" : "Description"}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       )}
     </div>
