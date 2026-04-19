@@ -3,6 +3,7 @@
 import { useReducer, useCallback, useEffect } from "react";
 import type { CoverLetterContent, CoverLetterTemplate } from "@/lib/types/cover-letter";
 import { defaultCoverLetterContent, COVER_LETTER_STORAGE_KEY } from "@/lib/defaults";
+import { readEditorState, writeEditorState } from "@/lib/storage";
 import { Toolbar } from "./Toolbar";
 import { FormPanel } from "./FormPanel";
 import { PreviewPanel } from "./PreviewPanel";
@@ -39,38 +40,13 @@ function reducer(state: EditorState, action: EditorAction): EditorState {
   }
 }
 
-/* ---- Storage ---- */
-
-function loadFromStorage(): Omit<EditorState, "hydrated"> | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = localStorage.getItem(COVER_LETTER_STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (parsed?.content) {
-      parsed.content = { ...defaultCoverLetterContent, ...parsed.content };
-    }
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-
-function saveToStorage(state: Omit<EditorState, "hydrated">) {
-  try {
-    localStorage.setItem(COVER_LETTER_STORAGE_KEY, JSON.stringify(state));
-  } catch {
-    // Storage quota exceeded — silently ignore
-  }
-}
-
 /* ---- Component ---- */
 
 export function CoverLetterEditorContent() {
   const [state, dispatch] = useReducer(reducer, initialState);
 
   useEffect(() => {
-    const stored = loadFromStorage();
+    const stored = readEditorState<EditorState, CoverLetterContent>(COVER_LETTER_STORAGE_KEY, defaultCoverLetterContent);
     dispatch({
       type: "HYDRATE",
       payload: stored ?? {
@@ -82,7 +58,7 @@ export function CoverLetterEditorContent() {
   }, []);
 
   const persist = useCallback((next: Omit<EditorState, "hydrated">) => {
-    saveToStorage(next);
+    writeEditorState(COVER_LETTER_STORAGE_KEY, next);
   }, []);
 
   function handleContentChange(newContent: CoverLetterContent) {
