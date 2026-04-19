@@ -97,8 +97,27 @@ export function FormPanel({ content, onChange, language }: FormPanelProps) {
     setSectionCollapsed((prev) => ({ ...prev, [type]: false }));
   }
 
+  const SECTION_DEFAULTS: Partial<AcademicCVContent> = {
+    researchInterests: "",
+    education: [],
+    researchExperience: [],
+    teachingExperience: [],
+    industryExperience: [],
+    publications: [],
+    manuscriptsUnderReview: [],
+    conferencePresentations: [],
+    grantsAndAwards: [],
+    professionalService: [],
+    technicalSkills: [],
+    references: [],
+  };
+
   function removeSection(type: AcademicSectionType) {
-    onChange({ ...content, sections: activeSections.filter((s) => s !== type) });
+    onChange({
+      ...content,
+      sections: activeSections.filter((s) => s !== type),
+      ...{ [type]: SECTION_DEFAULTS[type] },
+    });
   }
 
   function moveSection(index: number, direction: -1 | 1) {

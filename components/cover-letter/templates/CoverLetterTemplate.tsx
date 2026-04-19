@@ -1,6 +1,7 @@
 "use client";
 
 import type { CoverLetterContent } from "@/lib/types/cover-letter";
+import { PageBreakAvoid } from "@/components/shared/PageBreakAvoid";
 
 /* ------------------------------------------------------------------ */
 /*  A4 page: 794px × 1123px at 96 DPI, 1.27cm (48px) margins         */
@@ -28,6 +29,7 @@ export function CoverLetterTemplate({ content }: Props) {
 
   return (
     <div
+      data-cv-root
       className="relative bg-white text-black"
       style={{
         width: "794px",
@@ -45,42 +47,42 @@ export function CoverLetterTemplate({ content }: Props) {
 
       {/* ── Date ── */}
       {date && (
-        <div style={{ ...baseStyle, marginBottom: "16pt" }}>{date}</div>
+        <PageBreakAvoid style={{ ...baseStyle, marginBottom: "16pt" }}>{date}</PageBreakAvoid>
       )}
 
       {/* ── Recipient block ── */}
       {(recipient.name || recipient.department || recipient.institution || recipient.addressLine1 || recipient.addressLine2) && (
-        <div style={{ ...baseStyle, marginBottom: "16pt" }}>
+        <PageBreakAvoid style={{ ...baseStyle, marginBottom: "16pt" }}>
           {recipient.name && <div>{recipient.name}</div>}
           {recipient.department && <div>{recipient.department}</div>}
           {recipient.institution && <div>{recipient.institution}</div>}
           {recipient.addressLine1 && <div>{recipient.addressLine1}</div>}
           {recipient.addressLine2 && <div>{recipient.addressLine2}</div>}
-        </div>
+        </PageBreakAvoid>
       )}
 
       {/* ── Salutation ── */}
       {salutation && (
-        <div style={{ ...baseStyle, marginBottom: "12pt" }}>
+        <PageBreakAvoid style={{ ...baseStyle, marginBottom: "12pt" }}>
           Dear {salutation}:
-        </div>
+        </PageBreakAvoid>
       )}
 
       {/* ── Body paragraphs ── */}
       {paragraphs.map((p) =>
         p.text ? (
-          <p key={p.id} style={{ ...baseStyle, marginBottom: "10pt", marginTop: 0 }}>
+          <PageBreakAvoid key={p.id} style={{ ...baseStyle, marginBottom: "10pt" }}>
             {p.text}
-          </p>
+          </PageBreakAvoid>
         ) : null,
       )}
 
       {/* ── Closing ── */}
       {sender.name && (
-        <div style={{ ...baseStyle, marginTop: "16pt" }}>
+        <PageBreakAvoid style={{ ...baseStyle, marginTop: "16pt" }}>
           <div>Sincerely,</div>
           <div style={{ marginTop: "36pt" }}>{sender.name}</div>
-        </div>
+        </PageBreakAvoid>
       )}
 
       {/* Placeholder when empty */}

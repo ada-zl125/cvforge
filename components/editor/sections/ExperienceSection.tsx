@@ -7,6 +7,7 @@ import { defaultDate } from "@/lib/defaults";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 
 interface ExperienceSectionProps {
@@ -128,6 +129,16 @@ function ExperienceBlock({
     onDescriptionsChange(descriptions.filter((d) => d.id !== id));
   }
 
+  function moveDesc(id: string, direction: "up" | "down") {
+    const idx = descriptions.findIndex((d) => d.id === id);
+    if (idx < 0) return;
+    const next = [...descriptions];
+    const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= next.length) return;
+    [next[idx], next[swapIdx]] = [next[swapIdx], next[idx]];
+    onDescriptionsChange(next);
+  }
+
   const headerText = [exp.company, exp.position].filter(Boolean).join(" · ") || `${zh ? "条目" : "Entry"} #${index + 1}`;
 
   return (
@@ -193,22 +204,41 @@ function ExperienceBlock({
           {/* Description fields */}
           <div className="mt-3 space-y-2">
             <Label className="text-xs text-muted-foreground">{zh ? "工作描述" : "Descriptions"}</Label>
-            {descriptions.map((desc) => (
-              <div key={desc.id} className="flex items-center gap-2">
-                <Input
-                  className="flex-1"
+            {descriptions.map((desc, di) => (
+              <div key={desc.id} className="flex items-start gap-1">
+                <Textarea
+                  className="flex-1 resize-y text-xs"
+                  rows={2}
                   value={desc.value}
                   onChange={(e) => updateDesc(desc.id, e.target.value)}
                   placeholder={zh ? "描述一项职责或成就..." : "Describe a responsibility or achievement..."}
                 />
-                <Button
-                  variant="ghost" size="icon-xs"
-                  className="cursor-pointer text-muted-foreground hover:text-destructive disabled:opacity-30"
-                  disabled={descriptions.length <= 1}
-                  onClick={() => removeDesc(desc.id)}
-                >
-                  <Trash2 className="size-3" />
-                </Button>
+                <div className="flex flex-col gap-0.5 pt-0.5">
+                  <Button
+                    variant="ghost" size="icon-xs"
+                    className="cursor-pointer text-muted-foreground hover:text-foreground disabled:opacity-30"
+                    disabled={di === 0}
+                    onClick={() => moveDesc(desc.id, "up")}
+                  >
+                    <ChevronUp className="size-3" />
+                  </Button>
+                  <Button
+                    variant="ghost" size="icon-xs"
+                    className="cursor-pointer text-muted-foreground hover:text-foreground disabled:opacity-30"
+                    disabled={di === descriptions.length - 1}
+                    onClick={() => moveDesc(desc.id, "down")}
+                  >
+                    <ChevronDown className="size-3" />
+                  </Button>
+                  <Button
+                    variant="ghost" size="icon-xs"
+                    className="cursor-pointer text-muted-foreground hover:text-destructive disabled:opacity-30"
+                    disabled={descriptions.length <= 1}
+                    onClick={() => removeDesc(desc.id)}
+                  >
+                    <Trash2 className="size-3" />
+                  </Button>
+                </div>
               </div>
             ))}
             <button
