@@ -3,6 +3,7 @@
 import { useReducer, useCallback, useEffect } from "react";
 import type { ResumeContent, ResumeTemplate, ResumeLanguage } from "@/lib/types/resume";
 import { defaultResumeContent, RESUME_STORAGE_KEY } from "@/lib/defaults";
+import { readEditorState, writeEditorState } from "@/lib/storage";
 import { Toolbar } from "./Toolbar";
 import { FormPanel } from "./FormPanel";
 import { PreviewPanel } from "./PreviewPanel";
@@ -41,31 +42,6 @@ function reducer(state: EditorState, action: EditorAction): EditorState {
   }
 }
 
-/* ---- Storage ---- */
-
-function loadFromStorage(): Omit<EditorState, "hydrated"> | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = localStorage.getItem(RESUME_STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (parsed?.content) {
-      parsed.content = { ...defaultResumeContent, ...parsed.content };
-    }
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-
-function saveToStorage(state: Omit<EditorState, "hydrated">) {
-  try {
-    localStorage.setItem(RESUME_STORAGE_KEY, JSON.stringify(state));
-  } catch {
-    // Storage quota exceeded — silently ignore
-  }
-}
-
 /* ---- Component ---- */
 
 export function EditorContent() {
@@ -73,7 +49,7 @@ export function EditorContent() {
 
   // Hydrate from localStorage on mount — single dispatch, no cascading setState
   useEffect(() => {
-    const stored = loadFromStorage();
+    const stored = readEditorState<EditorState, ResumeContent>(RESUME_STORAGE_KEY, defaultResumeContent);
     dispatch({
       type: "HYDRATE",
       payload: stored ?? {
@@ -86,7 +62,7 @@ export function EditorContent() {
   }, []);
 
   const persist = useCallback((next: Omit<EditorState, "hydrated">) => {
-    saveToStorage(next);
+    writeEditorState(RESUME_STORAGE_KEY, next);
   }, []);
 
   function handleContentChange(newContent: ResumeContent) {

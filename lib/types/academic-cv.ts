@@ -2,8 +2,8 @@
 /*  Academic CV data types                                              */
 /* ------------------------------------------------------------------ */
 
-import type { PersonalInfo, SkillGroup, ResumeLanguage } from "./resume";
-export type { PersonalInfo, SkillGroup, ResumeLanguage };
+import type { PersonalInfo, SkillGroup, ResumeLanguage, DescriptionField } from "./resume";
+export type { PersonalInfo, SkillGroup, ResumeLanguage, DescriptionField };
 
 /* ---- Section type union ---- */
 
@@ -22,13 +22,6 @@ export type AcademicSectionType =
   | "references";
 
 export type AcademicCVTemplate = "academic";
-
-/* ---- Shared ---- */
-
-export interface DescriptionField {
-  id: string;
-  value: string;
-}
 
 /* ---- Education extra fields ---- */
 
