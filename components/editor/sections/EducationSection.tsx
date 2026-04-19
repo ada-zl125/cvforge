@@ -196,7 +196,7 @@ function EducationBlock({
         </div>
         <div className="grid gap-1.5">
           <Label className="text-xs">{zh ? "学位与专业" : "Degree and Field of Study"}</Label>
-          <Input value={edu.degree} onChange={(e) => onUpdate("degree", e.target.value)} placeholder={zh ? "理学硕士 计算机科学" : "MSc in Computer Science"} />
+          <Input value={edu.degree} onChange={(e) => onUpdate("degree", e.target.value)} placeholder={zh ? "计算机科学理学硕士" : "MSc in Computer Science"} />
         </div>
         <div className="grid grid-cols-3 gap-2">
           <div className="grid gap-1.5">
@@ -223,11 +223,11 @@ function EducationBlock({
                 <div className="grid flex-1 grid-cols-[120px_1fr] gap-2">
                   <div className="flex flex-col gap-1">
                     <Label className="text-xs">{zh ? "字段名称" : "Field Name"}</Label>
-                    <Input value={ef.label} onChange={(e) => updateExtraField(ef.id, { label: e.target.value })} placeholder={zh ? "课程作业" : "Coursework"} />
+                    <Input value={ef.label} onChange={(e) => updateExtraField(ef.id, { label: e.target.value })} placeholder={zh ? "活动" : "Activities"} />
                   </div>
                   <div className="flex flex-col gap-1">
                     <Label className="text-xs">{zh ? "内容" : "Value"}</Label>
-                    <Input value={ef.value} onChange={(e) => updateExtraField(ef.id, { value: e.target.value })} placeholder={zh ? "描述..." : "Describe..."} />
+                    <Input value={ef.value} onChange={(e) => updateExtraField(ef.id, { value: e.target.value })} placeholder={zh ? "描述" : "Description"} />
                   </div>
                 </div>
               ) : (
@@ -238,8 +238,8 @@ function EducationBlock({
                     onChange={(e) => updateExtraField(ef.id, { value: e.target.value })}
                     placeholder={
                       ef.type === "grade"
-                        ? zh ? "一等荣誉学位 / 3.8/4.0" : "First Class Honours / 3.8/4.0"
-                        : zh ? "院长名单, 优秀学生奖学金" : "Dean's List, Outstanding Student Scholarship"
+                        ? zh ? "93.53/100" : "Distinction, 75.53/100"
+                        : zh ? "国家奖学金, 校优秀学生奖学金, 校优秀毕业生" : "Dean's List, Outstanding Student Scholarship"
                     }
                   />
                 </div>

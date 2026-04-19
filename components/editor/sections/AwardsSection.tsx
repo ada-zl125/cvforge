@@ -72,7 +72,7 @@ export function AwardsSection({ items, onChange, language }: AwardsSectionProps)
                 <Input
                   value={item.award}
                   onChange={(e) => update(i, "award", e.target.value)}
-                  placeholder={zh ? "国家奖学金" : "National Scholarship"}
+                  placeholder={zh ? "全国大学生数学建模竞赛, 国家级一等奖" : "1st in 2026 AI Agent Hackathon"}
                 />
               </div>
               <div className="flex flex-col gap-1">

@@ -93,20 +93,27 @@ function PersonalHeader({ personal, fontFamily, language }: { personal: Academic
   const contacts = personal.contacts ?? [];
   const hasPhoto = !!personal.photo;
 
+  const location = contacts.find(c => c.type === "location");
+  const otherContacts = contacts.filter(c => c.type !== "location");
+
   const nameEl = (
     <h1 className="leading-tight" style={{ fontSize: NAME_SIZE, ...boldFontStyle(language, fontFamily) }}>
       {personal.fullName || (language === "zh" ? "姓名" : "Your Name")}
     </h1>
   );
 
+  const locationEl = location && (
+    <p style={{ fontSize: BODY_SIZE }}>{formatContact(location)}</p>
+  );
+
   if (hasPhoto) {
-    const mainContacts = contacts.filter(c => c.type !== "website");
-    const websites = contacts.filter(c => c.type === "website");
+    const mainOthers = otherContacts.filter(c => c.type !== "website");
+    const websites = otherContacts.filter(c => c.type === "website");
     const headerMinHeight = websites.length > 0 ? "88px" : "76px";
-    const contactsEl = contacts.length > 0 && (
-      <div className="mt-1" style={{ fontSize: BODY_SIZE }}>
-        {mainContacts.length > 0 && (
-          <div>{mainContacts.map((f, i) => <span key={f.id}>{i > 0 && " | "}{formatContact(f)}</span>)}</div>
+    const contactsEl = otherContacts.length > 0 && (
+      <div style={{ fontSize: BODY_SIZE }}>
+        {mainOthers.length > 0 && (
+          <div>{mainOthers.map((f, i) => <span key={f.id}>{i > 0 && " | "}{formatContact(f)}</span>)}</div>
         )}
         {websites.length > 0 && (
           <div>{websites.map((f, i) => <span key={f.id}>{i > 0 && " | "}{formatContact(f)}</span>)}</div>
@@ -116,23 +123,23 @@ function PersonalHeader({ personal, fontFamily, language }: { personal: Academic
     return (
       <div className="relative mb-1" style={{ paddingRight: "90px", minHeight: headerMinHeight }}>
         {nameEl}
-        {contactsEl}
+        <div className="mt-1">{locationEl}{contactsEl}</div>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={personal.photo} alt="" style={{ position: "absolute", top: "-10px", right: 0, width: "74px", height: "92px", objectFit: "cover", borderRadius: "2px" }} />
       </div>
     );
   }
 
-  const contactsEl = contacts.length > 0 && (
-    <p className="mt-1" style={{ fontSize: BODY_SIZE }}>
-      {contacts.map((f, i) => <span key={f.id}>{i > 0 && " | "}{formatContact(f)}</span>)}
+  const contactsEl = otherContacts.length > 0 && (
+    <p style={{ fontSize: BODY_SIZE }}>
+      {otherContacts.map((f, i) => <span key={f.id}>{i > 0 && " | "}{formatContact(f)}</span>)}
     </p>
   );
 
   return (
     <div className="mb-2 text-center">
       {nameEl}
-      {contactsEl}
+      <div className="mt-1">{locationEl}{contactsEl}</div>
     </div>
   );
 }
@@ -146,7 +153,7 @@ function ResearchInterestsBlock({ value, lang, fontFamily }: { value: string; la
   return (
     <PageBreakAvoid className="mb-2">
       <SectionTitle type="researchInterests" lang={lang} fontFamily={fontFamily} />
-      <p style={{ ...LINE_STYLE, paddingLeft: 0 }}>{value}</p>
+      <p style={{ ...LINE_STYLE, paddingLeft: 0, textAlign: "justify" }}>{value}</p>
     </PageBreakAvoid>
   );
 }
@@ -431,7 +438,7 @@ export function AcademicTemplate({ content, language = "en" }: AcademicTemplateP
     <div
       data-cv-root
       className="relative bg-white text-black"
-      style={{ width: "794px", minHeight: "1123px", paddingTop: "30px", paddingRight: "48px", paddingBottom: "48px", paddingLeft: "48px", fontFamily }}
+      style={{ width: "794px", minHeight: "1123px", paddingTop: "32px", paddingRight: "48px", paddingBottom: "48px", paddingLeft: "48px", fontFamily }}
     >
       <PersonalHeader personal={content.personal} fontFamily={fontFamily} language={language} />
 

@@ -5,7 +5,7 @@ export function BulletItem({ children }: { children: React.ReactNode }) {
   return (
     <div style={BULLET_ROW_STYLE}>
       <span style={BULLET_DOT_STYLE}>●</span>
-      <span style={{ flex: 1 }}>{children}</span>
+      <span style={{ flex: 1, textAlign: "justify" }}>{children}</span>
     </div>
   );
 }

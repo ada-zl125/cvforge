@@ -95,6 +95,15 @@ function CreateCoverLetterDialog({ open, onOpenChange, onCreate }: CreateCoverLe
               <p className="text-xs text-destructive">{tr.titleTooLong(TITLE_MAX)}</p>
             )}
           </div>
+
+          <div className="grid gap-2">
+            <Label>{tr.languageLabel}</Label>
+            <div className="flex gap-2">
+              <span className="cursor-default rounded-lg border border-foreground bg-foreground/5 px-3 py-2 text-sm font-medium text-foreground">
+                English
+              </span>
+            </div>
+          </div>
         </div>
 
         <DialogFooter>

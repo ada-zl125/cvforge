@@ -4,6 +4,8 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ChevronDown, FileDown, FileImage, FileJson, FileUp, Loader2, Settings } from "lucide-react";
 import { exportResume, exportJson, type ExportFormat } from "@/lib/export";
+import { withId } from "@/lib/json-utils";
+import { defaultCoverLetterContent } from "@/lib/defaults";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -75,7 +77,16 @@ export function Toolbar({ title, content, template, onTitleChange, onImport }: T
           !parsed.content?.sender ||
           !Array.isArray(parsed.content?.paragraphs)
         ) throw new Error("invalid");
-        onImport({ title: parsed.title, template: parsed.template, content: parsed.content });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const raw: any = parsed.content;
+        const merged: CoverLetterContent = {
+          ...defaultCoverLetterContent,
+          ...raw,
+          sender: { ...defaultCoverLetterContent.sender, ...raw.sender },
+          recipient: { ...defaultCoverLetterContent.recipient, ...raw.recipient },
+          paragraphs: withId(raw.paragraphs),
+        };
+        onImport({ title: parsed.title, template: parsed.template, content: merged });
       } catch {
         alert(tr.importJsonError);
       }
