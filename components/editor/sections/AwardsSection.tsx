@@ -6,6 +6,7 @@ import { defaultDate } from "@/lib/defaults";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useUILanguage } from "@/lib/ui-language";
 
 
 function emptyAward(): AwardItem {
@@ -19,7 +20,9 @@ interface AwardsSectionProps {
 }
 
 export function AwardsSection({ items, onChange, language }: AwardsSectionProps) {
-  const zh = language === "zh";
+  const { lang } = useUILanguage();
+  const zh = lang === "zh";
+  const contentZh = language === "zh";
 
   function update(index: number, field: keyof AwardItem, value: string) {
     onChange(items.map((item, i) => (i === index ? { ...item, [field]: value } : item)));
@@ -72,7 +75,7 @@ export function AwardsSection({ items, onChange, language }: AwardsSectionProps)
                 <Input
                   value={item.award}
                   onChange={(e) => update(i, "award", e.target.value)}
-                  placeholder={zh ? "全国大学生数学建模竞赛, 国家级一等奖" : "1st in 2026 AI Agent Hackathon"}
+                  placeholder={contentZh ? "全国大学生数学建模竞赛, 国家级一等奖" : "1st in 2026 AI Agent Hackathon"}
                 />
               </div>
               <div className="flex flex-col gap-1">

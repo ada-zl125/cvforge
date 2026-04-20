@@ -1,6 +1,7 @@
 "use client";
 
 import { t } from "@/lib/translations";
+import { useUILanguage } from "@/lib/ui-language";
 import type { ResumeLanguage } from "@/lib/types/resume";
 
 interface SummarySectionProps {
@@ -9,8 +10,9 @@ interface SummarySectionProps {
   language: ResumeLanguage;
 }
 
-export function SummarySection({ value, onChange, language }: SummarySectionProps) {
-  const tr = t[language];
+export function SummarySection({ value, onChange, language: _language }: SummarySectionProps) {
+  const { lang } = useUILanguage();
+  const tr = t[lang];
 
   return (
     <textarea

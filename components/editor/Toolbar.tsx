@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ChevronDown, FileDown, FileImage, FileJson, FileUp, Loader2, Settings, Sparkles } from "lucide-react";
 import { exportResume, exportJson, type ExportFormat } from "@/lib/export";
-import { withId } from "@/lib/json-utils";
+import { withId, mergeDegreeField, stripDegreeField } from "@/lib/json-utils";
 import { defaultResumeContent } from "@/lib/defaults";
 import resumeExampleEn from "@/examples/resume-example-en.json";
 import resumeExampleCn from "@/examples/resume-example-cn.json";
@@ -75,7 +75,7 @@ export function Toolbar({ title, template, language, content, onSettingsChange, 
       ...raw,
       personal: { ...defaultResumeContent.personal, ...raw.personal },
       experience: withId(raw.experience).map((e) => ({ ...e, descriptions: withId(e.descriptions) })),
-      education: withId(raw.education).map((ed) => ({ ...ed, extraFields: withId(ed.extraFields) })),
+      education: withId(raw.education).map((ed) => { const e = mergeDegreeField(ed, example.language); return { ...e, extraFields: withId(e.extraFields) }; }),
       skills: withId(raw.skills),
       projects: withId(raw.projects).map((p) => ({ ...p, descriptions: withId(p.descriptions) })),
       awards: withId(raw.awards),
@@ -86,7 +86,7 @@ export function Toolbar({ title, template, language, content, onSettingsChange, 
   function handleExportJson() {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { photo: _photo, ...personal } = content.personal;
-    exportJson({ _type: "easycv-resume", title, template, language, content: { ...content, personal } }, title || "resume");
+    exportJson({ _type: "easycv-resume", title, template, language, content: { ...content, personal, education: stripDegreeField(content.education) } }, title || "resume");
   }
 
   function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -110,7 +110,7 @@ export function Toolbar({ title, template, language, content, onSettingsChange, 
           ...raw,
           personal: { ...defaultResumeContent.personal, ...raw.personal },
           experience: withId(raw.experience).map((e) => ({ ...e, descriptions: withId(e.descriptions) })),
-          education: withId(raw.education).map((ed) => ({ ...ed, extraFields: withId(ed.extraFields) })),
+          education: withId(raw.education).map((ed) => { const e = mergeDegreeField(ed, parsed.language); return { ...e, extraFields: withId(e.extraFields) }; }),
           skills: withId(raw.skills),
           projects: withId(raw.projects).map((p) => ({ ...p, descriptions: withId(p.descriptions) })),
           awards: withId(raw.awards),
@@ -265,7 +265,7 @@ export function Toolbar({ title, template, language, content, onSettingsChange, 
             </Button>
             <Button
               variant="outline"
-              className="btn-hover-border cursor-pointer"
+              className="btn-hover-primary cursor-pointer"
               onClick={() => { handleLoadExample(); setExampleDialogOpen(false); }}
             >
               {tr.loadExampleConfirm}

@@ -69,7 +69,7 @@ export function ReferencesSection({ items, onChange, language }: Props) {
         <Plus className="size-3" /> {tr.addEntry}
       </Button>
       {items.map((item, i) => {
-        const isCollapsed = collapsed[item.id] ?? false;
+        const isCollapsed = collapsed[item.id] ?? true;
         const header = item.name || `Entry #${i + 1}`;
         const zh = language === "zh";
 
@@ -100,7 +100,7 @@ export function ReferencesSection({ items, onChange, language }: Props) {
                 {/* Fixed: Name */}
                 <div className="grid gap-1.5">
                   <Label className="text-xs">{zh ? "姓名" : "Name"}</Label>
-                  <Input value={item.name} onChange={e => update(i, "name", e.target.value)} placeholder="Dr. Jane Smith" />
+                  <Input value={item.name} onChange={e => update(i, "name", e.target.value)} placeholder={zh ? "推荐人姓名" : "Referee Name"} />
                 </div>
 
                 {/* Optional: Title */}
@@ -132,7 +132,7 @@ export function ReferencesSection({ items, onChange, language }: Props) {
                       <Label className="text-xs">{zh ? OPTIONAL_FIELD_META.address.labelZh : OPTIONAL_FIELD_META.address.label}</Label>
                       <Button variant="ghost" size="icon-xs" className="cursor-pointer text-muted-foreground hover:text-destructive" onClick={() => removeOptionalField(i, "address")}><Trash2 className="size-3" /></Button>
                     </div>
-                    <Input value={item.address} onChange={e => update(i, "address", e.target.value)} placeholder={zh ? "地球科学系，不来梅大学，德国不来梅" : "Department of Geosciences, University of Bremen, Germany"} />
+                    <Input value={item.address} onChange={e => update(i, "address", e.target.value)} placeholder={zh ? "计算机系，北京大学，北京 100871" : "Department of Computer Science, Imperial College London, UK"} />
                   </div>
                 )}
 
@@ -154,7 +154,7 @@ export function ReferencesSection({ items, onChange, language }: Props) {
                       <Label className="text-xs">{zh ? OPTIONAL_FIELD_META.email.labelZh : OPTIONAL_FIELD_META.email.label}</Label>
                       <Button variant="ghost" size="icon-xs" className="cursor-pointer text-muted-foreground hover:text-destructive" onClick={() => removeOptionalField(i, "email")}><Trash2 className="size-3" /></Button>
                     </div>
-                    <Input value={item.email} onChange={e => update(i, "email", e.target.value)} placeholder="jsmith@mit.edu" />
+                    <Input value={item.email} onChange={e => update(i, "email", e.target.value)} placeholder="referee@example.com" />
                   </div>
                 )}
 

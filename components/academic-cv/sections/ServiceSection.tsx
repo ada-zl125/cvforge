@@ -37,7 +37,8 @@ export function ServiceSection({ items, onChange, language }: Props) {
     onChange(next);
   }
 
-  const zh = language === "zh";
+  const zh = lang === "zh";
+  const contentZh = language === "zh";
 
   return (
     <div className="space-y-3">
@@ -45,7 +46,7 @@ export function ServiceSection({ items, onChange, language }: Props) {
         <Plus className="size-3" /> {tr.addEntry}
       </Button>
       {items.map((item, i) => {
-        const isCollapsed = collapsed[item.id] ?? false;
+        const isCollapsed = collapsed[item.id] ?? true;
         const header = [item.role, item.organization].filter(Boolean).join(" · ") || `Entry #${i + 1}`;
 
         return (
@@ -71,7 +72,7 @@ export function ServiceSection({ items, onChange, language }: Props) {
                 <div className="grid grid-cols-2 gap-2">
                   <div className="grid gap-1.5">
                     <Label className="text-xs">{zh ? "职务" : "Role"}</Label>
-                    <Input value={item.role} onChange={e => update(i, "role", e.target.value)} placeholder={zh ? "审稿人 / 委员会成员" : "Reviewer / Committee Member"} />
+                    <Input value={item.role} onChange={e => update(i, "role", e.target.value)} placeholder={contentZh ? "审稿人 / 委员会成员" : "Reviewer / Committee Member"} />
                   </div>
                   <div className="grid gap-1.5">
                     <Label className="text-xs">{tr.date}</Label>

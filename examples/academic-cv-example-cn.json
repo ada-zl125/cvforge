@@ -1,0 +1,351 @@
+{
+  "_type": "easycv-academic-cv",
+  "title": "学术简历示例",
+  "template": "academic",
+  "language": "zh",
+  "content": {
+    "personal": {
+      "fullName": "刘宇桐",
+      "contacts": [
+        {
+          "id": "ac-p-0001-4000-8000-000000000001",
+          "type": "addressLine1",
+          "value": "中国, 北京, 清华大学, 计算机科学与技术系"
+        },
+        {
+          "id": "ac-p-0001-4000-8000-000000000002",
+          "type": "phone",
+          "value": "13800000000",
+          "countryCode": "+86"
+        },
+        {
+          "id": "ac-p-0001-4000-8000-000000000003",
+          "type": "email",
+          "value": "yutong.liu@ai.tsinghua.edu.cn"
+        },
+        {
+          "id": "ac-p-0001-4000-8000-000000000004",
+          "type": "website",
+          "value": "https://yutong-liu-example.github.io",
+          "label": "GitHub"
+        },
+        {
+          "id": "ac-p-0001-4000-8000-000000000005",
+          "type": "website",
+          "value": "https://github.com/yutong-liu-example",
+          "label": "LinkedIn"
+        }
+      ]
+    },
+    "sections": [
+      "researchInterests",
+      "education",
+      "researchExperience",
+      "industryExperience",
+      "publications",
+      "manuscriptsUnderReview",
+      "conferencePresentations",
+      "professionalService",
+      "technicalSkills",
+      "references"
+    ],
+    "education": [
+      {
+        "id": "ac-e-0001-4000-8000-000000000001",
+        "institution": "清华大学",
+        "degree": "计算机科学与技术博士",
+        "location": "中国, 北京",
+        "startDate": "2019/09",
+        "endDate": "2023/06",
+        "extraFields": [
+          {
+            "id": "ac-e-0001-4000-8000-000000000002",
+            "type": "researchField",
+            "label": "研究方向",
+            "value": "基础模型预训练、扩展、效率与泛化"
+          },
+          {
+            "id": "3047730b-9075-417e-9996-00728df7eae8",
+            "type": "awards",
+            "label": "获奖情况",
+            "value": "优秀博士毕业生, 国家奖学金"
+          }
+        ]
+      },
+      {
+        "id": "ac-e-0002-4000-8000-000000000001",
+        "institution": "北京大学",
+        "degree": "人工智能硕士",
+        "location": "中国, 北京",
+        "startDate": "2017/09",
+        "endDate": "2019/06",
+        "extraFields": [
+          {
+            "id": "ac-e-0002-4000-8000-000000000002",
+            "type": "grade",
+            "label": "成绩",
+            "value": "92.38/100"
+          },
+          {
+            "id": "ac-e-0002-4000-8000-000000000003",
+            "type": "awards",
+            "label": "奖励",
+            "value": "院长奖学金, 优秀毕业生"
+          }
+        ]
+      },
+      {
+        "id": "ac-e-0003-4000-8000-000000000001",
+        "institution": "浙江大学",
+        "degree": "软件工程学士",
+        "location": "中国, 杭州",
+        "startDate": "2013/09",
+        "endDate": "2017/06",
+        "extraFields": [
+          {
+            "id": "ac-e-0003-4000-8000-000000000002",
+            "type": "grade",
+            "label": "成绩",
+            "value": "91.84/100"
+          },
+          {
+            "id": "ac-e-0003-4000-8000-000000000003",
+            "type": "awards",
+            "label": "奖励",
+            "value": "国家奖学金, 优秀毕业生, 优秀学生奖学金"
+          }
+        ]
+      }
+    ],
+    "researchExperience": [
+      {
+        "id": "ac-r-0001-4000-8000-000000000001",
+        "organization": "清华大学",
+        "role": "博士后研究员",
+        "researchGroup": "智能计算研究组",
+        "department": "计算机科学与技术系",
+        "location": "中国, 北京",
+        "startDate": "2023/07",
+        "endDate": "至今",
+        "descriptions": [
+          {
+            "id": "ac-r-0001-4000-8000-000000000002",
+            "value": "研究大规模基础模型的可扩展预训练策略, 重点关注训练语料筛选流程与分词器效率优化, 并探究大规模Transformer语言模型的自适应计算调度机制, 所提方法在多个主流基准上显著提升了预训练效率。"
+          },
+          {
+            "id": "ac-r-0001-4000-8000-000000000003",
+            "value": "主导跨机构多语言预训练基准及标准化评测协议的合作研究, 构建覆盖12种语言的系统性评测体系, 成果已在学术社区广泛采用, 相关开源工具累计获得超过2,000个GitHub星标。"
+          }
+        ]
+      },
+      {
+        "id": "ac-r-0002-4000-8000-000000000001",
+        "organization": "清华大学",
+        "role": "博士研究生",
+        "researchGroup": "智能计算研究组",
+        "department": "计算机科学与技术系",
+        "location": "中国, 北京",
+        "startDate": "2019/09",
+        "endDate": "2023/06",
+        "descriptions": [
+          {
+            "id": "ac-r-0002-4000-8000-000000000002",
+            "value": "开展大语言模型预训练的理论与实证研究, 系统探究预训练扩展规律特性, 优化动态演变机制及跨多样化语料的数据混合策略, 揭示训练数据组成对模型涌现能力与泛化性能的影响规律。"
+          },
+          {
+            "id": "ac-r-0002-4000-8000-000000000003",
+            "value": "在NeurIPS, ICML, EMNLP等顶级国际学术会议发表4篇同行评审论文, 受邀在ICLR, ACL等国际会议及相关研讨会作口头报告, 研究工作受到学界广泛关注并对后续工作产生实质影响。"
+          }
+        ]
+      }
+    ],
+    "teachingExperience": [],
+    "industryExperience": [
+      {
+        "id": "ac-i-0001-4000-8000-000000000001",
+        "organization": "微软中国",
+        "role": "研究科学家实习生",
+        "location": "中国, 北京",
+        "startDate": "2022/06",
+        "endDate": "2022/09",
+        "descriptions": [
+          {
+            "id": "ac-i-0001-4000-8000-000000000002",
+            "value": "开发并评估大规模预训练语料的数据筛选算法, 通过优化训练数据组成与领域覆盖度, 在多个下游任务评测上取得显著性能提升, 核心方法已集成至公司内部预训练流程并持续使用。"
+          },
+          {
+            "id": "ac-i-0001-4000-8000-000000000003",
+            "value": "与语言模型团队协作, 为百亿参数规模模型设计自适应学习率调度器, 系统分析长上下文设置下的训练稳定性问题, 实验结果表明所提调度策略可将训练损失波动降低约30%。"
+          }
+        ]
+      },
+      {
+        "id": "ac-i-0002-4000-8000-000000000001",
+        "organization": "字节跳动",
+        "role": "机器学习工程师实习生",
+        "location": "中国, 上海",
+        "startDate": "2021/06",
+        "endDate": "2021/09",
+        "descriptions": [
+          {
+            "id": "ac-i-0002-4000-8000-000000000002",
+            "value": "设计并部署面向大规模文本分类的生产级机器学习流程, 综合运用模型蒸馏与量化技术将线上推理延迟降低约40%, 有效满足高并发业务场景下的实时性要求。"
+          },
+          {
+            "id": "ac-i-0002-4000-8000-000000000003",
+            "value": "开展基于预训练语言模型的长文本理解研究, 提出分层语义压缩方法有效缩短输入序列长度, 在保留核心语义信息的同时将系统吞吐量提升约2倍, 已在生产环境稳定运行。"
+          }
+        ]
+      },
+      {
+        "id": "ac-i-0003-4000-8000-000000000001",
+        "organization": "阿里巴巴",
+        "role": "算法实习生",
+        "location": "中国, 深圳",
+        "startDate": "2020/06",
+        "endDate": "2020/09",
+        "descriptions": [
+          {
+            "id": "ac-i-0003-4000-8000-000000000002",
+            "value": "参与构建大规模预训练语料的自动化质量评估与清洗流程, 设计规则与模型融合的数据筛选方案, 有效提升预训练语料的质量与语言多样性, 为后续模型训练提供数据保障。"
+          },
+          {
+            "id": "ac-i-0003-4000-8000-000000000003",
+            "value": "与工程团队协作完成大规模文本去重与语料过滤系统的工程化落地, 实现处理规模逾500亿Token的语料清洗管线, 显著改善数据质量与领域覆盖, 为大语言模型预训练提供数据底座。"
+          }
+        ]
+      }
+    ],
+    "publications": [
+      {
+        "id": "ac-pub-0001-4000-8000-000000000001",
+        "citation": "Liu, Y., example, Collaborator Name, A., & Supervisor Name. (2024). On Adaptive Data Curation for Efficient Pretraining of Large Language Models. Nature Machine Intelligence, 6(5), 512–528. https://doi.org/10.0000/example"
+      },
+      {
+        "id": "ac-pub-0002-4000-8000-000000000001",
+        "citation": "Collaborator Name, B., Liu, Y..example, & Collaborator Name, C. (2024, July). Scaling Laws for Trillion-Token Foundation Model Pretraining [Paper presentation]. ICML 2024, Vienna, Austria."
+      },
+      {
+        "id": "ac-pub-0003-4000-8000-000000000001",
+        "citation": "Liu, Y.,example, & Supervisor Name. (2023). Structured Data Curricula for Continual Pretraining of Large Language Models. Journal of Machine Learning Research, 24(1), 1–35. https://doi.org/10.0000/example"
+      },
+      {
+        "id": "ac-pub-0004-4000-8000-000000000001",
+        "citation": "Collaborator Name, D., Liu, Y.,example, & Collaborator Name, E. (2023, December). Towards Data-Efficient Pretraining via Domain-Adaptive Token Sampling [Paper presentation]. NeurIPS 2023, New Orleans, USA."
+      }
+    ],
+    "manuscriptsUnderReview": [
+      {
+        "id": "ac-ms-0001-4000-8000-000000000001",
+        "citation": "Liu, Y.,example, Collaborator Name, F., Collaborator Name, G., & Supervisor Name. (under review). Cross-Lingual Transfer in Multilingual Foundation Model Pretraining. Manuscript submitted to JMLR."
+      },
+      {
+        "id": "ac-ms-0002-4000-8000-000000000001",
+        "citation": "Liu, Y.,example, & Collaborator Name, H. (under review). Sparse Mixture-of-Experts Pretraining with Dynamic Routing for Scalable Language Model Training. Manuscript submitted to ICLR 2025."
+      },
+      {
+        "id": "ac-ms-0003-4000-8000-000000000001",
+        "citation": "Collaborator Name, I., Liu, Y.,example, & Collaborator Name, J. (under review). Revisiting Tokenization Efficiency in Large-Scale Multilingual Pretraining. Manuscript submitted to ACL 2025."
+      }
+    ],
+    "conferencePresentations": [
+      {
+        "id": "ac-cp-0001-4000-8000-000000000001",
+        "event": "NeurIPS 2024",
+        "title": "面向大语言模型高效预训练的自适应数据筛选",
+        "location": "美国, 新奥尔良",
+        "date": "2024/12",
+        "type": "口头报告"
+      },
+      {
+        "id": "ac-cp-0002-4000-8000-000000000001",
+        "event": "ICML 2024",
+        "title": "万亿Token基础模型预训练的扩展规律分析",
+        "location": "奥地利, 维也纳",
+        "date": "2024/07",
+        "type": "口头报告"
+      },
+      {
+        "id": "ac-cp-0003-4000-8000-000000000001",
+        "event": "ICLR 2023 Workshop on Efficient Large Language Models",
+        "title": "大语言模型持续预训练的结构化数据课程设计",
+        "location": "卢旺达, 基加利",
+        "date": "2023/05",
+        "type": "海报展示"
+      }
+    ],
+    "grantsAndAwards": [],
+    "professionalService": [
+      {
+        "id": "ac-ps-0001-4000-8000-000000000001",
+        "role": "审稿人",
+        "organization": "NeurIPS",
+        "date": "2024"
+      },
+      {
+        "id": "ac-ps-0002-4000-8000-000000000001",
+        "role": "审稿人",
+        "organization": "Journal of Machine Learning Research (JMLR)",
+        "date": "2023"
+      },
+      {
+        "id": "ac-ps-0003-4000-8000-000000000001",
+        "role": "程序委员会成员",
+        "organization": "ICML 2024 Workshop on Efficient Large-Scale Pretraining",
+        "date": "2022"
+      }
+    ],
+    "technicalSkills": [
+      {
+        "id": "ac-sk-0004-4000-8000-000000000001",
+        "category": "语言能力",
+        "items": "中文, 英语"
+      },
+      {
+        "id": "ac-sk-0001-4000-8000-000000000001",
+        "category": "编程语言",
+        "items": "Python, C++, CUDA, Bash"
+      },
+      {
+        "id": "ac-sk-0002-4000-8000-000000000001",
+        "category": "机器学习框架",
+        "items": "PyTorch, JAX, Hugging Face Transformers, DeepSpeed, Megatron-LM"
+      },
+      {
+        "id": "ac-sk-0003-4000-8000-000000000001",
+        "category": "研究基础设施",
+        "items": "分布式训练, SLURM, Docker, Weights & Biases, Linux"
+      }
+    ],
+    "references": [
+      {
+        "id": "ac-ref-0001-4000-8000-000000000001",
+        "name": "推荐人1",
+        "title": "职称1",
+        "relationship": "关系1",
+        "address": "清华大学计算机科学与技术系, 北京 100084, 中国",
+        "phone": "+86 10 0000 0000",
+        "email": "referee.a@example.tsinghua.edu.cn"
+      },
+      {
+        "id": "ac-ref-0002-4000-8000-000000000001",
+        "name": "推荐人2",
+        "title": "职称2",
+        "relationship": "关系2",
+        "address": "阿里巴巴研究院, 北京 100000, 中国",
+        "phone": "+86 10 0000 0001",
+        "email": "referee.b@example.com"
+      },
+      {
+        "id": "ac-ref-0003-4000-8000-000000000001",
+        "name": "推荐人3",
+        "title": "职称3",
+        "relationship": "关系3",
+        "address": "北京大学计算机学院, 北京 100871, 中国",
+        "phone": "+86 10 0000 0002",
+        "email": "referee.c@example.pku.edu.cn"
+      }
+    ],
+    "researchInterests": "聚焦于大规模语言模型的预训练理论与效率优化, 研究训练扩展规律的刻画方法及其对模型能力涌现的影响机制。研究内容涵盖预训练语料筛选与数据课程设计, Transformer架构优化, 以及跨领域语料的持续学习与领域适应策略。致力于从理论分析与大规模实验两个维度深入理解基础模型的能力边界与泛化行为, 系统性地探索更高效, 可持续的大语言模型预训练方法与实践框架。"
+  }
+}

@@ -2,10 +2,12 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ChevronDown, FileDown, FileImage, FileJson, FileUp, Loader2, Settings } from "lucide-react";
+import { ArrowLeft, ChevronDown, FileDown, FileImage, FileJson, FileUp, Loader2, Settings, Sparkles } from "lucide-react";
 import { exportResume, exportJson, type ExportFormat } from "@/lib/export";
-import { withId } from "@/lib/json-utils";
+import { withId, mergeDegreeField, stripDegreeField } from "@/lib/json-utils";
 import { defaultAcademicCVContent } from "@/lib/defaults";
+import academicCvExampleEn from "@/examples/academic-cv-example-en.json";
+import academicCvExampleCn from "@/examples/academic-cv-example-cn.json";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -52,6 +54,7 @@ export function Toolbar({ title, template, language, content, onSettingsChange, 
 
   /* ---- Export state ---- */
   const [exporting, setExporting] = useState(false);
+  const [exampleDialogOpen, setExampleDialogOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function handleExport(format: ExportFormat) {
@@ -63,10 +66,33 @@ export function Toolbar({ title, template, language, content, onSettingsChange, 
     }
   }
 
+  function handleLoadExample() {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const raw: any = (language === "zh" ? academicCvExampleCn : academicCvExampleEn).content;
+    const example = language === "zh" ? academicCvExampleCn : academicCvExampleEn;
+    const merged: AcademicCVContent = {
+      ...defaultAcademicCVContent,
+      ...raw,
+      personal: { ...defaultAcademicCVContent.personal, ...raw.personal },
+      education: withId(raw.education).map((ed) => { const e = mergeDegreeField(ed, example.language); return { ...e, extraFields: withId(e.extraFields) }; }),
+      researchExperience: withId(raw.researchExperience).map((e) => ({ ...e, descriptions: withId(e.descriptions ?? []) })),
+      teachingExperience: withId(raw.teachingExperience ?? []).map((e) => ({ ...e, descriptions: withId(e.descriptions ?? []) })),
+      industryExperience: withId(raw.industryExperience).map((e) => ({ ...e, descriptions: withId(e.descriptions ?? []) })),
+      publications: withId(raw.publications),
+      manuscriptsUnderReview: withId(raw.manuscriptsUnderReview),
+      conferencePresentations: withId(raw.conferencePresentations),
+      grantsAndAwards: withId(raw.grantsAndAwards ?? []),
+      professionalService: withId(raw.professionalService),
+      technicalSkills: withId(raw.technicalSkills),
+      references: withId(raw.references),
+    };
+    onImport({ title: example.title, template: example.template as AcademicCVTemplate, language: example.language as ResumeLanguage, content: merged });
+  }
+
   function handleExportJson() {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { photo: _photo, ...personal } = content.personal;
-    exportJson({ _type: "easycv-academic-cv", title, template, language, content: { ...content, personal } }, title || "academic-cv");
+    exportJson({ _type: "easycv-academic-cv", title, template, language, content: { ...content, personal, education: stripDegreeField(content.education) } }, title || "academic-cv");
   }
 
   function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -89,9 +115,9 @@ export function Toolbar({ title, template, language, content, onSettingsChange, 
           ...defaultAcademicCVContent,
           ...raw,
           personal: { ...defaultAcademicCVContent.personal, ...raw.personal },
-          education: withId(raw.education).map((ed) => ({ ...ed, extraFields: withId(ed.extraFields) })),
+          education: withId(raw.education).map((ed) => { const e = mergeDegreeField(ed, parsed.language); return { ...e, extraFields: withId(e.extraFields) }; }),
           researchExperience: withId(raw.researchExperience).map((e) => ({ ...e, descriptions: withId(e.descriptions ?? []) })),
-          teachingExperience: withId(raw.teachingExperience).map((e) => ({ ...e, descriptions: withId(e.descriptions ?? []) })),
+          teachingExperience: withId(raw.teachingExperience ?? []).map((e) => ({ ...e, descriptions: withId(e.descriptions ?? []) })),
           industryExperience: withId(raw.industryExperience).map((e) => ({ ...e, descriptions: withId(e.descriptions ?? []) })),
           publications: withId(raw.publications),
           manuscriptsUnderReview: withId(raw.manuscriptsUnderReview),
@@ -158,11 +184,21 @@ export function Toolbar({ title, template, language, content, onSettingsChange, 
           <Settings className="size-4" />
         </Button>
 
+        {/* Language switcher */}
+        <LanguageSwitcher />
+
         {/* Spacer */}
         <div className="flex-1" />
 
-        {/* Language switcher */}
-        <LanguageSwitcher />
+        {/* Example button */}
+        <Button
+          className="btn-hover-border h-8 cursor-pointer gap-1.5 rounded-lg px-3 text-sm font-medium"
+          variant="outline"
+          onClick={() => setExampleDialogOpen(true)}
+        >
+          <Sparkles className="size-4" />
+          {tr.loadExample}
+        </Button>
 
         {/* Import dropdown */}
         <DropdownMenu>
@@ -215,6 +251,40 @@ export function Toolbar({ title, template, language, content, onSettingsChange, 
           </DropdownMenuContent>
         </DropdownMenu>
       </header>
+
+      {/* Example confirmation dialog */}
+      <Dialog open={exampleDialogOpen} onOpenChange={setExampleDialogOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
+                <Sparkles className="h-4 w-4 text-foreground" />
+              </div>
+              <DialogTitle>{tr.loadExampleDialogTitle}</DialogTitle>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground text-justify leading-relaxed">
+                {tr.loadExampleDialogDesc}
+              </p>
+              <p className="text-sm font-medium text-foreground">
+                {tr.loadExampleDialogWarn}
+              </p>
+            </div>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" className="btn-hover-border cursor-pointer" onClick={() => setExampleDialogOpen(false)}>
+              {tr.cancel}
+            </Button>
+            <Button
+              variant="outline"
+              className="btn-hover-primary cursor-pointer"
+              onClick={() => { handleLoadExample(); setExampleDialogOpen(false); }}
+            >
+              {tr.loadExampleConfirm}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Settings Dialog */}
       <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>

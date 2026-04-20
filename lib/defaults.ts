@@ -34,9 +34,9 @@ export const defaultAcademicCVContent: AcademicCVContent = {
 };
 
 export const defaultCoverLetterContent: CoverLetterContent = {
-  sender: { name: "", addressLine1: "", addressLine2: "" },
+  sender: { name: "", addressLines: [] },
   date: "",
-  recipient: { name: "" },
+  recipient: { name: "", addressLines: [] },
   paragraphs: [],
 };
 
