@@ -26,15 +26,15 @@ import type { ContactField, SkillGroup } from "@/lib/types/resume";
 const SECTION_TITLES_ZH: Record<AcademicSectionType, string> = {
   researchInterests:       "研究兴趣",
   education:               "教育经历",
-  researchExperience:      "科研经历",
+  researchExperience:      "研究经历",
   teachingExperience:      "教学经历",
-  industryExperience:      "工业界经历",
-  publications:            "已发表论文",
+  industryExperience:      "工作经历",
+  publications:            "学术成果",
   manuscriptsUnderReview:  "在投论文",
-  conferencePresentations: "会议报告",
-  grantsAndAwards:         "科研资助与荣誉",
+  conferencePresentations: "学术报告",
+  grantsAndAwards:         "荣誉奖项",
   professionalService:     "学术服务",
-  technicalSkills:         "技术技能",
+  technicalSkills:         "专业技能",
   references:              "推荐人列表",
 };
 
@@ -79,6 +79,9 @@ function formatContact(field: ContactField): React.ReactNode {
     case "phone":
       return `${field.countryCode ?? ""} ${field.value}`.trim();
     case "location":
+    case "addressLine1":
+    case "addressLine2":
+    case "addressLine3":
       return field.value;
     case "website":
       return <a href={field.value} style={{ color: "#1a4dc2" }}>{field.label || field.value}</a>;
@@ -93,8 +96,9 @@ function PersonalHeader({ personal, fontFamily, language }: { personal: Academic
   const contacts = personal.contacts ?? [];
   const hasPhoto = !!personal.photo;
 
-  const location = contacts.find(c => c.type === "location");
-  const otherContacts = contacts.filter(c => c.type !== "location");
+  const ADDRESS_TYPES = ["location", "addressLine1", "addressLine2", "addressLine3"] as const;
+  const addressContacts = contacts.filter(c => (ADDRESS_TYPES as readonly string[]).includes(c.type));
+  const otherContacts = contacts.filter(c => !(ADDRESS_TYPES as readonly string[]).includes(c.type));
 
   const nameEl = (
     <h1 className="leading-tight" style={{ fontSize: NAME_SIZE, ...boldFontStyle(language, fontFamily) }}>
@@ -102,14 +106,15 @@ function PersonalHeader({ personal, fontFamily, language }: { personal: Academic
     </h1>
   );
 
-  const locationEl = location && (
-    <p style={{ fontSize: BODY_SIZE }}>{formatContact(location)}</p>
+  const addressEl = addressContacts.length > 0 && (
+    <div style={{ fontSize: BODY_SIZE }}>
+      {addressContacts.map(c => c.value.trim() && <p key={c.id}>{formatContact(c)}</p>)}
+    </div>
   );
 
   if (hasPhoto) {
     const mainOthers = otherContacts.filter(c => c.type !== "website");
     const websites = otherContacts.filter(c => c.type === "website");
-    const headerMinHeight = websites.length > 0 ? "88px" : "76px";
     const contactsEl = otherContacts.length > 0 && (
       <div style={{ fontSize: BODY_SIZE }}>
         {mainOthers.length > 0 && (
@@ -121,11 +126,11 @@ function PersonalHeader({ personal, fontFamily, language }: { personal: Academic
       </div>
     );
     return (
-      <div className="relative mb-1" style={{ paddingRight: "90px", minHeight: headerMinHeight }}>
+      <div className="relative mb-1" style={{ paddingRight: "90px" }}>
         {nameEl}
-        <div className="mt-1">{locationEl}{contactsEl}</div>
+        <div className="mt-1">{addressEl}{contactsEl}</div>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={personal.photo} alt="" style={{ position: "absolute", top: "-10px", right: 0, width: "74px", height: "92px", objectFit: "cover", borderRadius: "2px" }} />
+        <img src={personal.photo} alt="" style={{ position: "absolute", top: "50%", transform: "translateY(-50%)", right: 0, width: "74px", height: "92px", objectFit: "cover", borderRadius: "2px" }} />
       </div>
     );
   }
@@ -139,7 +144,7 @@ function PersonalHeader({ personal, fontFamily, language }: { personal: Academic
   return (
     <div className="mb-2 text-center">
       {nameEl}
-      <div className="mt-1">{locationEl}{contactsEl}</div>
+      <div className="mt-1">{addressEl}{contactsEl}</div>
     </div>
   );
 }

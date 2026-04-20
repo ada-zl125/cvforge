@@ -87,8 +87,7 @@
       {
         "id": "50fc8075-acb0-4b1c-a93a-0199332c9469",
         "institution": "University of Oxford",
-        "degree": "MSc",
-        "field": "Advanced Computer Science",
+        "degree": "MSc in Advanced Computer Science",
         "location": "Oxford, UK",
         "startDate": "Sept 2022",
         "endDate": "Sept 2023",
@@ -116,8 +115,7 @@
       {
         "id": "8bda015b-007a-4421-b51f-467e1b32f5fa",
         "institution": "University of Huddersfield",
-        "degree": "BSc",
-        "field": "Computer Science",
+        "degree": "BSc in Computer Science",
         "location": "Huddersfield, UK",
         "startDate": "Sept 2019",
         "endDate": "Jun 2022",

@@ -42,15 +42,15 @@ import { ReferencesSection } from "./sections/ReferencesSection";
 const SECTION_META: Record<AcademicSectionType, { icon: typeof GraduationCap; label: string; labelZh: string }> = {
   researchInterests:       { icon: Search,        label: "Research Interests",        labelZh: "研究兴趣" },
   education:               { icon: GraduationCap, label: "Education",                 labelZh: "教育经历" },
-  researchExperience:      { icon: FlaskConical,  label: "Research Experience",       labelZh: "科研经历" },
+  researchExperience:      { icon: FlaskConical,  label: "Research Experience",       labelZh: "研究经历" },
   teachingExperience:      { icon: BookOpen,      label: "Teaching Experience",       labelZh: "教学经历" },
-  industryExperience:      { icon: Briefcase,     label: "Industry Experience",       labelZh: "工业界经历" },
-  publications:            { icon: BookMarked,    label: "Publications",              labelZh: "已发表论文" },
+  industryExperience:      { icon: Briefcase,     label: "Industry Experience",       labelZh: "工作经历" },
+  publications:            { icon: BookMarked,    label: "Publications",              labelZh: "学术成果" },
   manuscriptsUnderReview:  { icon: FileText,      label: "Manuscripts under Review",  labelZh: "在投论文" },
-  conferencePresentations: { icon: Mic,           label: "Conference Presentations",  labelZh: "会议报告" },
-  grantsAndAwards:         { icon: Award,         label: "Grants & Awards",           labelZh: "科研资助与荣誉" },
+  conferencePresentations: { icon: Mic,           label: "Conference Presentations",  labelZh: "学术报告" },
+  grantsAndAwards:         { icon: Award,         label: "Grants & Awards",           labelZh: "荣誉奖项" },
   professionalService:     { icon: Users,         label: "Professional Service",      labelZh: "学术服务" },
-  technicalSkills:         { icon: Wrench,        label: "Technical Skills",          labelZh: "技术技能" },
+  technicalSkills:         { icon: Wrench,        label: "Technical Skills",          labelZh: "专业技能" },
   references:              { icon: UserCheck,     label: "Referees",                  labelZh: "推荐人" },
 };
 
@@ -167,6 +167,7 @@ export function FormPanel({ content, onChange, language }: FormPanelProps) {
         collapsed={personalCollapsed}
         onToggleCollapse={() => setPersonalCollapsed((v) => !v)}
         language={language}
+        excludeContactTypes={["location"]}
       />
 
       {/* Dynamic sections */}
@@ -204,7 +205,7 @@ export function FormPanel({ content, onChange, language }: FormPanelProps) {
                   onClick={() => addSection(type)}
                 >
                   <meta.icon className="size-4" />
-                  {language === "zh" ? meta.labelZh : meta.label}
+                  {lang === "zh" ? meta.labelZh : meta.label}
                 </DropdownMenuItem>
               );
             })}
@@ -225,7 +226,7 @@ export function FormPanel({ content, onChange, language }: FormPanelProps) {
             <AlertDialogCancel className="btn-hover-border cursor-pointer">{tr.cancel}</AlertDialogCancel>
             <AlertDialogAction
               variant="outline"
-              className="btn-hover-destructive cursor-pointer border-destructive/40 text-destructive hover:border-destructive hover:bg-destructive/10 hover:text-destructive"
+              className="btn-hover-destructive cursor-pointer"
               onClick={handleReset}
             >
               {tr.resetConfirm}
@@ -267,7 +268,8 @@ function CollapsibleSection({
   language: ResumeLanguage;
 }) {
   const meta = SECTION_META[type];
-  const sectionLabel = language === "zh" ? meta.labelZh : meta.label;
+  const { lang } = useUILanguage();
+  const sectionLabel = lang === "zh" ? meta.labelZh : meta.label;
 
   return (
     <section className="section-card rounded-lg border border-border">
@@ -337,7 +339,7 @@ function CollapsibleSection({
               items={content.industryExperience}
               onChange={(items) => onChange({ ...content, industryExperience: items })}
               language={language}
-              orgPlaceholder={language === "zh" ? "谷歌公司" : "Google"}
+              orgPlaceholder={language === "zh" ? "微软中国" : "Google"}
               optionalFields={["department", "descriptions"]}
             />
           )}

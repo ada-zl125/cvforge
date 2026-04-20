@@ -111,7 +111,7 @@ export function AcademicExperienceSection({
         <Plus className="size-3" /> {tr.addEntry}
       </Button>
       {items.map((item, i) => {
-        const isCollapsed = collapsed[item.id] ?? false;
+        const isCollapsed = collapsed[item.id] ?? true;
         const header = [item.organization, item.role].filter(Boolean).join(" · ") || `Entry #${i + 1}`;
         const zh = language === "zh";
 
@@ -145,7 +145,7 @@ export function AcademicExperienceSection({
                 {/* Fixed fields */}
                 <div className="grid gap-1.5">
                   <Label className="text-xs">{tr.organization}</Label>
-                  <Input value={item.organization} onChange={e => update(i, "organization", e.target.value)} placeholder={orgPlaceholder ?? "MIT CSAIL"} />
+                  <Input value={item.organization} onChange={e => update(i, "organization", e.target.value)} placeholder={orgPlaceholder ?? (zh ? "中国科学院" : "Imperial College London")} />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="grid gap-1.5">
@@ -154,7 +154,7 @@ export function AcademicExperienceSection({
                   </div>
                   <div className="grid gap-1.5">
                     <Label className="text-xs">{zh ? "地点" : "Location"}</Label>
-                    <Input value={item.location} onChange={e => update(i, "location", e.target.value)} placeholder="Cambridge, MA" />
+                    <Input value={item.location} onChange={e => update(i, "location", e.target.value)} placeholder={zh ? "北京, 中国" : "London, UK"} />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2">

@@ -110,7 +110,7 @@ function EducationBlock({
   onMoveDown: () => void;
   onExtraFieldsChange: (fields: AcademicEducationExtraField[]) => void;
 }) {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
   const zh = language === "zh";
   const extraFields = item.extraFields ?? [];
 
@@ -162,16 +162,16 @@ function EducationBlock({
           <div className="grid gap-2">
             <div className="grid gap-1.5">
               <Label className="text-xs">{zh ? "学校" : "Institution"}</Label>
-              <Input value={item.institution} onChange={e => onUpdate("institution", e.target.value)} placeholder={zh ? "清华大学" : "MIT"} />
+              <Input value={item.institution} onChange={e => onUpdate("institution", e.target.value)} placeholder={zh ? "北京大学" : "Imperial College London"} />
             </div>
             <div className="grid gap-1.5">
               <Label className="text-xs">{zh ? "学位与专业" : "Degree and Field of Study"}</Label>
-              <Input value={item.degree} onChange={e => onUpdate("degree", e.target.value)} placeholder={zh ? "理学博士 计算机科学" : "PhD in Computer Science"} />
+              <Input value={item.degree} onChange={e => onUpdate("degree", e.target.value)} placeholder={zh ? "计算机科学理学硕士" : "PhD in Computer Science"} />
             </div>
             <div className="grid grid-cols-3 gap-2">
               <div className="grid gap-1.5">
                 <Label className="text-xs">{zh ? "地点" : "Location"}</Label>
-                <Input value={item.location} onChange={e => onUpdate("location", e.target.value)} placeholder="Cambridge, MA" />
+                <Input value={item.location} onChange={e => onUpdate("location", e.target.value)} placeholder={zh ? "北京, 中国" : "London, UK"} />
               </div>
               <div className="grid gap-1.5">
                 <Label className="text-xs">{zh ? "开始" : "Start"}</Label>

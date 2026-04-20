@@ -14,6 +14,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
+import { useUILanguage } from "@/lib/ui-language";
 
 
 interface ProjectsSectionProps {
@@ -39,6 +40,7 @@ function emptyProject(): ProjectItem {
 }
 
 export function ProjectsSection({ items, onChange, language }: ProjectsSectionProps) {
+  const { lang } = useUILanguage();
   function update(index: number, field: keyof ProjectItem, value: string) {
     const next = items.map((item, i) => (i === index ? { ...item, [field]: value } : item));
     onChange(next);
@@ -69,7 +71,7 @@ export function ProjectsSection({ items, onChange, language }: ProjectsSectionPr
     <div>
       <div className="space-y-4">
         <Button variant="ghost" size="xs" className="add-btn cursor-pointer gap-1 text-xs" onClick={add}>
-          <Plus className="size-3" /> {language === "zh" ? "添加条目" : "Add Entry"}
+          <Plus className="size-3" /> {lang === "zh" ? "添加条目" : "Add Entry"}
         </Button>
         {items.map((proj, i) => (
           <ProjectBlock
@@ -118,10 +120,12 @@ function ProjectBlock({
   onDescriptionsChange: (descs: DescriptionField[]) => void;
   language: ResumeLanguage;
 }) {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
   const [websiteVisible, setWebsiteVisible] = useState(Boolean(proj.websiteLabel || proj.websiteUrl));
   const descriptions = proj.descriptions ?? [emptyDescription()];
-  const zh = language === "zh";
+  const { lang } = useUILanguage();
+  const zh = lang === "zh";
+  const contentZh = language === "zh";
 
   function updateDesc(id: string, value: string) {
     onDescriptionsChange(descriptions.map((d) => (d.id === id ? { ...d, value } : d)));
@@ -191,7 +195,7 @@ function ProjectBlock({
           <div className="grid grid-cols-2 gap-x-3 gap-y-2">
             <div className="col-span-2 flex flex-col gap-1">
               <Label className="text-xs">{zh ? "项目名称" : "Project Name"}</Label>
-              <Input value={proj.name} onChange={(e) => onUpdate("name", e.target.value)} placeholder={zh ? "我的项目" : "My Project"} />
+              <Input value={proj.name} onChange={(e) => onUpdate("name", e.target.value)} placeholder={contentZh ? "我的项目" : "My Project"} />
             </div>
             <div className="flex flex-col gap-1">
               <Label className="text-xs">{zh ? "开始时间" : "Start Date"}</Label>
@@ -262,7 +266,7 @@ function ProjectBlock({
                     rows={2}
                     value={desc.value}
                     onChange={(e) => updateDesc(desc.id, e.target.value)}
-                    placeholder={zh ? "描述项目特性、技术栈或成果..." : "Describe a feature, technology, or outcome..."}
+                    placeholder={contentZh ? "描述项目特性、技术栈或成果..." : "Describe a feature, technology, or outcome..."}
                   />
                   <Button
                     variant="ghost" size="icon-xs"

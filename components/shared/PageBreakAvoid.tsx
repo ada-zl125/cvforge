@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useLayoutEffect } from "react";
+import { useLayoutEffect } from "react";
 import { TOP, CONTENT_H } from "@/lib/page-constants";
 
 interface Props {
@@ -9,10 +9,8 @@ interface Props {
   className?: string;
 }
 
-/**
- * Parses a CSS length value that is expected to be in px (e.g. "6px", 6).
- * Returns 0 for anything it cannot parse (em, %, etc.).
- */
+const PAGE_BREAK_BUFFER = 2;
+
 function parsePx(v: React.CSSProperties["marginTop"]): number {
   if (v === undefined || v === null) return 0;
   if (typeof v === "number") return v;
@@ -21,64 +19,81 @@ function parsePx(v: React.CSSProperties["marginTop"]): number {
 }
 
 /**
- * Prevents its content from being split across A4 page boundaries.
- *
- * Uses marginTop (not paddingTop) so that getBoundingClientRect().top
- * reflects the applied offset, making the "natural position" calculation
- * stable and loop-free:
- *
- *   naturalY = elRect.top - rootRect.top - extraMargin
- *
- * After the margin is applied, elRect.top = originalTop + baseMargin + extraMargin,
- * so naturalY collapses back to originalTop + baseMargin — a fixed value —
- * and the effect converges after exactly one adjustment.
+ * Processes all [data-page-break-avoid] elements within a [data-cv-root] in a
+ * single DOM-order pass. Positions are read before any writes (avoids layout
+ * thrashing). The `shift` accumulator compensates for pending margin deltas that
+ * haven't yet been flushed by the browser, so each element's naturalY is exact.
  */
-export function PageBreakAvoid({ children, style, className }: Props) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [extraMargin, setExtraMargin] = useState(0);
+function processRoot(cvRoot: HTMLElement): void {
+  const els = Array.from(cvRoot.querySelectorAll<HTMLElement>("[data-page-break-avoid]"));
+  if (els.length === 0) return;
 
+  // One forced reflow here; no further reflows during the write phase.
+  const rootRect = cvRoot.getBoundingClientRect();
+
+  // Phase 1 — batch-read positions and previously applied extra margins.
+  const snapshots = els.map((el) => ({
+    el,
+    top: el.getBoundingClientRect().top,
+    height: el.getBoundingClientRect().height,
+    prev: parseFloat(el.style.getPropertyValue("--page-break-extra")) || 0,
+  }));
+
+  // Phase 2 — compute needed margins with shift, then write CSS variables.
+  // `shift` tracks the cumulative delta of margins changed so far in this pass.
+  // Without it, elements after a changed element would compute wrong naturalY
+  // (their DOM positions haven't been updated by the browser yet).
+  let shift = 0;
+  for (const { el, top, height, prev } of snapshots) {
+    const naturalY = top - rootRect.top - prev + shift;
+
+    let needed = 0;
+    if (naturalY >= TOP && height < CONTENT_H) {
+      const pagePos = (naturalY - TOP) % CONTENT_H;
+      if (pagePos + height > CONTENT_H) needed = CONTENT_H - pagePos + PAGE_BREAK_BUFFER;
+    }
+
+    if (needed !== prev) {
+      el.style.setProperty("--page-break-extra", `${needed}px`);
+    }
+    shift += needed - prev;
+  }
+}
+
+/**
+ * Coordinator for page-break avoidance. Place once as an ancestor of all CV
+ * templates. After each render it runs a single-pass computation across all
+ * [data-page-break-avoid] elements and applies extra top-margins via CSS custom
+ * properties — no React setState, so there are zero cascading re-render cycles.
+ */
+export function PageBreakProvider({ children }: { children: React.ReactNode }) {
+  // No deps: must re-run after every render to catch layout changes.
+  // No setState here — margins are applied via CSS variables directly, so this
+  // effect never triggers additional React renders.
   useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-
-    const root = el.closest("[data-cv-root]") as HTMLElement | null;
-    if (!root) return;
-
-    const rootRect = root.getBoundingClientRect();
-    const elRect = el.getBoundingClientRect();
-
-    // With marginTop, elRect.top already includes the extra margin we applied,
-    // so subtracting it recovers the element's natural (un-pushed) position.
-    const naturalY = elRect.top - rootRect.top - extraMargin;
-    const elH = elRect.height; // height is unaffected by marginTop
-
-    // Skip: element is taller than one page (unavoidable split) or still in
-    // the template's top-padding zone.
-    if (naturalY < TOP || elH >= CONTENT_H) return;
-
-    const pagePos = (naturalY - TOP) % CONTENT_H;
-
-    if (pagePos + elH > CONTENT_H) {
-      // Crosses a page break — push the whole block to the next page.
-      const needed = CONTENT_H - pagePos;
-      if (needed !== extraMargin) setExtraMargin(needed);
-    } else if (extraMargin !== 0) {
-      setExtraMargin(0);
+    for (const root of document.querySelectorAll<HTMLElement>("[data-cv-root]")) {
+      processRoot(root);
     }
   });
 
-  // Combine the caller's base marginTop with our page-break extra margin so
-  // both values are expressed in a single marginTop declaration.
+  return <>{children}</>;
+}
+
+/**
+ * Prevents its content from being split across A4 page boundaries.
+ * Requires a PageBreakProvider ancestor to function.
+ */
+export function PageBreakAvoid({ children, style, className }: Props) {
   const baseMarginTop = parsePx(style?.marginTop);
-  const totalMarginTop = baseMarginTop + extraMargin;
-
-  const computedStyle: React.CSSProperties =
-    totalMarginTop > 0
-      ? { ...style, marginTop: `${totalMarginTop}px` }
-      : { ...style, marginTop: style?.marginTop };
-
   return (
-    <div ref={ref} style={computedStyle} className={className}>
+    <div
+      data-page-break-avoid
+      style={{
+        ...style,
+        marginTop: `calc(${baseMarginTop}px + var(--page-break-extra, 0px))`,
+      }}
+      className={className}
+    >
       {children}
     </div>
   );

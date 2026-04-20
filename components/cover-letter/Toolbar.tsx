@@ -2,10 +2,11 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ChevronDown, FileDown, FileImage, FileJson, FileUp, Loader2, Settings } from "lucide-react";
+import { ArrowLeft, ChevronDown, FileDown, FileImage, FileJson, FileUp, Loader2, Settings, Sparkles } from "lucide-react";
 import { exportResume, exportJson, type ExportFormat } from "@/lib/export";
 import { withId } from "@/lib/json-utils";
 import { defaultCoverLetterContent } from "@/lib/defaults";
+import coverLetterExampleEn from "@/examples/cover-letter-example-en.json";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -48,6 +49,7 @@ export function Toolbar({ title, content, template, onTitleChange, onImport }: T
   const tr = t[lang];
 
   const [exporting, setExporting] = useState(false);
+  const [exampleDialogOpen, setExampleDialogOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function handleExport(format: ExportFormat) {
@@ -57,6 +59,28 @@ export function Toolbar({ title, content, template, onTitleChange, onImport }: T
     } finally {
       setExporting(false);
     }
+  }
+
+  function handleLoadExample() {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const raw: any = coverLetterExampleEn.content;
+    const merged: CoverLetterContent = {
+      ...defaultCoverLetterContent,
+      ...raw,
+      sender: {
+        ...defaultCoverLetterContent.sender,
+        ...raw.sender,
+        addressLines: withId(raw.sender?.addressLines ?? []),
+      },
+      recipient: {
+        ...defaultCoverLetterContent.recipient,
+        ...raw.recipient,
+        addressLines: withId(raw.recipient?.addressLines ?? []),
+      },
+      paragraphs: withId(raw.paragraphs ?? []),
+    };
+    onImport({ title: coverLetterExampleEn.title, template: coverLetterExampleEn.template as CoverLetterTemplate, content: merged });
+    setExampleDialogOpen(false);
   }
 
   function handleExportJson() {
@@ -82,8 +106,16 @@ export function Toolbar({ title, content, template, onTitleChange, onImport }: T
         const merged: CoverLetterContent = {
           ...defaultCoverLetterContent,
           ...raw,
-          sender: { ...defaultCoverLetterContent.sender, ...raw.sender },
-          recipient: { ...defaultCoverLetterContent.recipient, ...raw.recipient },
+          sender: {
+            ...defaultCoverLetterContent.sender,
+            ...raw.sender,
+            addressLines: withId(raw.sender?.addressLines ?? []),
+          },
+          recipient: {
+            ...defaultCoverLetterContent.recipient,
+            ...raw.recipient,
+            addressLines: withId(raw.recipient?.addressLines ?? []),
+          },
           paragraphs: withId(raw.paragraphs),
         };
         onImport({ title: parsed.title, template: parsed.template, content: merged });
@@ -137,9 +169,20 @@ export function Toolbar({ title, content, template, onTitleChange, onImport }: T
           <Settings className="size-4" />
         </Button>
 
+        {/* Language switcher — left of spacer */}
+        <LanguageSwitcher />
+
         <div className="flex-1" />
 
-        <LanguageSwitcher />
+        {/* Example button */}
+        <Button
+          className="btn-hover-border h-8 cursor-pointer gap-1.5 rounded-lg px-3 text-sm font-medium"
+          variant="outline"
+          onClick={() => setExampleDialogOpen(true)}
+        >
+          <Sparkles className="size-4" />
+          {tr.loadExample}
+        </Button>
 
         {/* Import dropdown */}
         <DropdownMenu>
@@ -193,6 +236,46 @@ export function Toolbar({ title, content, template, onTitleChange, onImport }: T
         </DropdownMenu>
       </header>
 
+      {/* Example confirmation dialog */}
+      <Dialog open={exampleDialogOpen} onOpenChange={setExampleDialogOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
+                <Sparkles className="h-4 w-4 text-foreground" />
+              </div>
+              <DialogTitle>{tr.loadExampleDialogTitle}</DialogTitle>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground text-justify leading-relaxed">
+                {tr.loadExampleDialogDesc}
+              </p>
+              <p className="text-sm text-muted-foreground text-justify leading-relaxed">
+                {tr.coverLetter.exampleAttributionPre}
+                <span className="font-medium">MIT Career Advising &amp; Professional Development</span>
+                {tr.coverLetter.exampleAttributionPost}
+              </p>
+              <p className="text-sm font-medium text-foreground">
+                {tr.loadExampleDialogWarn}
+              </p>
+            </div>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" className="btn-hover-border cursor-pointer" onClick={() => setExampleDialogOpen(false)}>
+              {tr.cancel}
+            </Button>
+            <Button
+              variant="outline"
+              className="btn-hover-primary cursor-pointer"
+              onClick={handleLoadExample}
+            >
+              {tr.loadExampleConfirm}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Settings dialog */}
       <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>

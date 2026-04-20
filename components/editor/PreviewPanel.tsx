@@ -3,6 +3,7 @@
 import { useRef, useState, useLayoutEffect } from "react";
 import type { ResumeContent, ResumeLanguage } from "@/lib/types/resume";
 import { GeneralTemplate } from "./templates/GeneralTemplate";
+import { PageBreakProvider } from "@/components/shared/PageBreakAvoid";
 import { PAGE_H, TOP, BOTTOM, CONTENT_H } from "@/lib/page-constants";
 
 interface PreviewPanelProps {
@@ -43,6 +44,7 @@ export function PreviewPanel({ content, language }: PreviewPanelProps) {
   }, []);
 
   return (
+    <PageBreakProvider>
     <div className="flex flex-1 items-start justify-center overflow-y-auto bg-muted/50 p-8">
       {/* Hidden export target — captured by lib/export.ts via .preview-a4 > div */}
       <div style={{ position: "fixed", left: "-9999px", top: 0, width: "794px", pointerEvents: "none" }}>
@@ -80,5 +82,6 @@ export function PreviewPanel({ content, language }: PreviewPanelProps) {
         ))}
       </div>
     </div>
+    </PageBreakProvider>
   );
 }
