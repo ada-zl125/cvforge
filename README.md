@@ -1,24 +1,25 @@
 # EasyCV
 
-Online resume generation tool for job seekers and academics. Focus on content — we handle the layout.
+Free online resume builder for job seekers and academics. No account required — build and export directly in your browser.
+
+**Live site:** https://ada-zl125.github.io/easy-cv
+
+## Features
+
+- **Resume** — general-purpose resume with customisable sections
+- **Academic CV** — full academic CV with publications, research experience, references, and more
+- **Cover Letter** — structured cover letter editor with live A4 preview
+- Export to PDF, PNG, or JSON; import from JSON
 
 ## Tech Stack
 
-Next.js 16 · TypeScript · Tailwind CSS v4 · shadcn/ui · Supabase · Vercel
+Next.js 16 · TypeScript · Tailwind CSS v4 · shadcn/ui
 
-## Getting Started
+## Local Development
 
 ```bash
 npm install
-cp .env.local.example .env.local  # fill in Supabase credentials
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
-
-## Environment Variables
-
-```
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-```
