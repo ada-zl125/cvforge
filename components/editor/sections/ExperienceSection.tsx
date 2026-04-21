@@ -8,6 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
+import { useUILanguage } from "@/lib/ui-language";
 
 
 interface ExperienceSectionProps {
@@ -28,11 +35,12 @@ function emptyExperience(): ExperienceItem {
     location: "",
     startDate: "",
     endDate: "",
-    descriptions: [emptyDescription()],
+    descriptions: [],
   };
 }
 
 export function ExperienceSection({ items, onChange, language }: ExperienceSectionProps) {
+  const { lang } = useUILanguage();
   function update(index: number, field: keyof ExperienceItem, value: string) {
     const next = items.map((item, i) => (i === index ? { ...item, [field]: value } : item));
     onChange(next);
@@ -63,7 +71,7 @@ export function ExperienceSection({ items, onChange, language }: ExperienceSecti
     <div>
       <div className="space-y-4">
         <Button variant="ghost" size="xs" className="add-btn cursor-pointer gap-1 text-xs" onClick={add}>
-          <Plus className="size-3" /> {language === "zh" ? "添加条目" : "Add Entry"}
+          <Plus className="size-3" /> {lang === "zh" ? "添加条目" : "Add Entry"}
         </Button>
         {items.map((exp, i) => (
           <ExperienceBlock
@@ -112,9 +120,11 @@ function ExperienceBlock({
   onDescriptionsChange: (descs: DescriptionField[]) => void;
   language: ResumeLanguage;
 }) {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
   const descriptions = exp.descriptions ?? [emptyDescription()];
-  const zh = language === "zh";
+  const { lang } = useUILanguage();
+  const zh = lang === "zh";
+  const contentZh = language === "zh";
 
   function updateDesc(id: string, value: string) {
     onDescriptionsChange(descriptions.map((d) => (d.id === id ? { ...d, value } : d)));
@@ -125,7 +135,6 @@ function ExperienceBlock({
   }
 
   function removeDesc(id: string) {
-    if (descriptions.length <= 1) return;
     onDescriptionsChange(descriptions.filter((d) => d.id !== id));
   }
 
@@ -180,16 +189,16 @@ function ExperienceBlock({
           {/* Fixed fields */}
           <div className="grid grid-cols-2 gap-x-3 gap-y-2">
             <div className="col-span-2 flex flex-col gap-1">
-              <Label className="text-xs">{zh ? "公司 / 机构" : "Company / Organization"}</Label>
-              <Input value={exp.company} onChange={(e) => onUpdate("company", e.target.value)} placeholder={zh ? "字节跳动" : "Google"} />
+              <Label className="text-xs">{zh ? "公司" : "Company"}</Label>
+              <Input value={exp.company} onChange={(e) => onUpdate("company", e.target.value)} placeholder={contentZh ? "字节跳动" : "Google"} />
             </div>
             <div className="flex flex-col gap-1">
               <Label className="text-xs">{zh ? "职位" : "Position"}</Label>
-              <Input value={exp.position} onChange={(e) => onUpdate("position", e.target.value)} placeholder={zh ? "软件工程师" : "Software Engineer"} />
+              <Input value={exp.position} onChange={(e) => onUpdate("position", e.target.value)} placeholder={contentZh ? "软件工程师" : "Software Engineer"} />
             </div>
             <div className="flex flex-col gap-1">
               <Label className="text-xs">{zh ? "地点" : "Location"}</Label>
-              <Input value={exp.location} onChange={(e) => onUpdate("location", e.target.value)} placeholder={zh ? "中国, 北京" : "London, UK"} />
+              <Input value={exp.location} onChange={(e) => onUpdate("location", e.target.value)} placeholder={contentZh ? "中国, 北京" : "London, UK"} />
             </div>
             <div className="flex flex-col gap-1">
               <Label className="text-xs">{zh ? "开始时间" : "Start Date"}</Label>
@@ -202,53 +211,61 @@ function ExperienceBlock({
           </div>
 
           {/* Description fields */}
-          <div className="mt-3 space-y-2">
-            <Label className="text-xs text-muted-foreground">{zh ? "工作描述" : "Descriptions"}</Label>
-            {descriptions.map((desc, di) => (
-              <div key={desc.id} className="flex items-start gap-1">
-                <Textarea
-                  className="flex-1 resize-y text-xs"
-                  rows={2}
-                  value={desc.value}
-                  onChange={(e) => updateDesc(desc.id, e.target.value)}
-                  placeholder={zh ? "描述一项职责或成就..." : "Describe a responsibility or achievement..."}
-                />
-                <div className="flex flex-col gap-0.5 pt-0.5">
+          {descriptions.length > 0 && (
+            <div className="mt-3 space-y-2">
+              <Label className="text-xs text-muted-foreground">{zh ? "工作描述" : "Descriptions"}</Label>
+              {descriptions.map((desc, di) => (
+                <div key={desc.id} className="flex items-start gap-1">
+                  <div className="flex flex-col gap-0.5 pt-0.5">
+                    <Button
+                      variant="ghost" size="icon-xs"
+                      className="cursor-pointer text-muted-foreground hover:text-foreground disabled:opacity-30"
+                      disabled={di === 0}
+                      onClick={() => moveDesc(desc.id, "up")}
+                    >
+                      <ChevronUp className="size-3" />
+                    </Button>
+                    <Button
+                      variant="ghost" size="icon-xs"
+                      className="cursor-pointer text-muted-foreground hover:text-foreground disabled:opacity-30"
+                      disabled={di === descriptions.length - 1}
+                      onClick={() => moveDesc(desc.id, "down")}
+                    >
+                      <ChevronDown className="size-3" />
+                    </Button>
+                  </div>
+                  <Textarea
+                    className="flex-1 resize-y text-xs"
+                    rows={2}
+                    value={desc.value}
+                    onChange={(e) => updateDesc(desc.id, e.target.value)}
+                    placeholder={contentZh ? "描述一项职责或成就..." : "Describe a responsibility or achievement..."}
+                  />
                   <Button
                     variant="ghost" size="icon-xs"
-                    className="cursor-pointer text-muted-foreground hover:text-foreground disabled:opacity-30"
-                    disabled={di === 0}
-                    onClick={() => moveDesc(desc.id, "up")}
-                  >
-                    <ChevronUp className="size-3" />
-                  </Button>
-                  <Button
-                    variant="ghost" size="icon-xs"
-                    className="cursor-pointer text-muted-foreground hover:text-foreground disabled:opacity-30"
-                    disabled={di === descriptions.length - 1}
-                    onClick={() => moveDesc(desc.id, "down")}
-                  >
-                    <ChevronDown className="size-3" />
-                  </Button>
-                  <Button
-                    variant="ghost" size="icon-xs"
-                    className="cursor-pointer text-muted-foreground hover:text-destructive disabled:opacity-30"
-                    disabled={descriptions.length <= 1}
+                    className="mt-0.5 cursor-pointer text-muted-foreground hover:text-destructive"
                     onClick={() => removeDesc(desc.id)}
                   >
                     <Trash2 className="size-3" />
                   </Button>
                 </div>
-              </div>
-            ))}
-            <button
-              type="button"
-              className="add-btn inline-flex h-7 cursor-pointer items-center gap-1 rounded-md px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              onClick={addDesc}
-            >
-              <Plus className="size-3" />
-              {zh ? "添加描述" : "Add description"}
-            </button>
+              ))}
+            </div>
+          )}
+
+          {/* Add field dropdown — always at bottom */}
+          <div className="mt-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger className="add-btn inline-flex h-7 cursor-pointer items-center gap-1 rounded-md px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+                <Plus className="size-3" />
+                {zh ? "添加字段" : "Add field"}
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" sideOffset={4}>
+                <DropdownMenuItem className="cursor-pointer" onClick={addDesc}>
+                  {zh ? "描述" : "Description"}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       )}

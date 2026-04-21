@@ -13,6 +13,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
+import { useUILanguage } from "@/lib/ui-language";
 
 const EXTRA_FIELD_META: Record<EducationExtraFieldType, { label: string; labelZh: string; unique: boolean }> = {
   grade:  { label: "Grade",        labelZh: "成绩",    unique: true },
@@ -41,6 +42,7 @@ function emptyEducation(): EducationItem {
 }
 
 export function EducationSection({ items, onChange, language }: EducationSectionProps) {
+  const { lang } = useUILanguage();
   function update(index: number, field: keyof EducationItem, value: string) {
     const next = items.map((item, i) => (i === index ? { ...item, [field]: value } : item));
     onChange(next);
@@ -71,7 +73,7 @@ export function EducationSection({ items, onChange, language }: EducationSection
     <div>
       <div className="space-y-4">
         <Button variant="ghost" size="xs" className="add-btn cursor-pointer gap-1 text-xs" onClick={add}>
-          <Plus className="size-3" /> {language === "zh" ? "添加条目" : "Add Entry"}
+          <Plus className="size-3" /> {lang === "zh" ? "添加条目" : "Add Entry"}
         </Button>
         {items.map((edu, i) => (
           <EducationBlock
@@ -120,9 +122,11 @@ function EducationBlock({
   onExtraFieldsChange: (fields: EducationExtraField[]) => void;
   language: ResumeLanguage;
 }) {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
   const extraFields = edu.extraFields ?? [];
-  const zh = language === "zh";
+  const { lang } = useUILanguage();
+  const zh = lang === "zh";
+  const contentZh = language === "zh";
 
   // Filter out unique types already added
   const addableTypes = (Object.keys(EXTRA_FIELD_META) as EducationExtraFieldType[]).filter((type) => {
@@ -192,22 +196,16 @@ function EducationBlock({
       <div className="grid gap-2">
         <div className="grid gap-1.5">
           <Label className="text-xs">{zh ? "学校" : "Institution"}</Label>
-          <Input value={edu.institution} onChange={(e) => onUpdate("institution", e.target.value)} placeholder={zh ? "你的学校" : "University of..."} />
+          <Input value={edu.institution} onChange={(e) => onUpdate("institution", e.target.value)} placeholder={contentZh ? "你的学校" : "University of..."} />
         </div>
-        <div className="grid grid-cols-2 gap-2">
-          <div className="grid gap-1.5">
-            <Label className="text-xs">{zh ? "学位" : "Degree"}</Label>
-            <Input value={edu.degree} onChange={(e) => onUpdate("degree", e.target.value)} placeholder={zh ? "理学学士 / 理学硕士 / 博士" : "BSc / MSc / PhD"} />
-          </div>
-          <div className="grid gap-1.5">
-            <Label className="text-xs">{zh ? "专业" : "Field of Study"}</Label>
-            <Input value={edu.field} onChange={(e) => onUpdate("field", e.target.value)} placeholder={zh ? "计算机科学与技术" : "Computer Science"} />
-          </div>
+        <div className="grid gap-1.5">
+          <Label className="text-xs">{zh ? "学位与专业" : "Degree and Field of Study"}</Label>
+          <Input value={edu.degree} onChange={(e) => onUpdate("degree", e.target.value)} placeholder={contentZh ? "计算机科学理学硕士" : "MSc in Computer Science"} />
         </div>
         <div className="grid grid-cols-3 gap-2">
           <div className="grid gap-1.5">
             <Label className="text-xs">{zh ? "地点" : "Location"}</Label>
-            <Input value={edu.location} onChange={(e) => onUpdate("location", e.target.value)} placeholder={zh ? "中国, 北京" : "London, UK"} />
+            <Input value={edu.location} onChange={(e) => onUpdate("location", e.target.value)} placeholder={contentZh ? "中国, 北京" : "London, UK"} />
           </div>
           <div className="grid gap-1.5">
             <Label className="text-xs">{zh ? "开始" : "Start"}</Label>
@@ -229,11 +227,11 @@ function EducationBlock({
                 <div className="grid flex-1 grid-cols-[120px_1fr] gap-2">
                   <div className="flex flex-col gap-1">
                     <Label className="text-xs">{zh ? "字段名称" : "Field Name"}</Label>
-                    <Input value={ef.label} onChange={(e) => updateExtraField(ef.id, { label: e.target.value })} placeholder={zh ? "课程作业" : "Coursework"} />
+                    <Input value={ef.label} onChange={(e) => updateExtraField(ef.id, { label: e.target.value })} placeholder={contentZh ? "活动" : "Activities"} />
                   </div>
                   <div className="flex flex-col gap-1">
                     <Label className="text-xs">{zh ? "内容" : "Value"}</Label>
-                    <Input value={ef.value} onChange={(e) => updateExtraField(ef.id, { value: e.target.value })} placeholder={zh ? "描述..." : "Describe..."} />
+                    <Input value={ef.value} onChange={(e) => updateExtraField(ef.id, { value: e.target.value })} placeholder={contentZh ? "描述" : "Description"} />
                   </div>
                 </div>
               ) : (
@@ -244,8 +242,8 @@ function EducationBlock({
                     onChange={(e) => updateExtraField(ef.id, { value: e.target.value })}
                     placeholder={
                       ef.type === "grade"
-                        ? zh ? "一等荣誉学位 / 3.8/4.0" : "First Class Honours / 3.8/4.0"
-                        : zh ? "院长名单, 优秀学生奖学金" : "Dean's List, Outstanding Student Scholarship"
+                        ? contentZh ? "93.53/100" : "Distinction, 75.53/100"
+                        : contentZh ? "国家奖学金, 校优秀学生奖学金, 校优秀毕业生" : "Dean's List, Outstanding Student Scholarship"
                     }
                   />
                 </div>

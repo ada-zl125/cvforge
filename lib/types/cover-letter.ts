@@ -4,25 +4,26 @@
 
 export type CoverLetterTemplate = "classic";
 
+/* ---- Repeatable address line ---- */
+
+export interface AddressLine {
+  id: string;
+  value: string;
+}
+
 /* ---- Sender (top-right block) ---- */
 
 export interface CoverLetterSender {
   name: string;
-  addressLine1: string;
-  addressLine2: string;
+  addressLines: AddressLine[];
 }
 
 /* ---- Recipient (left block) ---- */
 
 export interface CoverLetterRecipient {
-  /** First line of address block. Falls back as salutation if `salutation` is unset. */
   name: string;
-  /** Optional override for "Dear [salutation]:". If absent, `name` is used. */
   salutation?: string;
-  department?: string;
-  institution?: string;
-  addressLine1?: string;
-  addressLine2?: string;
+  addressLines: AddressLine[];
 }
 
 /* ---- Body paragraphs ---- */

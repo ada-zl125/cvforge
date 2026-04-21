@@ -55,7 +55,7 @@ export function PresentationsSection({ items, onChange, language }: Props) {
         <Plus className="size-3" /> {tr.addEntry}
       </Button>
       {items.map((item, i) => {
-        const isCollapsed = collapsed[item.id] ?? false;
+        const isCollapsed = collapsed[item.id] ?? true;
         const header = item.event || `Entry #${i + 1}`;
         const zh = language === "zh";
 
@@ -82,7 +82,7 @@ export function PresentationsSection({ items, onChange, language }: Props) {
                 {/* Fixed fields */}
                 <div className="grid gap-1.5">
                   <Label className="text-xs">{tr.event}</Label>
-                  <Input value={item.event} onChange={e => update(i, "event", e.target.value)} placeholder={zh ? "国际机器学习大会（ICML 2024）" : "International Conference on Machine Learning (ICML 2024)"} />
+                  <Input value={item.event} onChange={e => update(i, "event", e.target.value)} placeholder={tr.eventPlaceholder} />
                 </div>
                 <div className="grid gap-1.5">
                   <Label className="text-xs">{zh ? "报告题目" : "Title"}</Label>
@@ -91,7 +91,7 @@ export function PresentationsSection({ items, onChange, language }: Props) {
                 <div className="grid grid-cols-2 gap-2">
                   <div className="grid gap-1.5">
                     <Label className="text-xs">{zh ? "地点" : "Location"}</Label>
-                    <Input value={item.location} onChange={e => update(i, "location", e.target.value)} placeholder="Vienna, Austria" />
+                    <Input value={item.location} onChange={e => update(i, "location", e.target.value)} placeholder={zh ? "北京, 中国" : "London, UK"} />
                   </div>
                   <div className="grid gap-1.5">
                     <Label className="text-xs">{tr.date}</Label>

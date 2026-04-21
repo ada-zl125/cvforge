@@ -5,7 +5,7 @@
 
 /* ---- Contact field (dynamic, user-addable/removable) ---- */
 
-export type ContactFieldType = "email" | "phone" | "location" | "website";
+export type ContactFieldType = "email" | "phone" | "location" | "website" | "addressLine1" | "addressLine2" | "addressLine3";
 
 export interface ContactField {
   id: string;

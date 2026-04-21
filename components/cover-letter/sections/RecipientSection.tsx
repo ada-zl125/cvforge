@@ -14,18 +14,6 @@ import {
 import { useUILanguage } from "@/lib/ui-language";
 import { t } from "@/lib/translations";
 
-type OptionalFieldType = "salutation" | "department" | "institution" | "addressLine1" | "addressLine2";
-
-interface FieldMeta { label: string; placeholder: string }
-
-const OPTIONAL_FIELD_META: Record<OptionalFieldType, FieldMeta> = {
-  salutation:   { label: "Salutation (Dear…)",    placeholder: "Professor Jane Smith" },
-  department:   { label: "Department",             placeholder: "Department of Mechanical Engineering" },
-  institution:  { label: "Institution",            placeholder: "University of XXX" },
-  addressLine1: { label: "Address Line 1",         placeholder: "000 University Ave" },
-  addressLine2: { label: "City, State Zip",        placeholder: "Cambridge, MA 02139" },
-};
-
 interface Props {
   data: CoverLetterRecipient;
   date: string;
@@ -39,22 +27,34 @@ export function RecipientSection({ data, date, onDateChange, onChange, collapsed
   const { lang } = useUILanguage();
   const tr = t[lang].coverLetter;
 
-  const addableFields = (Object.keys(OPTIONAL_FIELD_META) as OptionalFieldType[]).filter(
-    (f) => data[f] === undefined,
-  );
+  const addressLines = data.addressLines ?? [];
+  const hasSalutation = data.salutation !== undefined;
 
-  function update<K extends keyof CoverLetterRecipient>(field: K, value: CoverLetterRecipient[K]) {
-    onChange({ ...data, [field]: value });
+  const dropdownItems: { key: string; label: string }[] = [
+    ...(!hasSalutation ? [{ key: "salutation", label: tr.salutation }] : []),
+    { key: "addressLine", label: tr.addressLine },
+  ];
+
+  function addSalutation() {
+    onChange({ ...data, salutation: "" });
   }
 
-  function addField(field: OptionalFieldType) {
-    onChange({ ...data, [field]: "" });
+  function addAddressLine() {
+    onChange({ ...data, addressLines: [...addressLines, { id: crypto.randomUUID(), value: "" }] });
   }
 
-  function removeField(field: OptionalFieldType) {
-    const next = { ...data } as CoverLetterRecipient;
-    delete next[field];
+  function removeSalutation() {
+    const next = { ...data };
+    delete next.salutation;
     onChange(next);
+  }
+
+  function updateAddressLine(id: string, value: string) {
+    onChange({ ...data, addressLines: addressLines.map((l) => l.id === id ? { ...l, value } : l) });
+  }
+
+  function removeAddressLine(id: string) {
+    onChange({ ...data, addressLines: addressLines.filter((l) => l.id !== id) });
   }
 
   return (
@@ -79,45 +79,58 @@ export function RecipientSection({ data, date, onDateChange, onChange, collapsed
           {/* Recipient Name (required) */}
           <div className="grid gap-1.5">
             <Label className="text-xs">{tr.recipientName}</Label>
-            <Input value={data.name} onChange={(e) => update("name", e.target.value)} placeholder="Search Committee / Prof. Jane Smith" />
+            <Input value={data.name} onChange={(e) => onChange({ ...data, name: e.target.value })} placeholder="Search Committee / Prof. Jane Smith" />
           </div>
 
-          {/* Optional fields */}
-          {(Object.keys(OPTIONAL_FIELD_META) as OptionalFieldType[]).map((field) => {
-            if (data[field] === undefined) return null;
-            const meta = OPTIONAL_FIELD_META[field];
-            return (
-              <div key={field} className="grid gap-1.5">
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs">{meta.label}</Label>
-                  <Button
-                    variant="ghost" size="icon-xs"
-                    className="cursor-pointer text-muted-foreground hover:text-destructive"
-                    onClick={() => removeField(field)}
-                  >
-                    <Trash2 className="size-3" />
-                  </Button>
-                </div>
-                <Input
-                  value={data[field] as string}
-                  onChange={(e) => update(field, e.target.value)}
-                  placeholder={meta.placeholder}
-                />
+          {/* Optional: Salutation */}
+          {hasSalutation && (
+            <div className="grid gap-1.5">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs">{tr.salutation}</Label>
+                <Button variant="ghost" size="icon-xs" className="cursor-pointer text-muted-foreground hover:text-destructive" onClick={removeSalutation}>
+                  <Trash2 className="size-3" />
+                </Button>
               </div>
-            );
-          })}
+              <Input
+                value={data.salutation ?? ""}
+                onChange={(e) => onChange({ ...data, salutation: e.target.value })}
+                placeholder="Professor Jane Smith"
+              />
+            </div>
+          )}
 
-          {/* Add optional field */}
-          {addableFields.length > 0 && (
+          {/* Repeatable Address Lines */}
+          {addressLines.map((line, i) => (
+            <div key={line.id} className="grid gap-1.5">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs">{tr.addressLine} {i + 1}</Label>
+                <Button variant="ghost" size="icon-xs" className="cursor-pointer text-muted-foreground hover:text-destructive" onClick={() => removeAddressLine(line.id)}>
+                  <Trash2 className="size-3" />
+                </Button>
+              </div>
+              <Input
+                value={line.value}
+                onChange={(e) => updateAddressLine(line.id, e.target.value)}
+                placeholder="Please enter your address here."
+              />
+            </div>
+          ))}
+
+          {/* Add field dropdown */}
+          {dropdownItems.length > 0 && (
             <DropdownMenu>
               <DropdownMenuTrigger className="add-btn inline-flex h-7 cursor-pointer items-center gap-1 rounded-md px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
                 <Plus className="size-3" />
                 {tr.addField}
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" sideOffset={4}>
-                {addableFields.map((field) => (
-                  <DropdownMenuItem key={field} className="cursor-pointer" onClick={() => addField(field)}>
-                    {OPTIONAL_FIELD_META[field].label}
+                {dropdownItems.map((item) => (
+                  <DropdownMenuItem
+                    key={item.key}
+                    className="cursor-pointer"
+                    onClick={() => item.key === "salutation" ? addSalutation() : addAddressLine()}
+                  >
+                    {item.label}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>

@@ -2,20 +2,18 @@
 
 import type { CoverLetterContent } from "@/lib/types/cover-letter";
 import { PageBreakAvoid } from "@/components/shared/PageBreakAvoid";
+import { FONT_EN, BODY_SIZE } from "@/lib/template-styles";
 
 /* ------------------------------------------------------------------ */
 /*  A4 page: 794px × 1123px at 96 DPI, 1.27cm (48px) margins         */
 /*  Font: Times New Roman, 11pt, black on white                        */
 /* ------------------------------------------------------------------ */
 
-const FONT = "'Times New Roman', SimSun, serif";
-const BODY_SIZE = "11pt";
-const LINE_HEIGHT = "16pt";
-
 const baseStyle: React.CSSProperties = {
-  fontFamily: FONT,
+  fontFamily: FONT_EN,
   fontSize: BODY_SIZE,
-  lineHeight: LINE_HEIGHT,
+  fontWeight: 400,
+  lineHeight: "16pt",
   color: "#000",
 };
 
@@ -25,7 +23,11 @@ interface Props {
 
 export function CoverLetterTemplate({ content }: Props) {
   const { sender, date, recipient, paragraphs } = content;
+  const senderAddressLines = sender.addressLines ?? [];
+  const recipientAddressLines = recipient.addressLines ?? [];
   const salutation = recipient.salutation ?? recipient.name;
+
+  const hasRecipientBlock = recipient.name || recipientAddressLines.length > 0;
 
   return (
     <div
@@ -35,14 +37,14 @@ export function CoverLetterTemplate({ content }: Props) {
         width: "794px",
         minHeight: "1123px",
         padding: "48px",
-        fontFamily: FONT,
+        fontFamily: FONT_EN,
+        fontWeight: 400,
       }}
     >
       {/* ── Sender block (top-right) ── */}
       <div style={{ ...baseStyle, textAlign: "right", marginBottom: "40px" }}>
         {sender.name && <div>{sender.name}</div>}
-        {sender.addressLine1 && <div>{sender.addressLine1}</div>}
-        {sender.addressLine2 && <div>{sender.addressLine2}</div>}
+        {senderAddressLines.map((l) => l.value ? <div key={l.id}>{l.value}</div> : null)}
       </div>
 
       {/* ── Date ── */}
@@ -51,13 +53,10 @@ export function CoverLetterTemplate({ content }: Props) {
       )}
 
       {/* ── Recipient block ── */}
-      {(recipient.name || recipient.department || recipient.institution || recipient.addressLine1 || recipient.addressLine2) && (
+      {hasRecipientBlock && (
         <PageBreakAvoid style={{ ...baseStyle, marginBottom: "16pt" }}>
           {recipient.name && <div>{recipient.name}</div>}
-          {recipient.department && <div>{recipient.department}</div>}
-          {recipient.institution && <div>{recipient.institution}</div>}
-          {recipient.addressLine1 && <div>{recipient.addressLine1}</div>}
-          {recipient.addressLine2 && <div>{recipient.addressLine2}</div>}
+          {recipientAddressLines.map((l) => l.value ? <div key={l.id}>{l.value}</div> : null)}
         </PageBreakAvoid>
       )}
 
@@ -81,7 +80,7 @@ export function CoverLetterTemplate({ content }: Props) {
       {sender.name && (
         <PageBreakAvoid style={{ ...baseStyle, marginTop: "16pt" }}>
           <div>Sincerely,</div>
-          <div style={{ marginTop: "36pt" }}>{sender.name}</div>
+          <div style={{ marginTop: "20pt" }}>{sender.name}</div>
         </PageBreakAvoid>
       )}
 

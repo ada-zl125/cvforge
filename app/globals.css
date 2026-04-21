@@ -136,6 +136,12 @@
   color: var(--primary) !important;
 }
 
+.btn-hover-destructive:not(:disabled):hover {
+  border-color: var(--destructive) !important;
+  background-color: color-mix(in srgb, var(--destructive) 8%, transparent) !important;
+  color: var(--destructive) !important;
+}
+
 /* Editor form panel — section card hover: border → black, subtle lift */
 .section-card {
   transition: border-color 200ms ease-out, box-shadow 200ms ease-out;
