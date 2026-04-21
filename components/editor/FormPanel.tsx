@@ -187,7 +187,7 @@ export function FormPanel({ content, onChange, language }: FormPanelProps) {
                   onClick={() => addSection(type)}
                 >
                   <meta.icon className="size-4" />
-                  {language === "zh" ? meta.labelZh : meta.label}
+                  {lang === "zh" ? meta.labelZh : meta.label}
                 </DropdownMenuItem>
               );
             })}
@@ -208,7 +208,7 @@ export function FormPanel({ content, onChange, language }: FormPanelProps) {
             <AlertDialogCancel className="btn-hover-border cursor-pointer">{tr.cancel}</AlertDialogCancel>
             <AlertDialogAction
               variant="outline"
-              className="btn-hover-destructive cursor-pointer border-destructive/40 text-destructive hover:border-destructive hover:bg-destructive/10 hover:text-destructive"
+              className="btn-hover-destructive cursor-pointer"
               onClick={handleReset}
             >
               {tr.resetConfirm}
@@ -250,7 +250,8 @@ function CollapsibleSection({
   language: ResumeLanguage;
 }) {
   const meta = SECTION_META[type];
-  const sectionLabel = language === "zh" ? meta.labelZh : meta.label;
+  const { lang } = useUILanguage();
+  const sectionLabel = lang === "zh" ? meta.labelZh : meta.label;
 
   return (
     <section className="section-card rounded-lg border border-border">
@@ -298,6 +299,7 @@ function CollapsibleSection({
             <SummarySection
               value={content.summary ?? ""}
               onChange={(summary) => onChange({ ...content, summary })}
+              language={language}
             />
           )}
           {type === "education" && (

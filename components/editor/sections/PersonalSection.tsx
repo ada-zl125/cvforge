@@ -13,12 +13,16 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { PhotoCropDialog } from "@/components/editor/PhotoUpload";
+import { useUILanguage } from "@/lib/ui-language";
 
 const CONTACT_META: Record<ContactFieldType, { icon: typeof Mail; label: string; labelZh: string; unique: boolean }> = {
-  location: { icon: MapPin, label: "Location", labelZh: "地点", unique: true },
-  phone:    { icon: Phone,  label: "Phone",    labelZh: "电话", unique: true },
-  email:    { icon: Mail,   label: "Email",    labelZh: "邮箱", unique: true },
-  website:  { icon: Globe,  label: "Website",  labelZh: "网站", unique: false },
+  location:     { icon: MapPin, label: "Location",     labelZh: "地点",   unique: true },
+  phone:        { icon: Phone,  label: "Phone",        labelZh: "电话",   unique: true },
+  email:        { icon: Mail,   label: "Email",        labelZh: "邮箱",   unique: true },
+  website:      { icon: Globe,  label: "Website",      labelZh: "网站",   unique: false },
+  addressLine1: { icon: MapPin, label: "Address Line 1", labelZh: "地址第一行", unique: true },
+  addressLine2: { icon: MapPin, label: "Address Line 2", labelZh: "地址第二行", unique: true },
+  addressLine3: { icon: MapPin, label: "Address Line 3", labelZh: "地址第三行", unique: true },
 };
 
 interface PersonalSectionProps {
@@ -27,15 +31,17 @@ interface PersonalSectionProps {
   collapsed: boolean;
   onToggleCollapse: () => void;
   language: ResumeLanguage;
+  excludeContactTypes?: ContactFieldType[];
 }
 
-export function PersonalSection({ data: rawData, onChange, collapsed, onToggleCollapse, language }: PersonalSectionProps) {
+export function PersonalSection({ data: rawData, onChange, collapsed, onToggleCollapse, language, excludeContactTypes }: PersonalSectionProps) {
   const data: PersonalInfo = { ...rawData, contacts: rawData.contacts ?? [] };
   const photoFileRef = useRef<HTMLInputElement>(null);
   const [photoCropSrc, setPhotoCropSrc] = useState<string | null>(null);
   const [photoFieldAdded, setPhotoFieldAdded] = useState(!!rawData.photo);
   const [photoFileName, setPhotoFileName] = useState<string>("");
-  const zh = language === "zh";
+  const { lang } = useUILanguage();
+  const zh = lang === "zh";
 
   /* ---- name ---- */
 
@@ -100,6 +106,7 @@ export function PersonalSection({ data: rawData, onChange, collapsed, onToggleCo
   /* ---- addable types ---- */
 
   const addableTypes = (Object.keys(CONTACT_META) as ContactFieldType[]).filter((type) => {
+    if (excludeContactTypes?.includes(type)) return false;
     const meta = CONTACT_META[type];
     if (!meta.unique) return true;
     return !data.contacts.some((c) => c.type === type);
@@ -219,16 +226,16 @@ export function PersonalSection({ data: rawData, onChange, collapsed, onToggleCo
                 <Plus className="size-3" />
                 {zh ? "添加字段" : "Add field"}
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" sideOffset={4}>
+              <DropdownMenuContent align="start" sideOffset={4} className="min-w-44">
                 {addableTypes.map((type) => {
                   const meta = CONTACT_META[type];
                   return (
                     <DropdownMenuItem
                       key={type}
-                      className="cursor-pointer gap-2"
+                      className="cursor-pointer gap-2 whitespace-nowrap"
                       onClick={() => addContact(type)}
                     >
-                      <meta.icon className="size-4" />
+                      <meta.icon className="size-4 shrink-0" />
                       {zh ? meta.labelZh : meta.label}
                     </DropdownMenuItem>
                   );
@@ -236,10 +243,10 @@ export function PersonalSection({ data: rawData, onChange, collapsed, onToggleCo
                 {/* Photo option — only when field not yet added */}
                 {!photoFieldAdded && (
                   <DropdownMenuItem
-                    className="cursor-pointer gap-2"
+                    className="cursor-pointer gap-2 whitespace-nowrap"
                     onClick={() => setPhotoFieldAdded(true)}
                   >
-                    <Camera className="size-4" />
+                    <Camera className="size-4 shrink-0" />
                     {zh ? "照片" : "Photo"}
                   </DropdownMenuItem>
                 )}
@@ -276,7 +283,8 @@ function ContactFieldRow({
   language: ResumeLanguage;
 }) {
   const meta = CONTACT_META[field.type];
-  const zh = language === "zh";
+  const { lang } = useUILanguage();
+  const zh = lang === "zh";
 
   return (
     <div className="flex items-end gap-2">
@@ -343,11 +351,11 @@ function ContactFieldRow({
             value={field.value}
             onChange={(e) => onUpdate({ value: e.target.value })}
             placeholder={
-              field.type === "email"
-                ? "example@email.com"
-                : zh
-                ? "中国, 北京"
-                : "London, UK"
+              field.type === "email" ? "example@email.com"
+              : field.type === "addressLine1" ? (zh ? "请在此输入您的地址" : "Enter your address here...")
+              : field.type === "addressLine2" ? (zh ? "请在此输入您的地址" : "Enter your address here...")
+              : field.type === "addressLine3" ? (zh ? "请在此输入您的地址" : "Enter your address here...")
+              : zh ? "中国, 北京" : "London, UK"
             }
           />
         )}

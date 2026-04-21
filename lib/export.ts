@@ -3,6 +3,16 @@ import jsPDF from "jspdf";
 
 export type ExportFormat = "pdf" | "png";
 
+export function exportJson(data: object, filename: string): void {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${filename}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 async function captureCanvas(): Promise<HTMLCanvasElement> {
   // Target the inner resume div, not the wrapper (which has border/shadow)
   const el = document.querySelector(".preview-a4 > div") as HTMLElement | null;

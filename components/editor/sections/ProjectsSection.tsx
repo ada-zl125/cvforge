@@ -14,6 +14,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
+import { useUILanguage } from "@/lib/ui-language";
 
 
 interface ProjectsSectionProps {
@@ -34,11 +35,12 @@ function emptyProject(): ProjectItem {
     websiteUrl: "",
     startDate: "",
     endDate: "",
-    descriptions: [emptyDescription()],
+    descriptions: [],
   };
 }
 
 export function ProjectsSection({ items, onChange, language }: ProjectsSectionProps) {
+  const { lang } = useUILanguage();
   function update(index: number, field: keyof ProjectItem, value: string) {
     const next = items.map((item, i) => (i === index ? { ...item, [field]: value } : item));
     onChange(next);
@@ -69,7 +71,7 @@ export function ProjectsSection({ items, onChange, language }: ProjectsSectionPr
     <div>
       <div className="space-y-4">
         <Button variant="ghost" size="xs" className="add-btn cursor-pointer gap-1 text-xs" onClick={add}>
-          <Plus className="size-3" /> {language === "zh" ? "添加条目" : "Add Entry"}
+          <Plus className="size-3" /> {lang === "zh" ? "添加条目" : "Add Entry"}
         </Button>
         {items.map((proj, i) => (
           <ProjectBlock
@@ -118,10 +120,12 @@ function ProjectBlock({
   onDescriptionsChange: (descs: DescriptionField[]) => void;
   language: ResumeLanguage;
 }) {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
   const [websiteVisible, setWebsiteVisible] = useState(Boolean(proj.websiteLabel || proj.websiteUrl));
   const descriptions = proj.descriptions ?? [emptyDescription()];
-  const zh = language === "zh";
+  const { lang } = useUILanguage();
+  const zh = lang === "zh";
+  const contentZh = language === "zh";
 
   function updateDesc(id: string, value: string) {
     onDescriptionsChange(descriptions.map((d) => (d.id === id ? { ...d, value } : d)));
@@ -191,7 +195,7 @@ function ProjectBlock({
           <div className="grid grid-cols-2 gap-x-3 gap-y-2">
             <div className="col-span-2 flex flex-col gap-1">
               <Label className="text-xs">{zh ? "项目名称" : "Project Name"}</Label>
-              <Input value={proj.name} onChange={(e) => onUpdate("name", e.target.value)} placeholder={zh ? "我的项目" : "My Project"} />
+              <Input value={proj.name} onChange={(e) => onUpdate("name", e.target.value)} placeholder={contentZh ? "我的项目" : "My Project"} />
             </div>
             <div className="flex flex-col gap-1">
               <Label className="text-xs">{zh ? "开始时间" : "Start Date"}</Label>
@@ -233,41 +237,12 @@ function ProjectBlock({
             </div>
           )}
 
-          {/* Add field dropdown */}
-          <div className="mt-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger className="add-btn inline-flex h-7 cursor-pointer items-center gap-1 rounded-md px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
-                <Plus className="size-3" />
-                {zh ? "添加字段" : "Add field"}
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" sideOffset={4}>
-                {descriptions.length === 0 && (
-                  <DropdownMenuItem className="cursor-pointer" onClick={addDesc}>
-                    {zh ? "描述" : "Description"}
-                  </DropdownMenuItem>
-                )}
-                {!websiteVisible && (
-                  <DropdownMenuItem className="cursor-pointer" onClick={() => setWebsiteVisible(true)}>
-                    {zh ? "网站" : "Website"}
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-
           {/* Description fields — always last */}
           {descriptions.length > 0 && (
             <div className="mt-3 space-y-2">
               <Label className="text-xs text-muted-foreground">{zh ? "项目描述" : "Descriptions"}</Label>
               {descriptions.map((desc, di) => (
                 <div key={desc.id} className="flex items-start gap-1">
-                  <Textarea
-                    className="flex-1 resize-y text-xs"
-                    rows={2}
-                    value={desc.value}
-                    onChange={(e) => updateDesc(desc.id, e.target.value)}
-                    placeholder={zh ? "描述项目特性、技术栈或成果..." : "Describe a feature, technology, or outcome..."}
-                  />
                   <div className="flex flex-col gap-0.5 pt-0.5">
                     <Button
                       variant="ghost" size="icon-xs"
@@ -285,26 +260,45 @@ function ProjectBlock({
                     >
                       <ChevronDown className="size-3" />
                     </Button>
-                    <Button
-                      variant="ghost" size="icon-xs"
-                      className="cursor-pointer text-muted-foreground hover:text-destructive"
-                      onClick={() => removeDesc(desc.id)}
-                    >
-                      <Trash2 className="size-3" />
-                    </Button>
                   </div>
+                  <Textarea
+                    className="flex-1 resize-y text-xs"
+                    rows={2}
+                    value={desc.value}
+                    onChange={(e) => updateDesc(desc.id, e.target.value)}
+                    placeholder={contentZh ? "描述项目特性、技术栈或成果..." : "Describe a feature, technology, or outcome..."}
+                  />
+                  <Button
+                    variant="ghost" size="icon-xs"
+                    className="mt-0.5 cursor-pointer text-muted-foreground hover:text-destructive"
+                    onClick={() => removeDesc(desc.id)}
+                  >
+                    <Trash2 className="size-3" />
+                  </Button>
                 </div>
               ))}
-              <button
-                type="button"
-                className="add-btn inline-flex h-7 cursor-pointer items-center gap-1 rounded-md px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                onClick={addDesc}
-              >
-                <Plus className="size-3" />
-                {zh ? "添加描述" : "Add description"}
-              </button>
             </div>
           )}
+
+          {/* Add field dropdown — always at bottom */}
+          <div className="mt-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger className="add-btn inline-flex h-7 cursor-pointer items-center gap-1 rounded-md px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+                <Plus className="size-3" />
+                {zh ? "添加字段" : "Add field"}
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" sideOffset={4}>
+                {!websiteVisible && (
+                  <DropdownMenuItem className="cursor-pointer" onClick={() => setWebsiteVisible(true)}>
+                    {zh ? "网站" : "Website"}
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem className="cursor-pointer" onClick={addDesc}>
+                  {zh ? "描述" : "Description"}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       )}
     </div>

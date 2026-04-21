@@ -37,7 +37,8 @@ export function GrantsAwardsSection({ items, onChange, language }: Props) {
     onChange(next);
   }
 
-  const zh = language === "zh";
+  const zh = lang === "zh";
+  const contentZh = language === "zh";
 
   return (
     <div className="space-y-3">
@@ -45,7 +46,7 @@ export function GrantsAwardsSection({ items, onChange, language }: Props) {
         <Plus className="size-3" /> {tr.addEntry}
       </Button>
       {items.map((item, i) => {
-        const isCollapsed = collapsed[item.id] ?? false;
+        const isCollapsed = collapsed[item.id] ?? true;
         const header = item.title || `Entry #${i + 1}`;
 
         return (
@@ -73,7 +74,7 @@ export function GrantsAwardsSection({ items, onChange, language }: Props) {
                   <Input
                     value={item.title}
                     onChange={e => update(i, "title", e.target.value)}
-                    placeholder={zh ? "项目名称 / 奖项名称" : "Grant title / Award name"}
+                    placeholder={contentZh ? "项目名称 / 奖项名称" : "Grant title / Award name"}
                   />
                 </div>
                 <div className="grid gap-1.5">

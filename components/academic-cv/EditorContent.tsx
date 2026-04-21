@@ -74,6 +74,11 @@ export function AcademicEditorContent() {
     persist({ title: newTitle, template: newTemplate, language: newLanguage, content: state.content });
   }
 
+  function handleImport(imported: { title: string; template: AcademicCVTemplate; language: ResumeLanguage; content: AcademicCVContent }) {
+    dispatch({ type: "HYDRATE", payload: imported });
+    persist(imported);
+  }
+
   if (!state.hydrated) return null;
 
   return (
@@ -82,7 +87,9 @@ export function AcademicEditorContent() {
         title={state.title}
         template={state.template}
         language={state.language}
+        content={state.content}
         onSettingsChange={handleSettingsChange}
+        onImport={handleImport}
       />
 
       <div className="flex flex-1 overflow-hidden">

@@ -69,6 +69,14 @@ export function TeachingSection({ items, onChange, language }: Props) {
     update(i, "descriptions", descs);
   }
 
+  function moveDesc(i: number, di: number, dir: "up" | "down") {
+    const descs = [...(items[i].descriptions ?? [])];
+    const target = dir === "up" ? di - 1 : di + 1;
+    if (target < 0 || target >= descs.length) return;
+    [descs[di], descs[target]] = [descs[target], descs[di]];
+    update(i, "descriptions", descs);
+  }
+
   function removeDesc(i: number, di: number) {
     const descs = items[i].descriptions ?? [];
     const next = descs.filter((_, idx) => idx !== di);
@@ -87,7 +95,7 @@ export function TeachingSection({ items, onChange, language }: Props) {
         <Plus className="size-3" /> {tr.addEntry}
       </Button>
       {items.map((item, i) => {
-        const isCollapsed = collapsed[item.id] ?? false;
+        const isCollapsed = collapsed[item.id] ?? true;
         const header = [item.institution, item.role].filter(Boolean).join(" · ") || `Entry #${i + 1}`;
         const zh = language === "zh";
 
@@ -118,7 +126,7 @@ export function TeachingSection({ items, onChange, language }: Props) {
                 {/* Fixed fields */}
                 <div className="grid gap-1.5">
                   <Label className="text-xs">{zh ? "学校" : "Institution"}</Label>
-                  <Input value={item.institution} onChange={e => update(i, "institution", e.target.value)} placeholder={zh ? "麻省理工学院" : "MIT"} />
+                  <Input value={item.institution} onChange={e => update(i, "institution", e.target.value)} placeholder={zh ? "北京大学" : "Imperial College London"} />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="grid gap-1.5">
@@ -127,7 +135,7 @@ export function TeachingSection({ items, onChange, language }: Props) {
                   </div>
                   <div className="grid gap-1.5">
                     <Label className="text-xs">{zh ? "地点" : "Location"}</Label>
-                    <Input value={item.location} onChange={e => update(i, "location", e.target.value)} placeholder="Cambridge, MA" />
+                    <Input value={item.location} onChange={e => update(i, "location", e.target.value)} placeholder={zh ? "北京, 中国" : "London, UK"} />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
@@ -157,7 +165,21 @@ export function TeachingSection({ items, onChange, language }: Props) {
                   <div className="grid gap-1.5">
                     <Label className="text-xs">{zh ? OPTIONAL_FIELD_META.descriptions.labelZh : OPTIONAL_FIELD_META.descriptions.label}</Label>
                     {item.descriptions!.map((desc, di) => (
-                      <div key={desc.id} className="flex gap-1.5">
+                      <div key={desc.id} className="flex items-center gap-1">
+                        <div className="flex flex-col gap-0.5">
+                          <Button
+                            variant="ghost" size="icon-xs"
+                            className="cursor-pointer text-muted-foreground hover:text-foreground disabled:opacity-30"
+                            disabled={di === 0}
+                            onClick={() => moveDesc(i, di, "up")}
+                          ><ChevronUp className="size-3" /></Button>
+                          <Button
+                            variant="ghost" size="icon-xs"
+                            className="cursor-pointer text-muted-foreground hover:text-foreground disabled:opacity-30"
+                            disabled={di === item.descriptions!.length - 1}
+                            onClick={() => moveDesc(i, di, "down")}
+                          ><ChevronDown className="size-3" /></Button>
+                        </div>
                         <Input
                           value={desc.value}
                           onChange={e => updateDesc(i, di, e.target.value)}

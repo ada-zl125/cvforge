@@ -1,9 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ChevronDown, FileDown, FileImage, Loader2, Settings } from "lucide-react";
-import { exportResume, type ExportFormat } from "@/lib/export";
+import { ArrowLeft, ChevronDown, FileDown, FileImage, FileJson, FileUp, Loader2, Settings, Sparkles } from "lucide-react";
+import { exportResume, exportJson, type ExportFormat } from "@/lib/export";
+import { withId, mergeDegreeField, stripDegreeField } from "@/lib/json-utils";
+import { defaultAcademicCVContent } from "@/lib/defaults";
+import academicCvExampleEn from "@/examples/academic-cv-example-en.json";
+import academicCvExampleCn from "@/examples/academic-cv-example-cn.json";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,7 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { TITLE_MAX } from "@/lib/defaults";
-import type { AcademicCVTemplate, ResumeLanguage } from "@/lib/types/academic-cv";
+import type { AcademicCVTemplate, ResumeLanguage, AcademicCVContent } from "@/lib/types/academic-cv";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,24 +30,32 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 
-const TEMPLATE_OPTIONS: { value: AcademicCVTemplate; label: string; bg: string; text: string }[] = [
-  { value: "academic", label: "Academic", bg: "bg-emerald-50", text: "text-emerald-600" },
-];
+
+interface ImportedAcademicState {
+  title: string;
+  template: AcademicCVTemplate;
+  language: ResumeLanguage;
+  content: AcademicCVContent;
+}
 
 interface ToolbarProps {
   title: string;
   template: AcademicCVTemplate;
   language: ResumeLanguage;
+  content: AcademicCVContent;
   onSettingsChange: (title: string, language: ResumeLanguage, template: AcademicCVTemplate) => void;
+  onImport: (state: ImportedAcademicState) => void;
 }
 
-export function Toolbar({ title, template, language, onSettingsChange }: ToolbarProps) {
+export function Toolbar({ title, template, language, content, onSettingsChange, onImport }: ToolbarProps) {
   const router = useRouter();
   const { lang } = useUILanguage();
   const tr = t[lang];
 
   /* ---- Export state ---- */
   const [exporting, setExporting] = useState(false);
+  const [exampleDialogOpen, setExampleDialogOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function handleExport(format: ExportFormat) {
     setExporting(true);
@@ -54,16 +66,83 @@ export function Toolbar({ title, template, language, onSettingsChange }: Toolbar
     }
   }
 
+  function handleLoadExample() {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const raw: any = (language === "zh" ? academicCvExampleCn : academicCvExampleEn).content;
+    const example = language === "zh" ? academicCvExampleCn : academicCvExampleEn;
+    const merged: AcademicCVContent = {
+      ...defaultAcademicCVContent,
+      ...raw,
+      personal: { ...defaultAcademicCVContent.personal, ...raw.personal },
+      education: withId(raw.education).map((ed) => { const e = mergeDegreeField(ed, example.language); return { ...e, extraFields: withId(e.extraFields) }; }),
+      researchExperience: withId(raw.researchExperience).map((e) => ({ ...e, descriptions: withId(e.descriptions ?? []) })),
+      teachingExperience: withId(raw.teachingExperience ?? []).map((e) => ({ ...e, descriptions: withId(e.descriptions ?? []) })),
+      industryExperience: withId(raw.industryExperience).map((e) => ({ ...e, descriptions: withId(e.descriptions ?? []) })),
+      publications: withId(raw.publications),
+      manuscriptsUnderReview: withId(raw.manuscriptsUnderReview),
+      conferencePresentations: withId(raw.conferencePresentations),
+      grantsAndAwards: withId(raw.grantsAndAwards ?? []),
+      professionalService: withId(raw.professionalService),
+      technicalSkills: withId(raw.technicalSkills),
+      references: withId(raw.references),
+    };
+    onImport({ title: example.title, template: example.template as AcademicCVTemplate, language: example.language as ResumeLanguage, content: merged });
+  }
+
+  function handleExportJson() {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { photo: _photo, ...personal } = content.personal;
+    exportJson({ _type: "easycv-academic-cv", title, template, language, content: { ...content, personal, education: stripDegreeField(content.education) } }, title || "academic-cv");
+  }
+
+  function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(reader.result as string);
+        if (
+          parsed._type !== "easycv-academic-cv" ||
+          typeof parsed.content !== "object" ||
+          !parsed.content?.personal ||
+          !Array.isArray(parsed.content?.sections)
+        ) throw new Error("invalid");
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const raw: any = parsed.content;
+        const merged: AcademicCVContent = {
+          ...defaultAcademicCVContent,
+          ...raw,
+          personal: { ...defaultAcademicCVContent.personal, ...raw.personal },
+          education: withId(raw.education).map((ed) => { const e = mergeDegreeField(ed, parsed.language); return { ...e, extraFields: withId(e.extraFields) }; }),
+          researchExperience: withId(raw.researchExperience).map((e) => ({ ...e, descriptions: withId(e.descriptions ?? []) })),
+          teachingExperience: withId(raw.teachingExperience ?? []).map((e) => ({ ...e, descriptions: withId(e.descriptions ?? []) })),
+          industryExperience: withId(raw.industryExperience).map((e) => ({ ...e, descriptions: withId(e.descriptions ?? []) })),
+          publications: withId(raw.publications),
+          manuscriptsUnderReview: withId(raw.manuscriptsUnderReview),
+          conferencePresentations: withId(raw.conferencePresentations),
+          grantsAndAwards: withId(raw.grantsAndAwards),
+          professionalService: withId(raw.professionalService),
+          technicalSkills: withId(raw.technicalSkills),
+          references: withId(raw.references),
+        };
+        onImport({ title: parsed.title, template: parsed.template, language: parsed.language, content: merged });
+      } catch {
+        alert(tr.importJsonError);
+      }
+    };
+    reader.readAsText(file);
+  }
+
   /* ---- Settings dialog state ---- */
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [draftTitle, setDraftTitle] = useState(title);
   const [draftLanguage, setDraftLanguage] = useState<ResumeLanguage>(language);
-  const [draftTemplate, setDraftTemplate] = useState<AcademicCVTemplate>(template);
 
   function openSettings() {
     setDraftTitle(title);
     setDraftLanguage(language);
-    setDraftTemplate(template);
     setSettingsOpen(true);
   }
 
@@ -72,12 +151,13 @@ export function Toolbar({ title, template, language, onSettingsChange }: Toolbar
 
   function handleSettingsSave() {
     if (!canSave) return;
-    onSettingsChange(draftTitle.trim(), draftLanguage, draftTemplate);
+    onSettingsChange(draftTitle.trim(), draftLanguage, template);
     setSettingsOpen(false);
   }
 
   return (
     <>
+      <input ref={fileInputRef} type="file" accept=".json" className="hidden" onChange={handleImportFile} />
       <header className="editor-toolbar flex h-14 shrink-0 items-center gap-3 border-b border-border bg-card px-4">
         {/* Back button */}
         <Button
@@ -104,17 +184,47 @@ export function Toolbar({ title, template, language, onSettingsChange }: Toolbar
           <Settings className="size-4" />
         </Button>
 
+        {/* Language switcher */}
+        <LanguageSwitcher />
+
         {/* Spacer */}
         <div className="flex-1" />
 
-        {/* Language switcher */}
-        <LanguageSwitcher />
+        {/* Example button */}
+        <Button
+          className="btn-hover-border h-8 cursor-pointer gap-1.5 rounded-lg px-3 text-sm font-medium"
+          variant="outline"
+          onClick={() => setExampleDialogOpen(true)}
+        >
+          <Sparkles className="size-4" />
+          {tr.loadExample}
+        </Button>
+
+        {/* Import dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              className="btn-hover-border h-8 cursor-pointer gap-1.5 rounded-lg px-3 text-sm font-medium"
+              variant="outline"
+            >
+              <FileUp className="size-4" />
+              {tr.importLabel}
+              <ChevronDown className="size-3 opacity-60" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-44">
+            <DropdownMenuItem className="cursor-pointer gap-2" onClick={() => fileInputRef.current?.click()}>
+              <FileUp className="size-4 text-muted-foreground" />
+              {tr.importJson}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         {/* Export dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
-              className="btn-hover-primary h-8 cursor-pointer gap-1.5 rounded-lg px-3 text-sm font-medium"
+              className="btn-hover-border h-8 cursor-pointer gap-1.5 rounded-lg px-3 text-sm font-medium"
               variant="outline"
               disabled={exporting}
             >
@@ -125,7 +235,7 @@ export function Toolbar({ title, template, language, onSettingsChange }: Toolbar
               {!exporting && <ChevronDown className="size-3 opacity-60" />}
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent align="end" className="min-w-44">
             <DropdownMenuItem className="cursor-pointer gap-2" onClick={() => handleExport("pdf")}>
               <FileDown className="size-4 text-muted-foreground" />
               {tr.exportPdf}
@@ -134,9 +244,47 @@ export function Toolbar({ title, template, language, onSettingsChange }: Toolbar
               <FileImage className="size-4 text-muted-foreground" />
               {tr.exportPng}
             </DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer gap-2" onClick={handleExportJson}>
+              <FileJson className="size-4 text-muted-foreground" />
+              {tr.exportJson}
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </header>
+
+      {/* Example confirmation dialog */}
+      <Dialog open={exampleDialogOpen} onOpenChange={setExampleDialogOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
+                <Sparkles className="h-4 w-4 text-foreground" />
+              </div>
+              <DialogTitle>{tr.loadExampleDialogTitle}</DialogTitle>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground text-justify leading-relaxed">
+                {tr.loadExampleDialogDesc}
+              </p>
+              <p className="text-sm font-medium text-foreground">
+                {tr.loadExampleDialogWarn}
+              </p>
+            </div>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" className="btn-hover-border cursor-pointer" onClick={() => setExampleDialogOpen(false)}>
+              {tr.cancel}
+            </Button>
+            <Button
+              variant="outline"
+              className="btn-hover-primary cursor-pointer"
+              onClick={() => { handleLoadExample(); setExampleDialogOpen(false); }}
+            >
+              {tr.loadExampleConfirm}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Settings Dialog */}
       <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
@@ -188,26 +336,7 @@ export function Toolbar({ title, template, language, onSettingsChange }: Toolbar
               </div>
             </div>
 
-            {/* Template picker */}
-            <div className="grid gap-2">
-              <Label>{tr.templateLabel}</Label>
-              <div className="flex gap-2">
-                {TEMPLATE_OPTIONS.map((tmpl) => (
-                  <button
-                    key={tmpl.value}
-                    type="button"
-                    onClick={() => setDraftTemplate(tmpl.value)}
-                    className={`cursor-pointer rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
-                      draftTemplate === tmpl.value
-                        ? `${tmpl.bg} ${tmpl.text} border-current`
-                        : "border-border text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-                    }`}
-                  >
-                    {tmpl.label}
-                  </button>
-                ))}
-              </div>
-            </div>
+
           </div>
 
           <DialogFooter>

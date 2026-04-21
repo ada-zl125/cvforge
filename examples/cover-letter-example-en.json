@@ -1,0 +1,53 @@
+{
+  "_type": "easycv-cover-letter",
+  "title": "Example Cover Letter",
+  "template": "classic",
+  "content": {
+    "sender": {
+      "name": "Student Enviro Eng",
+      "addressLines": [
+        {
+          "id": "cl-s-0001",
+          "value": "Environment St."
+        },
+        {
+          "id": "cl-s-0002",
+          "value": "Cambridge, MA 02139"
+        }
+      ]
+    },
+    "date": "March 20, 2013",
+    "recipient": {
+      "name": "Joan Dough",
+      "addressLines": [
+        {
+          "id": "cl-r-0001",
+          "value": "77 Massachusetts Avenue"
+        },
+        {
+          "id": "cl-r-0002",
+          "value": "Cambridge, MA 02139"
+        }
+      ],
+      "salutation": "Ms. Dough"
+    },
+    "paragraphs": [
+      {
+        "id": "9df04d53-863d-4416-83ef-c1f41105bec0",
+        "text": "I am a 2013 degree candidate for a Master of Engineering in Environmental Engineering from Massachusetts Institute of Technology. In addition, I received my Bachelor of Science in Civil and Environmental Engineering from Cornell University in 2009. Before pursuing my graduate studies, I worked as a consultant at Camp Dresser and McKee for three years applying my skills to a range of projects including sustainable technology assessments and management of multi-disciplinary, multi-consultant project teams. Based on my work and educational experience, and perhaps more importantly because of my interest and enthusiasm, I think I am well suited to pursue a career in sustainability consulting."
+      },
+      {
+        "id": "295a188f-64f0-417b-bc74-f89cc026aa0e",
+        "text": "I have a keen interest in the field of global warming and greenhouse gas management. I am currently\npursuing this interest through my thesis work: a carbon impact evaluation of proposed hydropower in\nChilean Patagonia. During my time as a consultant, I was able to distinguish myself as a proficient and\nmotivated employee. In particular I sought to engage in projects that focused on renewable energy,\nsustainable design, and energy efficiency. I was also involved in promoting sustainable practices within\nthe company, and initiated an educational conference for public sector clients."
+      },
+      {
+        "id": "0e8aa370-9ac9-40e2-977f-637f53b2cb75",
+        "text": "My experience includes: delivering a sustainable technology assessment to compliment a campus’\nlow-carbon design strategy; evaluating the conversion of waste oils to biofuels at a local wastewater\ntreatment plant; and conducting a cost analysis and carbon inventory for the design of a deep heat\ngeothermal energy facility. Therefore, I am highly confident that I can use my skills, knowledge, and\nenthusiasm to help businesses develop and implement sustainability initiatives."
+      },
+      {
+        "id": "2b8a4745-f13b-4838-b677-f5f9a0552c02",
+        "text": "I welcome the opportunity to speak with you further about potential career opportunities. I can be reached\nat (617) XXX-XXXX or EnviroEng@mit.edu."
+      }
+    ]
+  }
+}

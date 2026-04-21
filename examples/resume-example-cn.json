@@ -1,0 +1,235 @@
+{
+  "_type": "easycv-resume",
+  "title": "resume-example-cn",
+  "template": "general",
+  "language": "zh",
+  "content": {
+    "personal": {
+      "fullName": "你的名字",
+      "contacts": [
+        {
+          "id": "a1b2c3d4-0001-4000-8000-000000000001",
+          "type": "location",
+          "value": "中国, 北京"
+        },
+        {
+          "id": "a1b2c3d4-0001-4000-8000-000000000002",
+          "type": "phone",
+          "value": "12345678901",
+          "countryCode": "+86"
+        },
+        {
+          "id": "a1b2c3d4-0001-4000-8000-000000000003",
+          "type": "email",
+          "value": "yourname@outlook.com"
+        },
+        {
+          "id": "a1b2c3d4-0001-4000-8000-000000000004",
+          "type": "website",
+          "value": "https://github.com/lizhiyuan-example",
+          "label": "GitHub"
+        },
+        {
+          "id": "a1b2c3d4-0001-4000-8000-000000000005",
+          "type": "website",
+          "value": "https://www.linkedin.com/in/lizhiyuan-example",
+          "label": "领英"
+        }
+      ]
+    },
+    "sections": [
+      "summary",
+      "education",
+      "experience",
+      "projects",
+      "awards",
+      "skills"
+    ],
+    "experience": [
+      {
+        "id": "a1b2c3d4-0002-4000-8000-000000000001",
+        "company": "字节跳动",
+        "position": "AI工程师",
+        "location": "北京, 中国",
+        "startDate": "2024/09",
+        "endDate": "至今",
+        "descriptions": [
+          {
+            "id": "a1b2c3d4-0002-4000-8000-000000000002",
+            "value": "基于大语言模型构建智能Agent系统, 实现多步任务规划与工具调用, 支持复杂任务自动化执行; 具备对话管理、记忆机制及多Agent协作的工程落地经验。"
+          },
+          {
+            "id": "a1b2c3d4-0002-4000-8000-000000000003",
+            "value": "构建检索增强生成 (RAG) 系统, 完成数据处理、向量化、检索与生成的端到端Pipeline; 优化检索与上下文策略, 提升生成结果的准确性与稳定性。"
+          }
+        ]
+      },
+      {
+        "id": "a1b2c3d4-0003-4000-8000-000000000001",
+        "company": "腾讯",
+        "position": "算法工程师",
+        "location": "深圳, 中国",
+        "startDate": "2023/09",
+        "endDate": "2024/09",
+        "descriptions": [
+          {
+            "id": "a1b2c3d4-0003-4000-8000-000000000002",
+            "value": "负责深度学习模型设计与训练, 基于PyTorch/TensorFlow完成模型搭建、调参与优化; 在计算机视觉/自然语言处理等任务中实现模型性能提升与稳定落地。"
+          },
+          {
+            "id": "a1b2c3d4-0003-4000-8000-000000000003",
+            "value": "具备模型部署与性能优化经验, 支持模型从训练到上线的全流程实现; 通过推理加速、模型压缩与资源优化提升系统效率与可扩展性。"
+          }
+        ]
+      }
+    ],
+    "education": [
+      {
+        "id": "a1b2c3d4-0004-4000-8000-000000000001",
+        "institution": "北京大学",
+        "degree": "计算机科学理学硕士",
+        "field": "",
+        "location": "北京, 中国",
+        "startDate": "2021/09",
+        "endDate": "2023/06",
+        "extraFields": [
+          {
+            "id": "a1b2c3d4-0004-4000-8000-000000000002",
+            "type": "grade",
+            "label": "成绩",
+            "value": "93.52/100"
+          },
+          {
+            "id": "a1b2c3d4-0004-4000-8000-000000000003",
+            "type": "awards",
+            "label": "获奖",
+            "value": "国家奖学金, 校优秀学生奖学金, 校优秀毕业生"
+          },
+          {
+            "id": "a1b2c3d4-0004-4000-8000-000000000004",
+            "type": "custom",
+            "label": "活动",
+            "value": "ACM校队成员, 研究助理"
+          }
+        ]
+      },
+      {
+        "id": "a1b2c3d4-0005-4000-8000-000000000001",
+        "institution": "郑州大学",
+        "degree": "计算机科学理学学士",
+        "field": "",
+        "location": "郑州, 中国",
+        "startDate": "2017/09",
+        "endDate": "2021/06",
+        "extraFields": [
+          {
+            "id": "a1b2c3d4-0005-4000-8000-000000000002",
+            "type": "grade",
+            "label": "成绩",
+            "value": "92.76/100"
+          },
+          {
+            "id": "a1b2c3d4-0005-4000-8000-000000000003",
+            "type": "awards",
+            "label": "获奖",
+            "value": "校优秀毕业生, 国家奖学金, 校优秀学生奖学金"
+          },
+          {
+            "id": "a1b2c3d4-0005-4000-8000-000000000004",
+            "type": "custom",
+            "label": "活动",
+            "value": "院学生会主席, 辅导员助理"
+          }
+        ]
+      }
+    ],
+    "skills": [
+      {
+        "id": "a1b2c3d4-0006-4000-8000-000000000001",
+        "category": "语言",
+        "items": "中文, 英语"
+      },
+      {
+        "id": "a1b2c3d4-0006-4000-8000-000000000002",
+        "category": "编程语言",
+        "items": "Python, Java, Rust, C++, C"
+      },
+      {
+        "id": "a1b2c3d4-0006-4000-8000-000000000003",
+        "category": "专业领域",
+        "items": "AI Agent, RAG, 大模型微调, 机器学习, 深度学习, 数据科学"
+      },
+      {
+        "id": "a1b2c3d4-0006-4000-8000-000000000004",
+        "category": "技术栈",
+        "items": "Numpy, Pandas, Matplotlib, Scikit-Learn, PyTorch, LangChain, LangGraph, LlamaIndex, AutoGen"
+      },
+      {
+        "id": "a1b2c3d4-0006-4000-8000-000000000005",
+        "category": "工具",
+        "items": "Ollama, vLLM, Linux, 版本控制, CI/CD"
+      },
+      {
+        "id": "a1b2c3d4-0006-4000-8000-000000000006",
+        "category": "其他",
+        "items": "Microsoft Office, Adobe Premiere, Adobe After Effects, Adobe Photoshop"
+      }
+    ],
+    "projects": [
+      {
+        "id": "a1b2c3d4-0007-4000-8000-000000000001",
+        "name": "多源推理数据分析智能体",
+        "websiteLabel": "GitHub",
+        "websiteUrl": "https://github.com/lizhiyuan-example/project-example",
+        "startDate": "2025/12",
+        "endDate": "2026/04",
+        "descriptions": [
+          {
+            "id": "a1b2c3d4-0007-4000-8000-000000000002",
+            "value": "构建跨 PostgreSQL、CSV 与文档数据源的智能分析 Agent, 基于 OpenAI 与 Llama 实现多步推理, 支持 Python 与 SQL 工具调用, 完成复杂数据分析任务。"
+          },
+          {
+            "id": "a1b2c3d4-0007-4000-8000-000000000003",
+            "value": "基于 Python、LangChain、LangGraph、FastAPI 与 FAISS 构建并部署为可扩展 API 服务; 通过优化上下文管理与工具选择策略, 提升系统准确性与响应效率。"
+          }
+        ]
+      },
+      {
+        "id": "a1b2c3d4-0008-4000-8000-000000000001",
+        "name": "多模态文档理解系统",
+        "websiteLabel": "GitHub",
+        "websiteUrl": "https://github.com/lizhiyuan-example/project-example",
+        "startDate": "2025/06",
+        "endDate": "2025/10",
+        "descriptions": [
+          {
+            "id": "a1b2c3d4-0008-4000-8000-000000000002",
+            "value": "基于 LayoutLMv3 与 Vision Transformer 构建多模态文档理解模型, 融合文本语义与视觉布局特征, 实现文档分类与关键信息抽取; 负责模型训练、特征对齐与结构优化, 提升复杂文档场景下的识别准确性与鲁棒性。"
+          },
+          {
+            "id": "a1b2c3d4-0008-4000-8000-000000000003",
+            "value": "基于 PyTorch 与 Hugging Face 完成模型训练与优化, 并通过 FastAPI 部署为可扩展服务; 相较传统 OCR 方案, 在文档理解与信息抽取任务上实现显著性能提升。"
+          }
+        ]
+      }
+    ],
+    "awards": [
+      {
+        "id": "a1b2c3d4-0009-4000-8000-000000000001",
+        "award": "全国大学生数学竞赛国家级一等奖",
+        "date": "2022/01"
+      },
+      {
+        "id": "a1b2c3d4-0009-4000-8000-000000000002",
+        "award": "美国大学生数学建模竞赛 Finalist",
+        "date": "2021/05"
+      },
+      {
+        "id": "a1b2c3d4-0009-4000-8000-000000000003",
+        "award": "全国大学生数学建模竞赛国家级一等奖",
+        "date": "2020/09"
+      }
+    ],
+    "summary": "拥有3年以上机器学习、深度学习与数据科学经验的AI工程师，擅长构建与部署端到端机器学习系统。在模型开发、性能优化及可扩展解决方案设计方面具备扎实的专业能力，能够将复杂数据转化为可执行的业务洞察，持续交付具备实际价值的AI驱动成果。"
+  }
+}

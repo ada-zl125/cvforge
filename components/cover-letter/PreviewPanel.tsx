@@ -3,6 +3,7 @@
 import { useRef, useState, useLayoutEffect } from "react";
 import type { CoverLetterContent } from "@/lib/types/cover-letter";
 import { CoverLetterTemplate } from "./templates/CoverLetterTemplate";
+import { PageBreakProvider } from "@/components/shared/PageBreakAvoid";
 import { PAGE_H, TOP, BOTTOM, CONTENT_H } from "@/lib/page-constants";
 
 interface Props {
@@ -39,6 +40,7 @@ export function PreviewPanel({ content }: Props) {
   }, []);
 
   return (
+    <PageBreakProvider>
     <div className="flex flex-1 items-start justify-center overflow-y-auto bg-muted/50 p-8">
       {/* Hidden export target — captured by lib/export.ts via .preview-a4 > div */}
       <div style={{ position: "fixed", left: "-9999px", top: 0, width: "794px", pointerEvents: "none" }}>
@@ -76,5 +78,6 @@ export function PreviewPanel({ content }: Props) {
         ))}
       </div>
     </div>
+    </PageBreakProvider>
   );
 }

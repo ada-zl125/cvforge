@@ -1,0 +1,377 @@
+{
+  "_type": "easycv-academic-cv",
+  "title": "Example Academic CV",
+  "template": "academic",
+  "language": "en",
+  "content": {
+    "personal": {
+      "fullName": "Zachary Lee",
+      "contacts": [
+        {
+          "id": "ae-p-0001-4000-8000-000000000001",
+          "type": "addressLine1",
+          "value": "Department of Computer Science"
+        },
+        {
+          "id": "ae-p-0001-4000-8000-000000000006",
+          "type": "addressLine2",
+          "value": "University of Oxford"
+        },
+        {
+          "id": "ae-p-0001-4000-8000-000000000007",
+          "type": "addressLine3",
+          "value": "Wolfson Building, Parks Rd, Oxford OX1 3QD, United Kingdom"
+        },
+        {
+          "id": "ae-p-0001-4000-8000-000000000002",
+          "type": "phone",
+          "value": "7123456789",
+          "countryCode": "+44"
+        },
+        {
+          "id": "ae-p-0001-4000-8000-000000000003",
+          "type": "email",
+          "value": "zachary.lee@cs.ox.ac.uk"
+        },
+        {
+          "id": "ae-p-0001-4000-8000-000000000004",
+          "type": "website",
+          "value": "https://zachary-lee-example.github.io",
+          "label": "Personal Website"
+        },
+        {
+          "id": "ae-p-0001-4000-8000-000000000005",
+          "type": "website",
+          "value": "https://github.com/zachary-lee-example",
+          "label": "GitHub"
+        }
+      ]
+    },
+    "sections": [
+      "researchInterests",
+      "education",
+      "researchExperience",
+      "industryExperience",
+      "publications",
+      "manuscriptsUnderReview",
+      "conferencePresentations",
+      "professionalService",
+      "technicalSkills",
+      "references"
+    ],
+    "education": [
+      {
+        "id": "ae-e-0001-4000-8000-000000000001",
+        "institution": "University of Oxford",
+        "degree": "PhD in Computer Science",
+        "location": "Oxford, UK",
+        "startDate": "Oct 2019",
+        "endDate": "Sept 2023",
+        "extraFields": [
+          {
+            "id": "ae-e-0001-4000-8000-000000000002",
+            "type": "researchField",
+            "label": "Research Field",
+            "value": "Foundation Model Pretraining, Scaling, Efficiency, and Generalisation"
+          },
+          {
+            "id": "13545e97-9f35-46ed-b8d4-6ed0fe19d185",
+            "type": "awards",
+            "label": "Awards",
+            "value": "Present's PhD Scholarship"
+          }
+        ]
+      },
+      {
+        "id": "ae-e-0002-4000-8000-000000000001",
+        "institution": "Imperial College London",
+        "degree": "MSc in Advanced Computing",
+        "location": "London, UK",
+        "startDate": "Sept 2018",
+        "endDate": "Sept 2019",
+        "extraFields": [
+          {
+            "id": "ae-e-0002-4000-8000-000000000002",
+            "type": "grade",
+            "label": "Grade",
+            "value": "Distinction, 79.86/100"
+          },
+          {
+            "id": "ae-e-0002-4000-8000-000000000003",
+            "type": "awards",
+            "label": "Awards",
+            "value": "Dean's List, Department Prize"
+          },
+          {
+            "id": "66532842-488a-456a-88d4-d4cb83f81be1",
+            "type": "custom",
+            "label": "Activities",
+            "value": "Class Representative, Consulting Club Member"
+          }
+        ]
+      },
+      {
+        "id": "ae-e-0003-4000-8000-000000000001",
+        "institution": "University of Huddersfield",
+        "degree": "BSc in Computer Science",
+        "location": "Huddersfield, UK",
+        "startDate": "Sept 2015",
+        "endDate": "Jun 2018",
+        "extraFields": [
+          {
+            "id": "ae-e-0003-4000-8000-000000000002",
+            "type": "grade",
+            "label": "Grade",
+            "value": "First Class Honours, 82.76/100"
+          },
+          {
+            "id": "ae-e-0003-4000-8000-000000000003",
+            "type": "awards",
+            "label": "Awards",
+            "value": "Dean's List, Outstanding Graduate, Annual Outstanding Student"
+          },
+          {
+            "id": "a48a41a1-bf8a-45f4-92b8-68291dfd2ef4",
+            "type": "custom",
+            "label": "Activities",
+            "value": "Class Representative, Student Assistant, Data Science Society Member"
+          }
+        ]
+      }
+    ],
+    "researchExperience": [
+      {
+        "id": "ae-r-0001-4000-8000-000000000001",
+        "organization": "University of Oxford",
+        "role": "Postdoctoral Research Associate",
+        "location": "Oxford, UK",
+        "startDate": "Oct 2023",
+        "endDate": "Present",
+        "descriptions": [
+          {
+            "id": "ae-r-0001-4000-8000-000000000002",
+            "value": "Developing scalable pretraining strategies for foundation models, focusing on training data curation pipelines, tokenisation efficiency, and adaptive compute scheduling for large-scale transformer-based language models."
+          },
+          {
+            "id": "ae-r-0001-4000-8000-000000000003",
+            "value": "Leading cross-institutional collaborations on multilingual pretraining benchmarks and standardised evaluation protocols, with findings informing open-source tooling adopted across the research community."
+          }
+        ],
+        "department": "Department of Computer Science"
+      },
+      {
+        "id": "ae-r-0002-4000-8000-000000000001",
+        "organization": "University of Oxford",
+        "role": "Doctoral Researcher",
+        "department": "Department of Computer Science",
+        "location": "Oxford, UK",
+        "startDate": "Oct 2019",
+        "endDate": "Sept 2023",
+        "descriptions": [
+          {
+            "id": "ae-r-0002-4000-8000-000000000002",
+            "value": "Conducted theoretical and empirical research on large language model pretraining, including scaling law characterisation, optimisation dynamics, and data mixture strategies across diverse corpora."
+          },
+          {
+            "id": "ae-r-0002-4000-8000-000000000003",
+            "value": "Published three peer-reviewed papers at top-tier international venues including [Conference Name] and [Journal Name]; presented findings at international conferences and workshops."
+          }
+        ]
+      },
+      {
+        "id": "9cc0762e-12fb-4a15-aad7-098e238c2cb4",
+        "organization": "Imperial College London",
+        "role": "Research Assistant",
+        "location": "London, UK",
+        "startDate": "Oct 2018",
+        "endDate": "Sept 2019",
+        "department": "Department of Earth Science and Engineering",
+        "descriptions": [
+          {
+            "id": "d61afd89-9e25-4a60-96e8-6680c94ac5b3",
+            "value": "Research Assistant in Large Language Models, focusing on training and fine-tuning transformer-based models. Built and evaluated models using PyTorch and Hugging Face for tasks such as text generation and summarization."
+          },
+          {
+            "id": "1b9d9b05-469a-4dae-9d9a-1116eeb92514",
+            "value": "Improved model performance through prompt engineering and efficient training methods. Supported research outputs with experiments, documentation, and reproducible code."
+          }
+        ]
+      }
+    ],
+    "teachingExperience": [],
+    "industryExperience": [
+      {
+        "id": "ae-i-0001-4000-8000-000000000001",
+        "organization": "Google",
+        "role": "Data Scientist Intern",
+        "location": "London, UK",
+        "startDate": "Jun 2022",
+        "endDate": "Sept 2022",
+        "descriptions": [
+          {
+            "id": "ae-i-0001-4000-8000-000000000002",
+            "value": "Developed and evaluated data selection algorithms for large-scale pretraining corpora, improving downstream task performance by optimising training data composition and domain coverage."
+          },
+          {
+            "id": "ae-i-0001-4000-8000-000000000003",
+            "value": "Collaborated with the language model team to prototype adaptive learning rate schedulers for billion-parameter models, achieving improved training stability across long-context settings."
+          }
+        ]
+      },
+      {
+        "id": "ae-i-0002-4000-8000-000000000001",
+        "organization": "Microsoft",
+        "role": "Machine Learning Engineer Intern",
+        "location": "London, UK",
+        "startDate": "Jun 2021",
+        "endDate": "Sept 2021",
+        "descriptions": [
+          {
+            "id": "ae-i-0002-4000-8000-000000000002",
+            "value": "Building and deploying scalable machine learning models using Python, PyTorch, and Azure ML. Developed data pipelines and supported production systems across NLP and recommendation tasks."
+          },
+          {
+            "id": "516347f4-5cc6-4f17-8046-4ae7d2653d95",
+            "value": "Optimised model performance and system efficiency through experimentation and monitoring. Collaborated with cross-functional teams to deliver reliable, production-ready ML solutions with reproducible workflows."
+          }
+        ]
+      }
+    ],
+    "publications": [
+      {
+        "id": "ae-pub-0001-4000-8000-000000000001",
+        "citation": "Your Name, Collaborator Name, A., & Supervisor Name. (2024). Paper Title: Adaptive data selection for efficient pretraining of large language models. Journal Name, 12(3), 415–438. https://doi.org/10.0000/example"
+      },
+      {
+        "id": "ae-pub-0002-4000-8000-000000000001",
+        "citation": "Collaborator Name, B., Your Name, & Collaborator Name, C. (2024, July). Paper Title: Scaling law analysis for trillion-token foundation model pretraining [Paper presentation]. Conference Name 2024, City Name, Country."
+      },
+      {
+        "id": "ae-pub-0003-4000-8000-000000000001",
+        "citation": "Your Name, & Supervisor Name. (2023). Paper Title: Continual pretraining of large language models via structured data curricula. Journal Name, 28(1), 58–79. https://doi.org/10.0000/example"
+      },
+      {
+        "id": "d92a09cf-2ddf-45f4-8b7d-2e535d324d70",
+        "citation": "Collaborator Name, B., Your Name, & Collaborator Name, C. (2022, July). Paper Title: Scaling law analysis for trillion-token foundation model pretraining [Paper presentation]. Conference Name 2024, City Name, Country."
+      },
+      {
+        "id": "81a94d1e-946d-4bca-a766-0f1a3405e5d3",
+        "citation": "Your Name, & Supervisor Name. (2021). Paper Title: Continual pretraining of large language models via structured data curricula. Journal Name, 28(1), 58–79. https://doi.org/10.0000/example"
+      }
+    ],
+    "manuscriptsUnderReview": [
+      {
+        "id": "ae-ms-0001-4000-8000-000000000001",
+        "citation": "Your Name, Collaborator Name, D., Collaborator Name, E., & Supervisor Name. (under review). Paper Title: Multilingual alignment in cross-lingual foundation model pretraining. Manuscript submitted to Journal Name."
+      },
+      {
+        "id": "ae-ms-0002-4000-8000-000000000001",
+        "citation": "Your Name, & Collaborator Name, F. (under review). Paper Title: Sparse mixture-of-experts pretraining with dynamic routing for efficient language model scaling. Manuscript submitted to Conference Name 2025."
+      }
+    ],
+    "conferencePresentations": [
+      {
+        "id": "ae-cp-0001-4000-8000-000000000001",
+        "event": "Data Science and Machine Learning Example Conference",
+        "title": " Adaptive Data Selection for Efficient Pretraining of Large Language Models",
+        "location": "London, UK",
+        "date": "Dec 2024",
+        "type": "Oral"
+      },
+      {
+        "id": "ae-cp-0002-4000-8000-000000000001",
+        "event": "Artificial Intelligence for Science Example Conference",
+        "title": "Scaling Law Analysis for Trillion-Token Foundation Model Pretraining",
+        "location": "Shanghai, China",
+        "date": "Jul 2024",
+        "type": "Poster"
+      },
+      {
+        "id": "ae-cp-0003-4000-8000-000000000001",
+        "event": "Data Mining and Advanced Technology Example Conference",
+        "title": "Data Curriculum Design for Continual Pretraining of Large Language Models",
+        "location": "City Name, Country",
+        "date": "May 2023",
+        "type": "Poster"
+      }
+    ],
+    "grantsAndAwards": [],
+    "professionalService": [
+      {
+        "id": "ae-ps-0001-4000-8000-000000000001",
+        "role": "Reviewer",
+        "organization": "Neural Information Processing Systems",
+        "date": "2023"
+      },
+      {
+        "id": "ae-ps-0002-4000-8000-000000000001",
+        "role": "Reviewer",
+        "organization": "Computer Vision and Pattern Recognition",
+        "date": "2022"
+      },
+      {
+        "id": "ae-ps-0003-4000-8000-000000000001",
+        "role": "Reviewer",
+        "organization": "International Conference on Machine Learning",
+        "date": "2020"
+      }
+    ],
+    "technicalSkills": [
+      {
+        "id": "ae-sk-0004-4000-8000-000000000001",
+        "category": "Languages",
+        "items": "English (Proficient), Chinese (Native)"
+      },
+      {
+        "id": "ae-sk-0001-4000-8000-000000000001",
+        "category": "Programming Languages",
+        "items": "Python, Java, C++, C, Go"
+      },
+      {
+        "id": "d0425c60-85ba-4610-b434-83b0842f8bb3",
+        "category": "Tech Stack",
+        "items": "Numpy, Pandas, Matplotlib, Scikit-Learn, Pytorch, LangChain, LangGraph, Llamalndex, AutoGen"
+      },
+      {
+        "id": "555ecd58-7ddc-4e31-a569-dfddea870349",
+        "category": "Tools",
+        "items": "Ollama, vLLM, Linux, Version Control, CI/CD"
+      },
+      {
+        "id": "72f45bfc-e068-47e6-9bcf-8f249d926d1e",
+        "category": "Others",
+        "items": "Microsoft Office, Adobe Premiere, Adobe After Effects, Adobe PhotoShop"
+      }
+    ],
+    "references": [
+      {
+        "id": "ae-ref-0001-4000-8000-000000000001",
+        "name": "Prof. RefereeName",
+        "title": "Professor of Machine Learning",
+        "relationship": "PhD Supervisor",
+        "address": "Department of Computer Science, University of Oxford, Oxford OX1 3QD, UK",
+        "phone": "+44 (0)1865 000000",
+        "email": "referee.a@example.com"
+      },
+      {
+        "id": "ae-ref-0002-4000-8000-000000000001",
+        "name": "Dr. RefereeName",
+        "title": "Senior Research Scientist",
+        "relationship": "Industry Research Mentor",
+        "address": "Machine Learning Lab, Research, London EC2A 0000, UK",
+        "phone": "+44 (0)20 0000 0000",
+        "email": "referee.b@example.com"
+      },
+      {
+        "id": "ae-ref-0003-4000-8000-000000000001",
+        "name": "Prof. RefereeName",
+        "title": "Reader in Computer Science",
+        "relationship": "MSc Supervisor",
+        "address": "Department of Computing, Imperial College London, London SW7 2AZ, UK",
+        "phone": "+44 (0)20 0000 0001",
+        "email": "referee.c@example.com"
+      }
+    ],
+    "researchInterests": "Foundation model pretraining, scaling laws, data-efficient pretraining, continual learning, and model generalisation. My research investigates how training data curation, architecture design, and optimisation strategies shape the emergent capabilities and efficiency of large-scale language models, with the goal of developing principled methods for building more capable and sustainable foundation models."
+  }
+}

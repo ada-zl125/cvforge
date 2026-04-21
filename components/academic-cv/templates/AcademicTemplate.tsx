@@ -4,7 +4,7 @@ import { PageBreakAvoid } from "@/components/shared/PageBreakAvoid";
 import { BulletItem } from "@/components/shared/BulletItem";
 import {
   BODY_SIZE, SECTION_TITLE_SIZE, NAME_SIZE,
-  LINE_STYLE, BULLET_ROW_STYLE, BULLET_DOT_STYLE,
+  LINE_STYLE,
   getFontFamily, boldFontStyle,
 } from "@/lib/template-styles";
 import type {
@@ -26,15 +26,15 @@ import type { ContactField, SkillGroup } from "@/lib/types/resume";
 const SECTION_TITLES_ZH: Record<AcademicSectionType, string> = {
   researchInterests:       "研究兴趣",
   education:               "教育经历",
-  researchExperience:      "科研经历",
+  researchExperience:      "研究经历",
   teachingExperience:      "教学经历",
-  industryExperience:      "工业界经历",
-  publications:            "已发表论文",
+  industryExperience:      "工作经历",
+  publications:            "学术成果",
   manuscriptsUnderReview:  "在投论文",
-  conferencePresentations: "会议报告",
-  grantsAndAwards:         "科研资助与荣誉",
+  conferencePresentations: "学术报告",
+  grantsAndAwards:         "荣誉奖项",
   professionalService:     "学术服务",
-  technicalSkills:         "技术技能",
+  technicalSkills:         "专业技能",
   references:              "推荐人列表",
 };
 
@@ -79,6 +79,9 @@ function formatContact(field: ContactField): React.ReactNode {
     case "phone":
       return `${field.countryCode ?? ""} ${field.value}`.trim();
     case "location":
+    case "addressLine1":
+    case "addressLine2":
+    case "addressLine3":
       return field.value;
     case "website":
       return <a href={field.value} style={{ color: "#1a4dc2" }}>{field.label || field.value}</a>;
@@ -93,20 +96,29 @@ function PersonalHeader({ personal, fontFamily, language }: { personal: Academic
   const contacts = personal.contacts ?? [];
   const hasPhoto = !!personal.photo;
 
+  const ADDRESS_TYPES = ["location", "addressLine1", "addressLine2", "addressLine3"] as const;
+  const addressContacts = contacts.filter(c => (ADDRESS_TYPES as readonly string[]).includes(c.type));
+  const otherContacts = contacts.filter(c => !(ADDRESS_TYPES as readonly string[]).includes(c.type));
+
   const nameEl = (
     <h1 className="leading-tight" style={{ fontSize: NAME_SIZE, ...boldFontStyle(language, fontFamily) }}>
       {personal.fullName || (language === "zh" ? "姓名" : "Your Name")}
     </h1>
   );
 
+  const addressEl = addressContacts.length > 0 && (
+    <div style={{ fontSize: BODY_SIZE }}>
+      {addressContacts.map(c => c.value.trim() && <p key={c.id}>{formatContact(c)}</p>)}
+    </div>
+  );
+
   if (hasPhoto) {
-    const mainContacts = contacts.filter(c => c.type !== "website");
-    const websites = contacts.filter(c => c.type === "website");
-    const headerMinHeight = websites.length > 0 ? "88px" : "76px";
-    const contactsEl = contacts.length > 0 && (
-      <div className="mt-1" style={{ fontSize: BODY_SIZE }}>
-        {mainContacts.length > 0 && (
-          <div>{mainContacts.map((f, i) => <span key={f.id}>{i > 0 && " | "}{formatContact(f)}</span>)}</div>
+    const mainOthers = otherContacts.filter(c => c.type !== "website");
+    const websites = otherContacts.filter(c => c.type === "website");
+    const contactsEl = otherContacts.length > 0 && (
+      <div style={{ fontSize: BODY_SIZE }}>
+        {mainOthers.length > 0 && (
+          <div>{mainOthers.map((f, i) => <span key={f.id}>{i > 0 && " | "}{formatContact(f)}</span>)}</div>
         )}
         {websites.length > 0 && (
           <div>{websites.map((f, i) => <span key={f.id}>{i > 0 && " | "}{formatContact(f)}</span>)}</div>
@@ -114,25 +126,25 @@ function PersonalHeader({ personal, fontFamily, language }: { personal: Academic
       </div>
     );
     return (
-      <div className="relative mb-1" style={{ paddingRight: "90px", minHeight: headerMinHeight }}>
+      <div className="relative mb-1" style={{ paddingRight: "90px" }}>
         {nameEl}
-        {contactsEl}
+        <div className="mt-1">{addressEl}{contactsEl}</div>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={personal.photo} alt="" style={{ position: "absolute", top: "-10px", right: 0, width: "74px", height: "92px", objectFit: "cover", borderRadius: "2px" }} />
+        <img src={personal.photo} alt="" style={{ position: "absolute", top: "50%", transform: "translateY(-50%)", right: 0, width: "74px", height: "92px", objectFit: "cover", borderRadius: "2px" }} />
       </div>
     );
   }
 
-  const contactsEl = contacts.length > 0 && (
-    <p className="mt-1" style={{ fontSize: BODY_SIZE }}>
-      {contacts.map((f, i) => <span key={f.id}>{i > 0 && " | "}{formatContact(f)}</span>)}
+  const contactsEl = otherContacts.length > 0 && (
+    <p style={{ fontSize: BODY_SIZE }}>
+      {otherContacts.map((f, i) => <span key={f.id}>{i > 0 && " | "}{formatContact(f)}</span>)}
     </p>
   );
 
   return (
     <div className="mb-2 text-center">
       {nameEl}
-      {contactsEl}
+      <div className="mt-1">{addressEl}{contactsEl}</div>
     </div>
   );
 }
@@ -146,7 +158,7 @@ function ResearchInterestsBlock({ value, lang, fontFamily }: { value: string; la
   return (
     <PageBreakAvoid className="mb-2">
       <SectionTitle type="researchInterests" lang={lang} fontFamily={fontFamily} />
-      <p style={{ ...LINE_STYLE, paddingLeft: 0 }}>{value}</p>
+      <p style={{ ...LINE_STYLE, paddingLeft: 0, textAlign: "justify" }}>{value}</p>
     </PageBreakAvoid>
   );
 }
@@ -157,13 +169,9 @@ function AcademicEducationBlock({ items, lang, fontFamily }: { items: AcademicEd
     <section className="mb-2">
       {items.map((edu, index) => {
         const dateText = [edu.startDate, edu.endDate].filter(Boolean).join(" – ");
-        let degreeLine: string;
-        if (lang === "zh") {
-          degreeLine = [edu.field, edu.degree].filter(Boolean).join("");
-        } else {
-          const combined = [edu.degree, edu.field].filter(Boolean).join(" ");
-          degreeLine = combined ? `Degree: ${combined}` : "";
-        }
+        const degreeLine = lang === "zh"
+          ? [edu.field, edu.degree].filter(Boolean).join("")
+          : [edu.degree, edu.field].filter(Boolean).join(" ");
         return (
           <PageBreakAvoid key={edu.id} style={index > 0 ? { marginTop: "6px" } : undefined}>
             {index === 0 && <SectionTitle type="education" lang={lang} fontFamily={fontFamily} />}
@@ -173,12 +181,9 @@ function AcademicEducationBlock({ items, lang, fontFamily }: { items: AcademicEd
                 <span className="shrink-0" style={boldFontStyle(lang, fontFamily)}>{edu.location}</span>
               </div>
               {degreeLine && (
-                <div style={BULLET_ROW_STYLE}>
-                  <span style={BULLET_DOT_STYLE}>●</span>
-                  <span style={{ flex: 1, display: "flex", justifyContent: "space-between", gap: "0.5em" }}>
-                    <span>{degreeLine}</span>
-                    {dateText && <span className="shrink-0">{dateText}</span>}
-                  </span>
+                <div className="flex items-baseline justify-between gap-2" style={{ ...LINE_STYLE, paddingLeft: 0 }}>
+                  <span>{degreeLine}</span>
+                  {dateText && <span className="shrink-0">{dateText}</span>}
                 </div>
               )}
               {(edu.extraFields ?? []).map(ef => {
@@ -438,7 +443,7 @@ export function AcademicTemplate({ content, language = "en" }: AcademicTemplateP
     <div
       data-cv-root
       className="relative bg-white text-black"
-      style={{ width: "794px", minHeight: "1123px", padding: "48px", fontFamily }}
+      style={{ width: "794px", minHeight: "1123px", paddingTop: "32px", paddingRight: "48px", paddingBottom: "48px", paddingLeft: "48px", fontFamily }}
     >
       <PersonalHeader personal={content.personal} fontFamily={fontFamily} language={language} />
 

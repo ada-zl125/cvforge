@@ -5,6 +5,7 @@ import type { SkillGroup, ResumeLanguage } from "@/lib/types/resume";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useUILanguage } from "@/lib/ui-language";
 
 interface SkillsSectionProps {
   items: SkillGroup[];
@@ -17,7 +18,9 @@ function emptySkillGroup(): SkillGroup {
 }
 
 export function SkillsSection({ items, onChange, language }: SkillsSectionProps) {
-  const zh = language === "zh";
+  const { lang } = useUILanguage();
+  const zh = lang === "zh";
+  const contentZh = language === "zh";
 
   function update(index: number, field: "category" | "items", value: string) {
     const next = items.map((g, i) => (i === index ? { ...g, [field]: value } : g));
@@ -69,11 +72,11 @@ export function SkillsSection({ items, onChange, language }: SkillsSectionProps)
             <div className="grid flex-1 grid-cols-[120px_1fr] gap-2">
               <div className="flex flex-col gap-1">
                 <Label className="text-xs">{zh ? "分类" : "Category"}</Label>
-                <Input value={group.category} onChange={(e) => update(i, "category", e.target.value)} placeholder={zh ? "编程语言" : "Languages"} />
+                <Input value={group.category} onChange={(e) => update(i, "category", e.target.value)} placeholder={contentZh ? "技术栈" : "Tech Stack"} />
               </div>
               <div className="flex flex-col gap-1">
                 <Label className="text-xs">{zh ? "技能" : "Skills"}</Label>
-                <Input value={group.items} onChange={(e) => update(i, "items", e.target.value)} placeholder="Python, JavaScript, Go" />
+                <Input value={group.items} onChange={(e) => update(i, "items", e.target.value)} placeholder="FastAPI, LangChain, LangGraph, LlamaIndex" />
               </div>
             </div>
 
