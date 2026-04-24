@@ -2,13 +2,13 @@
 const t = {
   en: {
     /* ---- Entry page ---- */
-    appName: "EasyCV",
+    appName: "CVForge",
     appTagline: "Free online CV builder",
     createCv: "New Resume",
     createCvDesc: "Create a professional resume in minutes.",
     createAcademicCv: "Academic CV",
     createAcademicCvDesc: "Build a detailed CV for academic and research positions.",
-    footer: "© 2026 EasyCV. All rights reserved.",
+    footer: "© 2026 CVForge. All rights reserved.",
     privacyPolicy: "Privacy Policy",
     termsOfService: "Terms of Service",
     getStarted: "Get Started",
@@ -44,7 +44,7 @@ const t = {
     exportJson: "Save as JSON",
     importLabel: "Import",
     importJson: "Import from JSON",
-    importJsonError: "Invalid file. Make sure you are importing a compatible EasyCV JSON file.",
+    importJsonError: "Invalid file. Make sure you are importing a compatible CVForge JSON file.",
     loadExample: "Example",
     loadExampleDialogTitle: "Load example resume?",
     loadExampleDialogDesc: "The example is for reference only and the content is not guaranteed to be professional.",
@@ -137,13 +137,13 @@ const t = {
 
   zh: {
     /* ---- Entry page ---- */
-    appName: "EasyCV",
+    appName: "CVForge",
     appTagline: "免费在线 CV 制作工具",
     createCv: "新建简历",
     createCvDesc: "几分钟内制作一份专业简历。",
     createAcademicCv: "学术简历",
     createAcademicCvDesc: "为学术和科研岗位制作详细的学术简历。",
-    footer: "© 2026 EasyCV. 保留所有权利。",
+    footer: "© 2026 CVForge. 保留所有权利。",
     privacyPolicy: "隐私政策",
     termsOfService: "服务条款",
     getStarted: "开始使用",
@@ -179,7 +179,7 @@ const t = {
     exportJson: "保存为 JSON",
     importLabel: "导入",
     importJson: "从 JSON 导入",
-    importJsonError: "文件无效，请确认导入的是兼容的 EasyCV JSON 文件。",
+    importJsonError: "文件无效，请确认导入的是兼容的 CVForge JSON 文件。",
     loadExample: "示例",
     loadExampleDialogTitle: "加载示例简历？",
     loadExampleDialogDesc: "示例仅供参考，内容不保证专业性。",

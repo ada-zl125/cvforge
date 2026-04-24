@@ -2,9 +2,9 @@ import type { ResumeContent, ResumeLanguage } from "./types/resume";
 import type { AcademicCVContent } from "./types/academic-cv";
 import type { CoverLetterContent } from "./types/cover-letter";
 
-export const RESUME_STORAGE_KEY = "easycv_resume";
-export const ACADEMIC_CV_STORAGE_KEY = "easycv_academic";
-export const COVER_LETTER_STORAGE_KEY = "easycv_cover_letter";
+export const RESUME_STORAGE_KEY = "cvforge_resume";
+export const ACADEMIC_CV_STORAGE_KEY = "cvforge_academic";
+export const COVER_LETTER_STORAGE_KEY = "cvforge_cover_letter";
 export const TITLE_MAX = 50;
 
 export const defaultResumeContent: ResumeContent = {

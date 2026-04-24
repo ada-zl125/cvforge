@@ -17,7 +17,7 @@ function LegalPage({ title, updated, children }: { title: string; updated: strin
     <div className="min-h-screen bg-background px-6 py-12">
       <div className="mx-auto max-w-3xl">
         <Link href="/" className="mb-8 inline-block text-sm text-muted-foreground hover:text-foreground transition-colors">
-          ← Back to EasyCV
+          ← Back to CVForge
         </Link>
         <h1 className="mb-2 text-3xl font-bold tracking-tight">{title}</h1>
         <p className="mb-10 text-sm text-muted-foreground">{updated}</p>
@@ -44,16 +44,16 @@ function TermsEN() {
   return (
     <LegalPage title="Terms of Service" updated="Last updated: April 2026">
       <Section title="1. Acceptance of Terms">
-        <p>By creating an account or using EasyCV, you agree to these Terms of Service. If you do not agree, please do not use the service.</p>
+        <p>By creating an account or using CVForge, you agree to these Terms of Service. If you do not agree, please do not use the service.</p>
       </Section>
 
       <Section title="2. Description of Service">
-        <p>EasyCV is an online tool that helps you create, edit, and export professional resumes. The service is provided on an &quot;as is&quot; basis during its beta period and may be updated or changed at any time.</p>
+        <p>CVForge is an online tool that helps you create, edit, and export professional resumes. The service is provided on an &quot;as is&quot; basis during its beta period and may be updated or changed at any time.</p>
       </Section>
 
       <Section title="3. Your Content">
-        <p>You retain full ownership of all resume content you create using EasyCV. We do not claim any rights over your content.</p>
-        <p>By using the service, you grant EasyCV a limited license to store, process, and display your content solely for the purpose of providing the service to you.</p>
+        <p>You retain full ownership of all resume content you create using CVForge. We do not claim any rights over your content.</p>
+        <p>By using the service, you grant CVForge a limited license to store, process, and display your content solely for the purpose of providing the service to you.</p>
       </Section>
 
       <Section title="4. Acceptable Use">
@@ -72,7 +72,7 @@ function TermsEN() {
       </Section>
 
       <Section title="6. Service Availability">
-        <p>EasyCV is currently in beta. We do not guarantee uninterrupted availability, and the service may be modified, suspended, or discontinued at any time. We will make reasonable efforts to provide advance notice of significant changes.</p>
+        <p>CVForge is currently in beta. We do not guarantee uninterrupted availability, and the service may be modified, suspended, or discontinued at any time. We will make reasonable efforts to provide advance notice of significant changes.</p>
       </Section>
 
       <Section title="7. Disclaimer of Warranties">
@@ -80,7 +80,7 @@ function TermsEN() {
       </Section>
 
       <Section title="8. Limitation of Liability">
-        <p>To the maximum extent permitted by applicable law, EasyCV shall not be liable for any indirect, incidental, special, or consequential damages arising from your use of the service.</p>
+        <p>To the maximum extent permitted by applicable law, CVForge shall not be liable for any indirect, incidental, special, or consequential damages arising from your use of the service.</p>
       </Section>
 
       <Section title="9. Governing Law">
@@ -88,7 +88,7 @@ function TermsEN() {
       </Section>
 
       <Section title="10. Contact">
-        <p>For questions about these terms, contact us at <a href="mailto:legal@easycv.app" className="underline underline-offset-2 hover:text-foreground">legal@easycv.app</a>.</p>
+        <p>For questions about these terms, contact us at <a href="mailto:legal@cvforge.app" className="underline underline-offset-2 hover:text-foreground">legal@cvforge.app</a>.</p>
       </Section>
     </LegalPage>
   );
@@ -102,16 +102,16 @@ function TermsZH() {
   return (
     <LegalPage title="服务条款" updated="最后更新：2026 年 4 月">
       <Section title="1. 接受条款">
-        <p>注册账户或使用 EasyCV 即表示您同意本服务条款。如不同意，请勿使用本服务。</p>
+        <p>注册账户或使用 CVForge 即表示您同意本服务条款。如不同意，请勿使用本服务。</p>
       </Section>
 
       <Section title="2. 服务说明">
-        <p>EasyCV 是一款帮助您创建、编辑和导出专业简历的在线工具。本服务在公测阶段以&ldquo;现状&rdquo;提供，可能随时更新或变更。</p>
+        <p>CVForge 是一款帮助您创建、编辑和导出专业简历的在线工具。本服务在公测阶段以&ldquo;现状&rdquo;提供，可能随时更新或变更。</p>
       </Section>
 
       <Section title="3. 您的内容">
-        <p>您对通过 EasyCV 创建的所有简历内容拥有完整所有权。我们不主张对您内容的任何权利。</p>
-        <p>使用本服务即表示您授予 EasyCV 有限许可，仅用于向您提供服务的目的存储、处理和展示您的内容。</p>
+        <p>您对通过 CVForge 创建的所有简历内容拥有完整所有权。我们不主张对您内容的任何权利。</p>
+        <p>使用本服务即表示您授予 CVForge 有限许可，仅用于向您提供服务的目的存储、处理和展示您的内容。</p>
       </Section>
 
       <Section title="4. 可接受使用">
@@ -130,7 +130,7 @@ function TermsZH() {
       </Section>
 
       <Section title="6. 服务可用性">
-        <p>EasyCV 目前处于公测阶段，我们不保证服务持续不中断，服务可能随时被修改、暂停或终止。对于重大变更，我们将尽合理努力提前告知。</p>
+        <p>CVForge 目前处于公测阶段，我们不保证服务持续不中断，服务可能随时被修改、暂停或终止。对于重大变更，我们将尽合理努力提前告知。</p>
       </Section>
 
       <Section title="7. 免责声明">
@@ -138,7 +138,7 @@ function TermsZH() {
       </Section>
 
       <Section title="8. 责任限制">
-        <p>在适用法律允许的最大范围内，EasyCV 不对因您使用本服务而产生的任何间接、附带、特殊或后果性损害承担责任。</p>
+        <p>在适用法律允许的最大范围内，CVForge 不对因您使用本服务而产生的任何间接、附带、特殊或后果性损害承担责任。</p>
       </Section>
 
       <Section title="9. 适用法律">
@@ -146,7 +146,7 @@ function TermsZH() {
       </Section>
 
       <Section title="10. 联系方式">
-        <p>如对本条款有疑问，请联系 <a href="mailto:legal@easycv.app" className="underline underline-offset-2 hover:text-foreground">legal@easycv.app</a>。</p>
+        <p>如对本条款有疑问，请联系 <a href="mailto:legal@cvforge.app" className="underline underline-offset-2 hover:text-foreground">legal@cvforge.app</a>。</p>
       </Section>
     </LegalPage>
   );

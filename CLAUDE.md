@@ -1,6 +1,6 @@
 @AGENTS.md
 
-# EasyCV — Project Context for Claude Code
+# CVForge — Project Context for Claude Code
 
 ## Product
 

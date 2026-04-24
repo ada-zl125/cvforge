@@ -4,7 +4,7 @@ import { createContext, useContext, useState } from "react";
 
 export type UILang = "en" | "zh";
 
-const STORAGE_KEY = "easycv-ui-lang";
+const STORAGE_KEY = "cvforge-ui-lang";
 
 interface UILanguageContextValue {
   lang: UILang;

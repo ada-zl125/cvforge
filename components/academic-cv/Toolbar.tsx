@@ -92,7 +92,7 @@ export function Toolbar({ title, template, language, content, onSettingsChange, 
   function handleExportJson() {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { photo: _photo, ...personal } = content.personal;
-    exportJson({ _type: "easycv-academic-cv", title, template, language, content: { ...content, personal, education: stripDegreeField(content.education) } }, title || "academic-cv");
+    exportJson({ _type: "cvforge-academic-cv", title, template, language, content: { ...content, personal, education: stripDegreeField(content.education) } }, title || "academic-cv");
   }
 
   function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -104,7 +104,7 @@ export function Toolbar({ title, template, language, content, onSettingsChange, 
       try {
         const parsed = JSON.parse(reader.result as string);
         if (
-          parsed._type !== "easycv-academic-cv" ||
+          parsed._type !== "cvforge-academic-cv" ||
           typeof parsed.content !== "object" ||
           !parsed.content?.personal ||
           !Array.isArray(parsed.content?.sections)
