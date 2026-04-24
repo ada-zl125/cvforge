@@ -53,7 +53,7 @@ function SectionTitle({ type, lang, fontFamily }: { type: SectionType; lang: Res
   return (
     <div className="mb-0.5">
       <h2
-        style={{ fontSize: SECTION_TITLE_SIZE, letterSpacing: "-0.03em", ...boldFontStyle(lang, fontFamily) }}
+        style={{ fontSize: SECTION_TITLE_SIZE, letterSpacing: "0.02em", ...boldFontStyle(lang, fontFamily) }}
         className={`${lang === "en" ? "uppercase" : ""}`}
       >
         {title}

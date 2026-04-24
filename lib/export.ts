@@ -19,7 +19,7 @@ async function captureCanvas(): Promise<HTMLCanvasElement> {
   if (!el) throw new Error("Resume preview element not found");
 
   return toCanvas(el, {
-    pixelRatio: 2,
+    pixelRatio: 4,
     backgroundColor: "#ffffff",
   });
 }
