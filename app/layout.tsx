@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "EasyCV — Professional Resumes, Effortlessly",
-  description: "Create professional resumes in minutes. Focus on your content — EasyCV handles the layout.",
+  title: "CVForge — Professional Resumes, Effortlessly",
+  description: "Create professional resumes in minutes. Focus on your content — CVForge handles the layout.",
 };
 
 export default function RootLayout({

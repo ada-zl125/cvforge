@@ -84,7 +84,7 @@ export function Toolbar({ title, content, template, onTitleChange, onImport }: T
   }
 
   function handleExportJson() {
-    exportJson({ _type: "easycv-cover-letter", title, template, content }, title || "cover-letter");
+    exportJson({ _type: "cvforge-cover-letter", title, template, content }, title || "cover-letter");
   }
 
   function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -96,7 +96,7 @@ export function Toolbar({ title, content, template, onTitleChange, onImport }: T
       try {
         const parsed = JSON.parse(reader.result as string);
         if (
-          parsed._type !== "easycv-cover-letter" ||
+          parsed._type !== "cvforge-cover-letter" ||
           typeof parsed.content !== "object" ||
           !parsed.content?.sender ||
           !Array.isArray(parsed.content?.paragraphs)

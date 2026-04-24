@@ -1,8 +1,8 @@
-# EasyCV
+# CVForge
 
 Free online resume builder for job seekers and academics. No account required — build and export directly in your browser.
 
-**Live site:** https://ada-zl125.github.io/easy-cv
+**Live site:** https://ada-zl125.github.io/cvforge
 
 ## Features
 

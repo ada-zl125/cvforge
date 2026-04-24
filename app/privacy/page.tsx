@@ -13,7 +13,7 @@ function LegalPage({ title, updated, children }: { title: string; updated: strin
     <div className="min-h-screen bg-background px-6 py-12">
       <div className="mx-auto max-w-3xl">
         <Link href="/" className="mb-8 inline-block text-sm text-muted-foreground hover:text-foreground transition-colors">
-          ← Back to EasyCV
+          ← Back to CVForge
         </Link>
         <h1 className="mb-2 text-3xl font-bold">{title}</h1>
         <p className="mb-10 text-sm text-muted-foreground">Last updated: {updated}</p>
@@ -30,7 +30,7 @@ function PrivacyEN() {
     <LegalPage title="Privacy Policy" updated="April 2026">
       <h2>Overview</h2>
       <p>
-        EasyCV is a stateless, client-side resume builder. We do not collect,
+        CVForge is a stateless, client-side resume builder. We do not collect,
         store, or transmit any personal data to a server. Everything you type
         stays in your browser.
       </p>
@@ -44,7 +44,7 @@ function PrivacyEN() {
 
       <h2>No Accounts or Authentication</h2>
       <p>
-        EasyCV does not require sign-up or login. We do not collect email
+        CVForge does not require sign-up or login. We do not collect email
         addresses, passwords, or any account information.
       </p>
 
@@ -75,7 +75,7 @@ function PrivacyEN() {
       <p>
         Questions? Open an issue on our{" "}
         <a
-          href="https://github.com/ada-zl125/easy-cv"
+          href="https://github.com/ada-zl125/cvforge"
           target="_blank"
           rel="noopener noreferrer"
           className="underline"
@@ -93,7 +93,7 @@ function PrivacyZH() {
     <LegalPage title="隐私政策" updated="2026 年 4 月">
       <h2>概述</h2>
       <p>
-        EasyCV 是一个无状态的纯客户端简历制作工具。我们不收集、存储或向服务器传输任何个人数据。你输入的所有内容均留在你的浏览器中。
+        CVForge 是一个无状态的纯客户端简历制作工具。我们不收集、存储或向服务器传输任何个人数据。你输入的所有内容均留在你的浏览器中。
       </p>
 
       <h2>数据存储</h2>
@@ -103,7 +103,7 @@ function PrivacyZH() {
 
       <h2>无账户或登录</h2>
       <p>
-        EasyCV 无需注册或登录。我们不收集电子邮件地址、密码或任何账户信息。
+        CVForge 无需注册或登录。我们不收集电子邮件地址、密码或任何账户信息。
       </p>
 
       <h2>Cookie</h2>
@@ -129,7 +129,7 @@ function PrivacyZH() {
       <p>
         如有疑问，请在我们的{" "}
         <a
-          href="https://github.com/ada-zl125/easy-cv"
+          href="https://github.com/ada-zl125/cvforge"
           target="_blank"
           rel="noopener noreferrer"
           className="underline"
