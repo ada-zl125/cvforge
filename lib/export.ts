@@ -43,21 +43,22 @@ export async function exportResume(
 
   const A4_W_MM = 210;
   const A4_H_MM = 297;
+  const PAGE_OVERFLOW_EPSILON_MM = 0.5;
 
   // Total rendered height in mm (preserving aspect ratio of canvas mapped to A4 width)
   const totalHeightMM = (canvas.height / canvas.width) * A4_W_MM;
+  const pageCount = Math.max(
+    1,
+    Math.ceil((totalHeightMM - PAGE_OVERFLOW_EPSILON_MM) / A4_H_MM)
+  );
 
   const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
 
-  let yOffsetMM = 0;
-  let pageIndex = 0;
-
-  while (yOffsetMM < totalHeightMM) {
+  for (let pageIndex = 0; pageIndex < pageCount; pageIndex++) {
     if (pageIndex > 0) pdf.addPage();
+    const yOffsetMM = pageIndex * A4_H_MM;
     // Shift image up by yOffsetMM so the correct slice shows on this page
     pdf.addImage(imgData, "JPEG", 0, -yOffsetMM, A4_W_MM, totalHeightMM);
-    yOffsetMM += A4_H_MM;
-    pageIndex++;
   }
 
   pdf.save(`${filename}.pdf`);

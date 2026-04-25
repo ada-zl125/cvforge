@@ -6,13 +6,13 @@ import { FONT_EN, BODY_SIZE } from "@/lib/template-styles";
 
 /* ------------------------------------------------------------------ */
 /*  A4 page: 794px × 1123px at 96 DPI, 1.27cm (48px) margins         */
-/*  Font: Times New Roman, 11pt, black on white                        */
+/*  Font: TeX Gyre Termes, 11pt, black on white                        */
 /* ------------------------------------------------------------------ */
 
 const baseStyle: React.CSSProperties = {
   fontFamily: FONT_EN,
   fontSize: BODY_SIZE,
-  fontWeight: 400,
+  fontWeight: 500,
   lineHeight: "16pt",
   color: "#000",
 };
@@ -38,7 +38,7 @@ export function CoverLetterTemplate({ content }: Props) {
         minHeight: "1123px",
         padding: "48px",
         fontFamily: FONT_EN,
-        fontWeight: 400,
+        fontWeight: 500,
       }}
     >
       {/* ── Sender block (top-right) ── */}

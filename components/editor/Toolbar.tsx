@@ -80,7 +80,7 @@ export function Toolbar({ title, template, language, content, onSettingsChange, 
       projects: withId(raw.projects).map((p) => ({ ...p, descriptions: withId(p.descriptions) })),
       awards: withId(raw.awards),
     };
-    onImport({ title: example.title, template: example.template as ResumeTemplate, language: example.language as ResumeLanguage, content: merged });
+    onImport({ title, template: example.template as ResumeTemplate, language: example.language as ResumeLanguage, content: merged });
   }
 
   function handleExportJson() {
@@ -146,7 +146,7 @@ export function Toolbar({ title, template, language, content, onSettingsChange, 
   return (
     <>
       <input ref={fileInputRef} type="file" accept=".json" className="hidden" onChange={handleImportFile} />
-      <header className="editor-toolbar flex h-14 shrink-0 items-center gap-3 border-b border-border bg-card px-4">
+      <header className="editor-toolbar relative z-20 flex h-14 shrink-0 items-center gap-3 border-b border-border bg-card px-4">
         {/* Back button */}
         <Button
           variant="ghost"
@@ -242,16 +242,16 @@ export function Toolbar({ title, template, language, content, onSettingsChange, 
 
       {/* Example confirmation dialog */}
       <Dialog open={exampleDialogOpen} onOpenChange={setExampleDialogOpen}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
+        <DialogContent className="editor-dialog overflow-hidden p-0 sm:max-w-[420px]">
+          <DialogHeader className="editor-dialog-header px-5 pb-4 pt-5">
             <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-black/40 bg-black/[0.035]">
                 <Sparkles className="h-4 w-4 text-foreground" />
               </div>
-              <DialogTitle>{tr.loadExampleDialogTitle}</DialogTitle>
+              <DialogTitle className="text-[15px] font-semibold leading-tight">{tr.loadExampleDialogTitle}</DialogTitle>
             </div>
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground text-justify leading-relaxed">
+            <div className="space-y-2 px-0 pt-1">
+              <p className="text-sm leading-relaxed text-gray-600">
                 {tr.loadExampleDialogDesc}
               </p>
               <p className="text-sm font-medium text-foreground">
@@ -259,13 +259,13 @@ export function Toolbar({ title, template, language, content, onSettingsChange, 
               </p>
             </div>
           </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" className="btn-hover-border cursor-pointer" onClick={() => setExampleDialogOpen(false)}>
+          <DialogFooter className="editor-dialog-footer">
+            <Button variant="outline" className="editor-dialog-cancel cursor-pointer" onClick={() => setExampleDialogOpen(false)}>
               {tr.cancel}
             </Button>
             <Button
               variant="outline"
-              className="btn-hover-primary cursor-pointer"
+              className="editor-dialog-soft-action cursor-pointer"
               onClick={() => { handleLoadExample(); setExampleDialogOpen(false); }}
             >
               {tr.loadExampleConfirm}
@@ -276,16 +276,21 @@ export function Toolbar({ title, template, language, content, onSettingsChange, 
 
       {/* Settings Dialog */}
       <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>{tr.editorResumeSettings}</DialogTitle>
+        <DialogContent className="editor-dialog overflow-hidden p-0 sm:max-w-[420px]">
+          <DialogHeader className="editor-dialog-header px-5 pb-4 pt-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-black/40 bg-black/[0.035]">
+                <Settings className="h-4 w-4 text-foreground" />
+              </div>
+              <DialogTitle className="text-[15px] font-semibold leading-tight">{tr.editorResumeSettings}</DialogTitle>
+            </div>
           </DialogHeader>
 
-          <div className="grid gap-4 py-2">
+          <div className="grid gap-5 px-5 pb-5 pt-3">
             {/* Title */}
-            <div className="grid gap-1.5">
+            <div className="grid gap-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="settings-title">{tr.titleLabel}</Label>
+                <Label htmlFor="settings-title" className="text-sm font-medium">{tr.titleLabel}</Label>
                 <span className={`text-xs ${titleTooLong ? "text-destructive" : "text-muted-foreground"}`}>
                   {draftTitle.length}/{TITLE_MAX}
                 </span>
@@ -295,7 +300,7 @@ export function Toolbar({ title, template, language, content, onSettingsChange, 
                 value={draftTitle}
                 onChange={(e) => setDraftTitle(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") handleSettingsSave(); }}
-                className={titleTooLong ? "border-destructive focus:border-destructive" : ""}
+                className={`editor-dialog-input h-10 ${titleTooLong ? "border-destructive focus:border-destructive" : ""}`}
                 autoFocus
               />
               {titleTooLong && (
@@ -305,17 +310,17 @@ export function Toolbar({ title, template, language, content, onSettingsChange, 
 
             {/* Language picker */}
             <div className="grid gap-2">
-              <Label>{tr.languageLabel}</Label>
+              <Label className="text-sm font-medium">{tr.languageLabel}</Label>
               <div className="flex gap-2">
                 {(["en", "zh"] as const).map((lang) => (
                   <button
                     key={lang}
                     type="button"
                     onClick={() => setDraftLanguage(lang)}
-                    className={`cursor-pointer rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                    className={`editor-dialog-language cursor-pointer rounded-lg px-3 py-2 text-sm font-medium ${
                       draftLanguage === lang
-                        ? "border-foreground bg-foreground/5 text-foreground"
-                        : "border-border text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                        ? "editor-dialog-language-active"
+                        : "text-muted-foreground"
                     }`}
                   >
                     {lang === "en" ? tr.langEnglish : tr.langChinese}
@@ -327,11 +332,11 @@ export function Toolbar({ title, template, language, content, onSettingsChange, 
 
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" className="btn-hover-border cursor-pointer" onClick={() => setSettingsOpen(false)}>
+          <DialogFooter className="editor-dialog-footer">
+            <Button variant="outline" className="editor-dialog-cancel cursor-pointer" onClick={() => setSettingsOpen(false)}>
               {tr.cancel}
             </Button>
-            <Button variant="outline" className="btn-hover-primary cursor-pointer" onClick={handleSettingsSave} disabled={!canSave}>
+            <Button variant="outline" className="editor-dialog-action cursor-pointer" onClick={handleSettingsSave} disabled={!canSave}>
               {tr.save}
             </Button>
           </DialogFooter>

@@ -197,18 +197,23 @@ export function FormPanel({ content, onChange, language }: FormPanelProps) {
 
       {/* Reset confirmation dialog */}
       <AlertDialog open={resetOpen} onOpenChange={setResetOpen}>
-        <AlertDialogContent size="sm">
-          <AlertDialogHeader>
-            <AlertDialogTitle>{tr.resetTitle}</AlertDialogTitle>
-            <AlertDialogDescription>
+        <AlertDialogContent size="sm" className="editor-dialog overflow-hidden p-0">
+          <AlertDialogHeader className="editor-dialog-header place-items-start px-5 pb-4 pt-5 text-left">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-black/40 bg-black/[0.035]">
+                <RotateCcw className="h-4 w-4 text-foreground" />
+              </div>
+              <AlertDialogTitle className="text-[15px] font-semibold leading-tight">{tr.resetTitle}</AlertDialogTitle>
+            </div>
+            <AlertDialogDescription className="pt-1 text-sm leading-relaxed text-gray-600">
               {tr.resetDesc}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="btn-hover-border cursor-pointer">{tr.cancel}</AlertDialogCancel>
+          <AlertDialogFooter className="editor-dialog-footer">
+            <AlertDialogCancel className="editor-dialog-cancel cursor-pointer">{tr.cancel}</AlertDialogCancel>
             <AlertDialogAction
               variant="outline"
-              className="btn-hover-destructive cursor-pointer"
+              className="editor-dialog-soft-action cursor-pointer"
               onClick={handleReset}
             >
               {tr.resetConfirm}

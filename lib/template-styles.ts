@@ -7,8 +7,8 @@ import type { ResumeLanguage } from "./types/resume";
 
 /* ---- Fonts ---- */
 
-export const FONT_EN = "'Times New Roman', SimSun, serif";
-export const FONT_ZH = "'Times New Roman', 'Songti SC', serif";
+export const FONT_EN = "'TeX Gyre Termes', SimSun, serif";
+export const FONT_ZH = "'TeX Gyre Termes', 'Songti SC', SimSun, serif";
 
 /* ---- Font sizes ---- */
 
@@ -20,6 +20,8 @@ export const NAME_SIZE = "20pt";
 
 export const LINE_STYLE: React.CSSProperties = {
   fontSize: BODY_SIZE,
+  fontWeight: 500,
+  color: "#000",
   lineHeight: "13pt",
   marginTop: "0.15pt",
   marginBottom: 0,
@@ -30,6 +32,8 @@ export const LINE_STYLE: React.CSSProperties = {
 
 export const BULLET_ROW_STYLE: React.CSSProperties = {
   fontSize: BODY_SIZE,
+  fontWeight: 500,
+  color: "#000",
   lineHeight: "13pt",
   marginTop: "0.15pt",
   marginBottom: 0,
@@ -42,7 +46,7 @@ export const BULLET_DOT_STYLE: React.CSSProperties = {
   marginLeft: "0.2cm",
   width: "0.4cm",
   flexShrink: 0,
-  fontSize: "11pt",
+  lineHeight: "13pt",
 };
 
 /* ---- Helper functions ---- */
