@@ -92,9 +92,9 @@ export function AcademicEditorContent() {
         onImport={handleImport}
       />
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="-mt-px flex min-h-0 flex-1 overflow-hidden">
         {/* Left: Form panel (40%) */}
-        <div className="w-2/5 shrink-0 overflow-y-auto border-r border-border">
+        <div className="editor-form-pane relative z-10 w-2/5 shrink-0 overflow-y-auto rounded-tr-lg border-r border-t border-border">
           <FormPanel content={state.content} onChange={handleContentChange} language={state.language} />
         </div>
 
