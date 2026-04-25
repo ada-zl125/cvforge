@@ -84,13 +84,13 @@ export function PhotoCropDialog({ src, onApply, onClose, language }: PhotoCropDi
 
   return (
     <Dialog open={!!src} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="sm:max-w-sm">
-        <DialogHeader>
-          <DialogTitle>{zh ? "裁剪照片" : "Crop Photo"}</DialogTitle>
+      <DialogContent className="editor-dialog overflow-hidden p-0 sm:max-w-sm">
+        <DialogHeader className="editor-dialog-header px-5 pb-4 pt-5">
+          <DialogTitle className="text-[15px] font-semibold leading-tight">{zh ? "裁剪照片" : "Crop Photo"}</DialogTitle>
         </DialogHeader>
 
         {src && (
-          <div className="flex justify-center overflow-hidden rounded">
+          <div className="mx-5 my-5 flex justify-center overflow-hidden rounded-lg border border-black/10 bg-black/[0.02]">
             <ReactCrop
               crop={crop}
               onChange={(c) => setCrop(c)}
@@ -110,13 +110,13 @@ export function PhotoCropDialog({ src, onApply, onClose, language }: PhotoCropDi
           </div>
         )}
 
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+        <DialogFooter className="editor-dialog-footer">
+          <Button variant="outline" className="editor-dialog-cancel cursor-pointer" onClick={onClose}>
             {zh ? "取消" : "Cancel"}
           </Button>
           <Button
             variant="outline"
-            className="btn-hover-primary cursor-pointer"
+            className="editor-dialog-action cursor-pointer"
             onClick={handleApply}
             disabled={!completedCrop}
           >
