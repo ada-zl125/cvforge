@@ -2,6 +2,22 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+@font-face {
+  font-family: "TeX Gyre Termes";
+  src: url("/fonts/texgyretermes-regular.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "TeX Gyre Termes";
+  src: url("/fonts/texgyretermes-bold.otf") format("opentype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme {
@@ -142,6 +158,161 @@
   color: var(--destructive) !important;
 }
 
+/* Entry page create dialogs */
+.entry-create-dialog {
+  border-color: rgb(0 0 0 / 0.12) !important;
+  box-shadow: 0 24px 80px rgb(0 0 0 / 0.16);
+}
+
+.entry-create-dialog-header {
+  border-bottom: 1px solid rgb(0 0 0 / 0.06);
+  background: linear-gradient(180deg, rgb(0 0 0 / 0.035), rgb(255 255 255 / 0));
+}
+
+.entry-create-dialog-footer {
+  margin: 0 !important;
+  border-top: 1px solid rgb(0 0 0 / 0.08) !important;
+  border-right: 0 !important;
+  border-bottom: 0 !important;
+  border-left: 0 !important;
+  background: rgb(250 250 250 / 0.92) !important;
+  padding: 1rem 1.25rem !important;
+}
+
+.entry-dialog-input {
+  border-color: rgb(0 0 0 / 0.14) !important;
+  background-color: rgb(255 255 255 / 0.9) !important;
+}
+
+.entry-dialog-input:focus-visible {
+  border-color: rgb(0 0 0 / 0.72) !important;
+  box-shadow: 0 0 0 3px rgb(0 0 0 / 0.08) !important;
+}
+
+.entry-dialog-language {
+  border: 1px solid rgb(0 0 0 / 0.1);
+  background: rgb(255 255 255 / 0.85);
+  transition: border-color 180ms ease-out, background-color 180ms ease-out, color 180ms ease-out, box-shadow 180ms ease-out;
+}
+
+.entry-dialog-language:hover {
+  border-color: rgb(0 0 0 / 0.28);
+  background: rgb(0 0 0 / 0.035);
+  color: var(--foreground);
+}
+
+.entry-dialog-language-active {
+  border: 1px solid rgb(0 0 0 / 0.72) !important;
+  background: rgb(0 0 0 / 0.055) !important;
+  color: var(--foreground) !important;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.58);
+}
+
+.entry-dialog-cancel {
+  border-color: rgb(0 0 0 / 0.14) !important;
+  background: rgb(255 255 255 / 0.9) !important;
+  transition: border-color 200ms ease-out, background-color 200ms ease-out, color 200ms ease-out;
+}
+
+.entry-dialog-cancel:not(:disabled):hover {
+  border-color: rgb(0 0 0 / 0.5) !important;
+  background: rgb(255 255 255) !important;
+  color: var(--foreground) !important;
+}
+
+.entry-dialog-action {
+  border-color: rgb(0 0 0 / 0.18) !important;
+  background: rgb(255 255 255 / 0.9) !important;
+  transition: border-color 200ms ease-out, background-color 200ms ease-out, color 200ms ease-out;
+}
+
+button.entry-dialog-action:not(:disabled):hover {
+  border-color: rgb(0 0 0) !important;
+  background-color: rgb(0 0 0 / 0.055) !important;
+  color: var(--foreground) !important;
+}
+
+/* Editor dialogs: examples, reset confirmations, and settings */
+.editor-dialog {
+  border-color: rgb(0 0 0 / 0.12) !important;
+  box-shadow: 0 24px 80px rgb(0 0 0 / 0.16);
+}
+
+.editor-dialog-header {
+  border-bottom: 0 !important;
+  background: linear-gradient(180deg, rgb(0 0 0 / 0.035), rgb(255 255 255 / 0));
+}
+
+.editor-dialog-footer {
+  margin: 0 !important;
+  border-top: 1px solid rgb(0 0 0 / 0.08) !important;
+  border-right: 0 !important;
+  border-bottom: 0 !important;
+  border-left: 0 !important;
+  background: rgb(250 250 250 / 0.92) !important;
+  padding: 1rem 1.25rem !important;
+}
+
+.editor-dialog-input {
+  border-color: rgb(0 0 0 / 0.14) !important;
+  background-color: rgb(255 255 255 / 0.9) !important;
+}
+
+.editor-dialog-input:focus-visible {
+  border-color: rgb(0 0 0 / 0.72) !important;
+  box-shadow: 0 0 0 3px rgb(0 0 0 / 0.08) !important;
+}
+
+.editor-dialog-language {
+  border: 1px solid rgb(0 0 0 / 0.1);
+  background: rgb(255 255 255 / 0.85);
+  transition: border-color 180ms ease-out, background-color 180ms ease-out, color 180ms ease-out, box-shadow 180ms ease-out;
+}
+
+.editor-dialog-language:hover {
+  border-color: rgb(0 0 0 / 0.28);
+  background: rgb(0 0 0 / 0.035);
+  color: var(--foreground);
+}
+
+.editor-dialog-language-active {
+  border: 1px solid rgb(0 0 0 / 0.72) !important;
+  background: rgb(0 0 0 / 0.055) !important;
+  color: var(--foreground) !important;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.58);
+}
+
+.editor-dialog-cancel {
+  border-color: rgb(0 0 0 / 0.14) !important;
+  background: rgb(255 255 255 / 0.9) !important;
+  transition: border-color 200ms ease-out, background-color 200ms ease-out, color 200ms ease-out;
+}
+
+.editor-dialog-cancel:not(:disabled):hover {
+  border-color: rgb(0 0 0 / 0.5) !important;
+  background: rgb(0 0 0 / 0.035) !important;
+  color: var(--foreground) !important;
+}
+
+.editor-dialog-action,
+.editor-dialog-soft-action {
+  border-color: rgb(0 0 0 / 0.18) !important;
+  background: rgb(255 255 255 / 0.9) !important;
+  transition: border-color 200ms ease-out, background-color 200ms ease-out, color 200ms ease-out;
+}
+
+button.editor-dialog-soft-action:not(:disabled):hover {
+  border-color: rgb(0 0 0) !important;
+  background-color: rgb(0 0 0 / 0.055) !important;
+  color: var(--foreground) !important;
+}
+
+button.editor-dialog-action:not(:disabled):hover {
+  border-color: rgb(0 0 0) !important;
+  background-color: rgb(0 0 0 / 0.055) !important;
+  color: var(--foreground) !important;
+}
+
 /* Editor form panel — section card hover: border → black, subtle lift */
 .section-card {
   transition: border-color 200ms ease-out, box-shadow 200ms ease-out;
@@ -205,12 +376,27 @@
 
 /* Editor toolbar hover: border → black */
 .editor-toolbar {
+  z-index: 20;
   transition: border-color 200ms ease-out, box-shadow 200ms ease-out;
 }
 
 .editor-toolbar:hover {
+  z-index: 40;
   border-color: var(--foreground) !important;
   box-shadow: 0 2px 8px color-mix(in srgb, var(--foreground) 6%, transparent);
+}
+
+/* Left editor form pane hover: top and right borders → black */
+.editor-form-pane {
+  z-index: 10;
+  transition: border-color 200ms ease-out, box-shadow 200ms ease-out;
+}
+
+.editor-form-pane:hover {
+  z-index: 30;
+  border-top-color: var(--foreground) !important;
+  border-right-color: var(--foreground) !important;
+  box-shadow: 2px 0 8px color-mix(in srgb, var(--foreground) 5%, transparent);
 }
 
 /* Preview A4 area hover: border → black */
@@ -222,4 +408,3 @@
   border-color: var(--foreground) !important;
   box-shadow: 0 4px 16px color-mix(in srgb, var(--foreground) 8%, transparent);
 }
-

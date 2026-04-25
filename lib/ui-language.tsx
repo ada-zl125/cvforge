@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 
 export type UILang = "en" | "zh";
 
@@ -17,15 +17,24 @@ const UILanguageContext = createContext<UILanguageContextValue>({
 });
 
 export function UILanguageProvider({ children }: { children: React.ReactNode }) {
-  const [lang, setLangState] = useState<UILang>(() => {
-    if (typeof window === "undefined") return "en";
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored === "en" || stored === "zh" ? stored : "en";
-  });
+  const [lang, setLangState] = useState<UILang>("en");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    queueMicrotask(() => {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (!cancelled && (stored === "en" || stored === "zh")) setLangState(stored);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   function setLang(l: UILang) {
     setLangState(l);
-    localStorage.setItem(STORAGE_KEY, l);
+    if (typeof window !== "undefined") localStorage.setItem(STORAGE_KEY, l);
   }
 
   return (
