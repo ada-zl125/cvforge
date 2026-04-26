@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, ChevronDown, FileDown, FileImage, FileJson, FileUp, Loader2, Settings, Sparkles } from "lucide-react";
 import { exportResume, exportJson, type ExportFormat } from "@/lib/export";
 import { withId } from "@/lib/json-utils";
-import { defaultCoverLetterContent } from "@/lib/defaults";
+import { defaultCoverLetterContent, TITLE_MAX } from "@/lib/defaults";
 import coverLetterExampleEn from "@/examples/cover-letter-example-en.json";
 import {
   DropdownMenu,
@@ -14,7 +14,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { CoverLetterTemplate, CoverLetterContent } from "@/lib/types/cover-letter";
-import { TITLE_MAX } from "@/lib/defaults";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

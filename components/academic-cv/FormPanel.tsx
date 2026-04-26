@@ -39,6 +39,21 @@ import { GrantsAwardsSection } from "./sections/GrantsAwardsSection";
 import { ServiceSection } from "./sections/ServiceSection";
 import { ReferencesSection } from "./sections/ReferencesSection";
 
+const SECTION_DEFAULTS: Partial<AcademicCVContent> = {
+  researchInterests: "",
+  education: [],
+  researchExperience: [],
+  teachingExperience: [],
+  industryExperience: [],
+  publications: [],
+  manuscriptsUnderReview: [],
+  conferencePresentations: [],
+  grantsAndAwards: [],
+  professionalService: [],
+  technicalSkills: [],
+  references: [],
+};
+
 const SECTION_META: Record<AcademicSectionType, { icon: typeof GraduationCap; label: string; labelZh: string }> = {
   researchInterests:       { icon: Search,        label: "Research Interests",        labelZh: "研究兴趣" },
   education:               { icon: GraduationCap, label: "Education",                 labelZh: "教育经历" },
@@ -96,21 +111,6 @@ export function FormPanel({ content, onChange, language }: FormPanelProps) {
     onChange({ ...content, sections: [...activeSections, type] });
     setSectionCollapsed((prev) => ({ ...prev, [type]: false }));
   }
-
-  const SECTION_DEFAULTS: Partial<AcademicCVContent> = {
-    researchInterests: "",
-    education: [],
-    researchExperience: [],
-    teachingExperience: [],
-    industryExperience: [],
-    publications: [],
-    manuscriptsUnderReview: [],
-    conferencePresentations: [],
-    grantsAndAwards: [],
-    professionalService: [],
-    technicalSkills: [],
-    references: [],
-  };
 
   function removeSection(type: AcademicSectionType) {
     onChange({

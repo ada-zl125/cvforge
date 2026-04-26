@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, ChevronDown, FileDown, FileImage, FileJson, FileUp, Loader2, Settings, Sparkles } from "lucide-react";
 import { exportResume, exportJson, type ExportFormat } from "@/lib/export";
 import { withId, mergeDegreeField, stripDegreeField } from "@/lib/json-utils";
-import { defaultAcademicCVContent } from "@/lib/defaults";
+import { defaultAcademicCVContent, TITLE_MAX } from "@/lib/defaults";
 import academicCvExampleEn from "@/examples/academic-cv-example-en.json";
 import academicCvExampleCn from "@/examples/academic-cv-example-cn.json";
 import {
@@ -14,7 +14,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { TITLE_MAX } from "@/lib/defaults";
 import type { AcademicCVTemplate, ResumeLanguage, AcademicCVContent } from "@/lib/types/academic-cv";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -67,9 +66,9 @@ export function Toolbar({ title, template, language, content, onSettingsChange, 
   }
 
   function handleLoadExample() {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const raw: any = (language === "zh" ? academicCvExampleCn : academicCvExampleEn).content;
     const example = language === "zh" ? academicCvExampleCn : academicCvExampleEn;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const raw: any = example.content;
     const merged: AcademicCVContent = {
       ...defaultAcademicCVContent,
       ...raw,
