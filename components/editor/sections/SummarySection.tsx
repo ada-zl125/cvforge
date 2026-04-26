@@ -7,10 +7,10 @@ import type { ResumeLanguage } from "@/lib/types/resume";
 interface SummarySectionProps {
   value: string;
   onChange: (value: string) => void;
-  language: ResumeLanguage;
+  language?: ResumeLanguage;
 }
 
-export function SummarySection({ value, onChange, language: _language }: SummarySectionProps) {
+export function SummarySection({ value, onChange }: SummarySectionProps) {
   const { lang } = useUILanguage();
   const tr = t[lang];
 

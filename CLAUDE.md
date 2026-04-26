@@ -4,9 +4,9 @@
 
 ## Product
 
-A stateless online resume builder for job seekers and academics. No accounts, no database — visitors use it as a tool and export when done. Two pages only:
-- **Entry page**: visitor creates a new CV (picks title, language, template), then jumps to the editor
-- **Editor page**: full resume editing with live A4 preview and export (PDF/PNG)
+A stateless online document builder for job seekers and academics. No accounts, no database — visitors use it as a tool and export when done.
+- **Entry page**: visitor creates a new resume, academic CV, or cover letter, then jumps to the matching editor
+- **Editor pages**: full editing with live A4 preview and export (PDF/PNG/JSON)
 
 Resume state is stored in `localStorage` for session persistence. No server-side data storage.
 
@@ -41,14 +41,19 @@ npm run lint         # ESLint check
 app/
   page.tsx                  # Entry page (create CV action + config dialog)
   editor/page.tsx           # Resume editor (form + A4 preview)
-  api/export/
-    pdf/route.ts            # PDF export (Puppeteer, server-side)
-    png/route.ts            # PNG export (Puppeteer, server-side)
+  academic-cv/page.tsx      # Academic CV editor
+  cover-letter/page.tsx     # Cover letter editor
+  privacy/page.tsx          # Privacy policy
+  terms/page.tsx            # Terms of service
 components/
-  editor/                   # FormPanel, PreviewPanel, templates/
+  editor/                   # Resume form, preview, toolbar, template
+  academic-cv/              # Academic CV form, preview, toolbar, template
+  cover-letter/             # Cover letter form, preview, toolbar, template
+  shared/                   # Shared editor/preview helpers
   ui/                       # shadcn/ui generated components
 lib/
-  types/resume.ts           # ResumeContent TypeScript types
+  types/                    # Document TypeScript types
+  export.ts                 # Browser-side PDF/PNG/JSON export helpers
 ```
 
 ## GitHub Workflow

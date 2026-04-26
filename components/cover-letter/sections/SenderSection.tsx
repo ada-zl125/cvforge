@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronDown, Plus, Trash2 } from "lucide-react";
-import type { CoverLetterSender, AddressLine } from "@/lib/types/cover-letter";
+import type { CoverLetterSender } from "@/lib/types/cover-letter";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
