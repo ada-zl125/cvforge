@@ -30,6 +30,8 @@ import {
 } from "@/lib/defaults";
 import type { ResumeTemplate, ResumeLanguage } from "@/lib/types/resume";
 
+const LOGO_SRC = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/logo-text-horizontal.png`;
+
 function GithubIcon({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -250,7 +252,7 @@ export default function EntryPage() {
       <header className="relative z-10 flex items-center justify-between px-8 py-5 lg:px-12">
         <Link href="/" className="inline-flex items-center bg-transparent" aria-label="CVForge home">
           <Image
-            src="/logo-text-horizontal.png"
+            src={LOGO_SRC}
             alt="CVForge"
             width={1262}
             height={329}
