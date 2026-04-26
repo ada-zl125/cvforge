@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.0.1] — 2026-04-26
+
+- Remove Address Line fields from resume editor Personal Information (academic CV only)
+- Sync app icon with updated CVForge logo
+
 ## [1.0.0] — 2026-04-26
 
 Initial release of CVForge.
