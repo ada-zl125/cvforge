@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { ChevronDown, ChevronUp, ChevronsUpDown, ChevronsDownUp, Plus, RotateCcw, Trash2 } from "lucide-react";
-import type { CoverLetterContent, ParagraphItem } from "@/lib/types/cover-letter";
+import type { CoverLetterContent } from "@/lib/types/cover-letter";
 import { defaultCoverLetterContent } from "@/lib/defaults";
 import { useUILanguage } from "@/lib/ui-language";
 import { t } from "@/lib/translations";

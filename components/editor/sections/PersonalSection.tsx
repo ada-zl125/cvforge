@@ -169,7 +169,6 @@ export function PersonalSection({ data: rawData, onChange, collapsed, onToggleCo
                     onRemove={() => removeContact(field.id)}
                     onMoveUp={() => moveContact(i, -1)}
                     onMoveDown={() => moveContact(i, 1)}
-                    language={language}
                   />
                 ))}
               </div>
@@ -271,7 +270,6 @@ function ContactFieldRow({
   onRemove,
   onMoveUp,
   onMoveDown,
-  language,
 }: {
   field: ContactField;
   isFirst: boolean;
@@ -280,7 +278,6 @@ function ContactFieldRow({
   onRemove: () => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
-  language: ResumeLanguage;
 }) {
   const meta = CONTACT_META[field.type];
   const { lang } = useUILanguage();
