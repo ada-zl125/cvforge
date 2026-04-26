@@ -150,6 +150,7 @@ export function FormPanel({ content, onChange, language }: FormPanelProps) {
         collapsed={personalCollapsed}
         onToggleCollapse={() => setPersonalCollapsed((v) => !v)}
         language={language}
+        excludeContactTypes={["addressLine1", "addressLine2", "addressLine3"]}
       />
 
       {/* Dynamic sections */}
