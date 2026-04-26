@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import logoImg from "@/public/logo-text-horizontal.png";
 import { ArrowRight, FileText, GraduationCap, Mail, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -250,7 +251,7 @@ export default function EntryPage() {
       <header className="relative z-10 flex items-center justify-between px-8 py-5 lg:px-12">
         <Link href="/" className="inline-flex items-center bg-transparent" aria-label="CVForge home">
           <Image
-            src="/logo-text-horizontal.png"
+            src={logoImg}
             alt="CVForge"
             width={1262}
             height={329}
