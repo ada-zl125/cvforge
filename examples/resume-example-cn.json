@@ -26,13 +26,13 @@
         {
           "id": "a1b2c3d4-0001-4000-8000-000000000004",
           "type": "website",
-          "value": "https://github.com/lizhiyuan-example",
+          "value": "https://github.com/liuyutong-example",
           "label": "GitHub"
         },
         {
           "id": "a1b2c3d4-0001-4000-8000-000000000005",
           "type": "website",
-          "value": "https://www.linkedin.com/in/lizhiyuan-example",
+          "value": "https://www.linkedin.com/in/liuyutong-example",
           "label": "LinkedIn"
         }
       ]
@@ -180,7 +180,7 @@
         "id": "a1b2c3d4-0007-4000-8000-000000000001",
         "name": "多源推理数据分析智能体",
         "websiteLabel": "GitHub",
-        "websiteUrl": "https://github.com/lizhiyuan-example/project-example",
+        "websiteUrl": "https://github.com/liuyutong-example/project-example",
         "startDate": "2025/12",
         "endDate": "2026/04",
         "descriptions": [
@@ -198,7 +198,7 @@
         "id": "a1b2c3d4-0008-4000-8000-000000000001",
         "name": "多模态文档理解系统",
         "websiteLabel": "GitHub",
-        "websiteUrl": "https://github.com/lizhiyuan-example/project-example",
+        "websiteUrl": "https://github.com/liuyutong-example/project-example",
         "startDate": "2025/06",
         "endDate": "2025/10",
         "descriptions": [
