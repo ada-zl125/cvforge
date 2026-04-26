@@ -31,19 +31,19 @@
         {
           "id": "ae-p-0001-4000-8000-000000000003",
           "type": "email",
-          "value": "zachary.lee@cs.ox.ac.uk"
+          "value": "zachary.lee-example@outlook.com"
         },
         {
           "id": "ae-p-0001-4000-8000-000000000004",
           "type": "website",
-          "value": "https://zachary-lee-example.github.io",
-          "label": "Personal Website"
+          "value": "https://github.com/zachary-lee-example",
+          "label": "GitHub"
         },
         {
           "id": "ae-p-0001-4000-8000-000000000005",
           "type": "website",
-          "value": "https://github.com/zachary-lee-example",
-          "label": "GitHub"
+          "value": "https://www.linkedin.com/in/zachary-lee-example",
+          "label": "LinkedIn"
         }
       ]
     },
