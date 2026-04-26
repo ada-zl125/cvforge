@@ -31,6 +31,15 @@ import { ExperienceSection } from "./sections/ExperienceSection";
 import { SkillsSection } from "./sections/SkillsSection";
 import { AwardsSection } from "./sections/AwardsSection";
 
+const SECTION_DEFAULTS: Partial<ResumeContent> = {
+  summary: "",
+  education: [],
+  experience: [],
+  projects: [],
+  skills: [],
+  awards: [],
+};
+
 const SECTION_META: Record<SectionType, { icon: typeof GraduationCap; label: string; labelZh: string }> = {
   summary:    { icon: AlignLeft,     label: "Summary",         labelZh: "个人简介" },
   education:  { icon: GraduationCap, label: "Education",       labelZh: "教育经历" },
@@ -84,15 +93,6 @@ export function FormPanel({ content, onChange, language }: FormPanelProps) {
     onChange({ ...content, sections: [...activeSections, type] });
     setSectionCollapsed((prev) => ({ ...prev, [type]: false }));
   }
-
-  const SECTION_DEFAULTS: Partial<ResumeContent> = {
-    summary: "",
-    education: [],
-    experience: [],
-    projects: [],
-    skills: [],
-    awards: [],
-  };
 
   function removeSection(type: SectionType) {
     onChange({
