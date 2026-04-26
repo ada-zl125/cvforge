@@ -5,7 +5,7 @@
   "language": "zh",
   "content": {
     "personal": {
-      "fullName": "你的名字",
+      "fullName": "刘宇桐",
       "contacts": [
         {
           "id": "a1b2c3d4-0001-4000-8000-000000000001",
@@ -21,7 +21,7 @@
         {
           "id": "a1b2c3d4-0001-4000-8000-000000000003",
           "type": "email",
-          "value": "yourname@outlook.com"
+          "value": "liu.yu.tong-example@outlook.com"
         },
         {
           "id": "a1b2c3d4-0001-4000-8000-000000000004",
@@ -33,7 +33,7 @@
           "id": "a1b2c3d4-0001-4000-8000-000000000005",
           "type": "website",
           "value": "https://www.linkedin.com/in/lizhiyuan-example",
-          "label": "领英"
+          "label": "LinkedIn"
         }
       ]
     },
