@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, FileText, GraduationCap, Mail, Github, Star } from "lucide-react";
+import { ArrowRight, FileText, GraduationCap, Mail, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,6 +21,7 @@ import { useUILanguage } from "@/lib/ui-language";
 import { t } from "@/lib/translations";
 import {
   defaultResumeContent,
+  defaultAcademicCVContent,
   defaultCoverLetterContent,
   RESUME_STORAGE_KEY,
   ACADEMIC_CV_STORAGE_KEY,
@@ -29,87 +30,54 @@ import {
 } from "@/lib/defaults";
 import type { ResumeTemplate, ResumeLanguage } from "@/lib/types/resume";
 
+function GithubIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4" />
+      <path d="M9 18c-4.51 2-5-2-7-2" />
+    </svg>
+  );
+}
+
 const LANGUAGE_OPTIONS: { value: ResumeLanguage; label: string }[] = [
   { value: "en", label: "English" },
   { value: "zh", label: "中文" },
 ];
 
-/* ---- Cover letter create dialog (English-only) ---- */
+const GITHUB_REPO = "ada-zl125/cvforge";
+const GITHUB_URL = `https://github.com/${GITHUB_REPO}`;
+const GITHUB_STARS_CACHE_KEY = "cvforge_github_stars";
+const GITHUB_STARS_CACHE_TTL_MS = 60 * 60 * 1000;
+const DEFAULT_TEMPLATE: ResumeTemplate = "general";
 
-interface CreateCoverLetterDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onCreate: (title: string) => void;
+interface GitHubStarsCache {
+  count: number;
+  fetchedAt: number;
 }
 
-function CreateCoverLetterDialog({ open, onOpenChange, onCreate }: CreateCoverLetterDialogProps) {
-  const { lang } = useUILanguage();
-  const tr = t[lang];
-  const [docTitle, setDocTitle] = useState("");
-  const titleTooLong = docTitle.length > TITLE_MAX;
-  const canCreate = docTitle.trim().length > 0 && !titleTooLong;
+function formatStars(n: number): string {
+  if (n < 100) return String(n);
+  const value = Math.floor(n / 100) / 10;
+  return `${Number.isInteger(value) ? value.toFixed(0) : value.toFixed(1)}k`;
+}
 
-  function handleOpenChange(next: boolean) {
-    if (next) setDocTitle("");
-    onOpenChange(next);
+function readCachedStars(now: number): number | null {
+  try {
+    const raw = localStorage.getItem(GITHUB_STARS_CACHE_KEY);
+    if (!raw) return null;
+    const cached = JSON.parse(raw) as Partial<GitHubStarsCache>;
+    if (
+      typeof cached.count !== "number" ||
+      typeof cached.fetchedAt !== "number" ||
+      now - cached.fetchedAt > GITHUB_STARS_CACHE_TTL_MS
+    ) return null;
+    return cached.count;
+  } catch {
+    return null;
   }
-
-  return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="entry-create-dialog overflow-hidden p-0 sm:max-w-[420px]">
-        <DialogHeader className="entry-create-dialog-header px-5 pb-4 pt-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-black/40 bg-black/[0.035]">
-              <Mail className="h-4 w-4 text-black" />
-            </div>
-            <div className="min-w-0">
-              <DialogTitle className="text-[15px] font-semibold leading-tight">{tr.createNewCoverLetter}</DialogTitle>
-              <DialogDescription className="mt-1 leading-relaxed text-gray-600">{tr.createNewCoverLetterDesc}</DialogDescription>
-            </div>
-          </div>
-        </DialogHeader>
-        <div className="grid gap-5 px-5 py-5">
-          <div className="grid gap-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="doc-title" className="text-sm font-medium">{tr.titleLabel}</Label>
-              <span className={`text-xs ${titleTooLong ? "text-destructive" : "text-muted-foreground"}`}>
-                {docTitle.length}/{TITLE_MAX}
-              </span>
-            </div>
-            <Input
-              id="doc-title"
-              value={docTitle}
-              onChange={(e) => setDocTitle(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter" && docTitle.trim()) onCreate(docTitle.trim()); }}
-              placeholder={tr.coverLetterTitlePlaceholder}
-              className={`entry-dialog-input h-10 ${titleTooLong ? "border-destructive" : ""}`}
-              autoFocus
-            />
-            {titleTooLong && <p className="text-xs text-destructive">{tr.titleTooLong(TITLE_MAX)}</p>}
-          </div>
-          <div className="grid gap-2">
-            <Label className="text-sm font-medium">{tr.languageLabel}</Label>
-            <div className="flex gap-2">
-              <span className="entry-dialog-language-active cursor-default rounded-lg px-3 py-2 text-sm font-medium">
-                English
-              </span>
-            </div>
-          </div>
-        </div>
-        <DialogFooter className="entry-create-dialog-footer">
-          <Button variant="outline" className="entry-dialog-cancel cursor-pointer" onClick={() => onOpenChange(false)}>
-            {tr.cancel}
-          </Button>
-          <Button variant="outline" className="entry-dialog-action cursor-pointer" onClick={() => canCreate && onCreate(docTitle.trim())} disabled={!canCreate}>
-            {tr.create}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
 }
 
-/* ---- Shared create dialog ---- */
+/* ---- Create dialog ---- */
 
 interface CreateDialogProps {
   open: boolean;
@@ -118,10 +86,15 @@ interface CreateDialogProps {
   title: string;
   description: string;
   placeholder: string;
+  /** When false, the language selector is hidden and "en" is used. Default: true. */
+  showLanguage?: boolean;
   onCreate: (title: string, lang: ResumeLanguage) => void;
 }
 
-function CreateDialog({ open, onOpenChange, icon, title, description, placeholder, onCreate }: CreateDialogProps) {
+function CreateDialog({
+  open, onOpenChange, icon, title, description, placeholder,
+  showLanguage = true, onCreate,
+}: CreateDialogProps) {
   const { lang } = useUILanguage();
   const tr = t[lang];
   const [docTitle, setDocTitle] = useState("");
@@ -170,20 +143,24 @@ function CreateDialog({ open, onOpenChange, icon, title, description, placeholde
           <div className="grid gap-2">
             <Label className="text-sm font-medium">{tr.languageLabel}</Label>
             <div className="flex gap-2">
-              {LANGUAGE_OPTIONS.map((opt) => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => setDocLang(opt.value)}
-                  className={`entry-dialog-language cursor-pointer rounded-lg px-3 py-2 text-sm font-medium ${
-                    docLang === opt.value
-                      ? "entry-dialog-language-active"
-                      : "text-muted-foreground"
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
+              {showLanguage ? (
+                LANGUAGE_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setDocLang(opt.value)}
+                    className={`entry-dialog-language cursor-pointer rounded-lg px-3 py-2 text-sm font-medium ${
+                      docLang === opt.value ? "entry-dialog-language-active" : "text-muted-foreground"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))
+              ) : (
+                <span className="entry-dialog-language-active cursor-default rounded-lg px-3 py-2 text-sm font-medium">
+                  English
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -201,41 +178,6 @@ function CreateDialog({ open, onOpenChange, icon, title, description, placeholde
 }
 
 /* ---- Entry page ---- */
-
-const GITHUB_REPO = "ada-zl125/cvforge";
-const GITHUB_URL = `https://github.com/${GITHUB_REPO}`;
-const GITHUB_STARS_CACHE_KEY = "cvforge_github_stars";
-const GITHUB_STARS_CACHE_TTL_MS = 60 * 60 * 1000;
-
-interface GitHubStarsCache {
-  count: number;
-  fetchedAt: number;
-}
-
-function formatStars(n: number): string {
-  if (n < 100) return String(n);
-
-  const value = Math.floor(n / 100) / 10;
-  return `${Number.isInteger(value) ? value.toFixed(0) : value.toFixed(1)}k`;
-}
-
-function readCachedStars(now: number): number | null {
-  try {
-    const raw = localStorage.getItem(GITHUB_STARS_CACHE_KEY);
-    if (!raw) return null;
-
-    const cached = JSON.parse(raw) as Partial<GitHubStarsCache>;
-    if (
-      typeof cached.count !== "number" ||
-      typeof cached.fetchedAt !== "number" ||
-      now - cached.fetchedAt > GITHUB_STARS_CACHE_TTL_MS
-    ) return null;
-
-    return cached.count;
-  } catch {
-    return null;
-  }
-}
 
 export default function EntryPage() {
   const router = useRouter();
@@ -272,23 +214,19 @@ export default function EntryPage() {
         .catch(() => {});
     });
 
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, []);
-
-  const template: ResumeTemplate = "general";
 
   function handleCreateResume(title: string, resumeLang: ResumeLanguage) {
     try {
-      localStorage.setItem(RESUME_STORAGE_KEY, JSON.stringify({ title, template, language: resumeLang, content: defaultResumeContent }));
+      localStorage.setItem(RESUME_STORAGE_KEY, JSON.stringify({ title, template: DEFAULT_TEMPLATE, language: resumeLang, content: defaultResumeContent }));
     } catch { /* ignore quota errors */ }
     router.push("/editor");
   }
 
   function handleCreateAcademicCv(title: string, cvLang: ResumeLanguage) {
     try {
-      localStorage.setItem(ACADEMIC_CV_STORAGE_KEY, JSON.stringify({ title, template, language: cvLang, content: defaultResumeContent }));
+      localStorage.setItem(ACADEMIC_CV_STORAGE_KEY, JSON.stringify({ title, template: DEFAULT_TEMPLATE, language: cvLang, content: defaultAcademicCVContent }));
     } catch { /* ignore quota errors */ }
     router.push("/academic-cv");
   }
@@ -328,7 +266,7 @@ export default function EntryPage() {
             rel="noopener noreferrer"
             className="flex items-center gap-1.5 rounded-md border border-gray-300 px-2.5 py-1 text-xs text-gray-600 transition-colors hover:border-gray-500 hover:text-gray-900"
           >
-            <Github className="h-3.5 w-3.5" />
+            <GithubIcon className="h-3.5 w-3.5" />
             <span className="flex items-center gap-1 tabular-nums">
               <Star className="h-3 w-3 fill-current" />
               {stars !== null ? formatStars(stars) : "—"}
@@ -355,7 +293,7 @@ export default function EntryPage() {
               rel="noopener noreferrer"
               className="mt-5 inline-flex items-center gap-2 rounded-full border border-gray-300 px-4 py-1.5 text-sm text-gray-600 transition-colors hover:border-gray-500 hover:text-gray-900"
             >
-              <Github className="h-4 w-4" />
+              <GithubIcon className="h-4 w-4" />
               <span>GitHub</span>
               <Star className="h-3.5 w-3.5 fill-current" />
               {stars !== null ? (
@@ -426,10 +364,15 @@ export default function EntryPage() {
         placeholder={tr.academicCvTitlePlaceholder}
         onCreate={handleCreateAcademicCv}
       />
-      <CreateCoverLetterDialog
+      <CreateDialog
         open={coverLetterOpen}
         onOpenChange={setCoverLetterOpen}
-        onCreate={handleCreateCoverLetter}
+        icon={<Mail className="h-4 w-4 text-black" />}
+        title={tr.createNewCoverLetter}
+        description={tr.createNewCoverLetterDesc}
+        placeholder={tr.coverLetterTitlePlaceholder}
+        showLanguage={false}
+        onCreate={(title) => handleCreateCoverLetter(title)}
       />
     </div>
   );

@@ -2,10 +2,10 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ChevronDown, FileDown, FileImage, FileJson, FileUp, Loader2, Settings, Sparkles } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ChevronDown, FileDown, FileImage, FileJson, FileUp, Loader2, Settings, Sparkles } from "lucide-react";
 import { exportResume, exportJson, type ExportFormat } from "@/lib/export";
 import { withId, mergeDegreeField, stripDegreeField } from "@/lib/json-utils";
-import { defaultAcademicCVContent } from "@/lib/defaults";
+import { defaultAcademicCVContent, TITLE_MAX } from "@/lib/defaults";
 import academicCvExampleEn from "@/examples/academic-cv-example-en.json";
 import academicCvExampleCn from "@/examples/academic-cv-example-cn.json";
 import {
@@ -14,8 +14,22 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { TITLE_MAX } from "@/lib/defaults";
-import type { AcademicCVTemplate, ResumeLanguage, AcademicCVContent } from "@/lib/types/academic-cv";
+import type {
+  AcademicCVTemplate,
+  ResumeLanguage,
+  AcademicCVContent,
+  AcademicEducationItem,
+  AcademicEducationExtraField,
+  AcademicExperienceItem,
+  TeachingItem,
+  PublicationItem,
+  PresentationItem,
+  GrantAwardItem,
+  ServiceItem,
+  SkillGroup,
+  ReferenceItem,
+  DescriptionField,
+} from "@/lib/types/academic-cv";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -55,6 +69,7 @@ export function Toolbar({ title, template, language, content, onSettingsChange, 
   /* ---- Export state ---- */
   const [exporting, setExporting] = useState(false);
   const [exampleDialogOpen, setExampleDialogOpen] = useState(false);
+  const [importErrorOpen, setImportErrorOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function handleExport(format: ExportFormat) {
@@ -67,24 +82,24 @@ export function Toolbar({ title, template, language, content, onSettingsChange, 
   }
 
   function handleLoadExample() {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const raw: any = (language === "zh" ? academicCvExampleCn : academicCvExampleEn).content;
     const example = language === "zh" ? academicCvExampleCn : academicCvExampleEn;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const raw: any = example.content;
     const merged: AcademicCVContent = {
       ...defaultAcademicCVContent,
       ...raw,
       personal: { ...defaultAcademicCVContent.personal, ...raw.personal },
-      education: withId(raw.education).map((ed) => { const e = mergeDegreeField(ed, example.language); return { ...e, extraFields: withId(e.extraFields) }; }),
-      researchExperience: withId(raw.researchExperience).map((e) => ({ ...e, descriptions: withId(e.descriptions ?? []) })),
-      teachingExperience: withId(raw.teachingExperience ?? []).map((e) => ({ ...e, descriptions: withId(e.descriptions ?? []) })),
-      industryExperience: withId(raw.industryExperience).map((e) => ({ ...e, descriptions: withId(e.descriptions ?? []) })),
-      publications: withId(raw.publications),
-      manuscriptsUnderReview: withId(raw.manuscriptsUnderReview),
-      conferencePresentations: withId(raw.conferencePresentations),
-      grantsAndAwards: withId(raw.grantsAndAwards ?? []),
-      professionalService: withId(raw.professionalService),
-      technicalSkills: withId(raw.technicalSkills),
-      references: withId(raw.references),
+      education: withId<AcademicEducationItem>(raw.education).map((ed) => { const e = mergeDegreeField(ed, example.language); return { ...e, extraFields: withId<AcademicEducationExtraField>(e.extraFields) }; }),
+      researchExperience: withId<AcademicExperienceItem>(raw.researchExperience).map((e) => ({ ...e, descriptions: withId<DescriptionField>(e.descriptions ?? []) })),
+      teachingExperience: withId<TeachingItem>(raw.teachingExperience ?? []).map((e) => ({ ...e, descriptions: withId<DescriptionField>(e.descriptions ?? []) })),
+      industryExperience: withId<AcademicExperienceItem>(raw.industryExperience).map((e) => ({ ...e, descriptions: withId<DescriptionField>(e.descriptions ?? []) })),
+      publications: withId<PublicationItem>(raw.publications),
+      manuscriptsUnderReview: withId<PublicationItem>(raw.manuscriptsUnderReview),
+      conferencePresentations: withId<PresentationItem>(raw.conferencePresentations),
+      grantsAndAwards: withId<GrantAwardItem>(raw.grantsAndAwards ?? []),
+      professionalService: withId<ServiceItem>(raw.professionalService),
+      technicalSkills: withId<SkillGroup>(raw.technicalSkills),
+      references: withId<ReferenceItem>(raw.references),
     };
     onImport({ title, template: example.template as AcademicCVTemplate, language: example.language as ResumeLanguage, content: merged });
   }
@@ -115,21 +130,21 @@ export function Toolbar({ title, template, language, content, onSettingsChange, 
           ...defaultAcademicCVContent,
           ...raw,
           personal: { ...defaultAcademicCVContent.personal, ...raw.personal },
-          education: withId(raw.education).map((ed) => { const e = mergeDegreeField(ed, parsed.language); return { ...e, extraFields: withId(e.extraFields) }; }),
-          researchExperience: withId(raw.researchExperience).map((e) => ({ ...e, descriptions: withId(e.descriptions ?? []) })),
-          teachingExperience: withId(raw.teachingExperience ?? []).map((e) => ({ ...e, descriptions: withId(e.descriptions ?? []) })),
-          industryExperience: withId(raw.industryExperience).map((e) => ({ ...e, descriptions: withId(e.descriptions ?? []) })),
-          publications: withId(raw.publications),
-          manuscriptsUnderReview: withId(raw.manuscriptsUnderReview),
-          conferencePresentations: withId(raw.conferencePresentations),
-          grantsAndAwards: withId(raw.grantsAndAwards),
-          professionalService: withId(raw.professionalService),
-          technicalSkills: withId(raw.technicalSkills),
-          references: withId(raw.references),
+          education: withId<AcademicEducationItem>(raw.education).map((ed) => { const e = mergeDegreeField(ed, parsed.language); return { ...e, extraFields: withId<AcademicEducationExtraField>(e.extraFields) }; }),
+          researchExperience: withId<AcademicExperienceItem>(raw.researchExperience).map((e) => ({ ...e, descriptions: withId<DescriptionField>(e.descriptions ?? []) })),
+          teachingExperience: withId<TeachingItem>(raw.teachingExperience ?? []).map((e) => ({ ...e, descriptions: withId<DescriptionField>(e.descriptions ?? []) })),
+          industryExperience: withId<AcademicExperienceItem>(raw.industryExperience).map((e) => ({ ...e, descriptions: withId<DescriptionField>(e.descriptions ?? []) })),
+          publications: withId<PublicationItem>(raw.publications),
+          manuscriptsUnderReview: withId<PublicationItem>(raw.manuscriptsUnderReview),
+          conferencePresentations: withId<PresentationItem>(raw.conferencePresentations),
+          grantsAndAwards: withId<GrantAwardItem>(raw.grantsAndAwards),
+          professionalService: withId<ServiceItem>(raw.professionalService),
+          technicalSkills: withId<SkillGroup>(raw.technicalSkills),
+          references: withId<ReferenceItem>(raw.references),
         };
         onImport({ title: parsed.title, template: parsed.template, language: parsed.language, content: merged });
       } catch {
-        alert(tr.importJsonError);
+        setImportErrorOpen(true);
       }
     };
     reader.readAsText(file);
@@ -251,6 +266,28 @@ export function Toolbar({ title, template, language, content, onSettingsChange, 
           </DropdownMenuContent>
         </DropdownMenu>
       </header>
+
+      {/* Import error dialog */}
+      <Dialog open={importErrorOpen} onOpenChange={setImportErrorOpen}>
+        <DialogContent className="editor-dialog overflow-hidden p-0 sm:max-w-[420px]">
+          <DialogHeader className="editor-dialog-header px-5 pb-4 pt-5">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-black/40 bg-black/[0.035]">
+                <AlertTriangle className="h-4 w-4 text-foreground" />
+              </div>
+              <DialogTitle className="text-[15px] font-semibold leading-tight">{tr.importJsonErrorTitle}</DialogTitle>
+            </div>
+            <div className="px-0 pt-1">
+              <p className="text-sm leading-relaxed text-gray-600">{tr.importJsonError}</p>
+            </div>
+          </DialogHeader>
+          <DialogFooter className="editor-dialog-footer">
+            <Button variant="outline" className="editor-dialog-action cursor-pointer" onClick={() => setImportErrorOpen(false)}>
+              {tr.close}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Example confirmation dialog */}
       <Dialog open={exampleDialogOpen} onOpenChange={setExampleDialogOpen}>

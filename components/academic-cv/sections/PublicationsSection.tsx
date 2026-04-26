@@ -13,10 +13,10 @@ function emptyPublication(): PublicationItem {
 interface Props {
   items: PublicationItem[];
   onChange: (items: PublicationItem[]) => void;
-  language: ResumeLanguage;
+  language?: ResumeLanguage;
 }
 
-export function PublicationsSection({ items, onChange, language: _language }: Props) {
+export function PublicationsSection({ items, onChange }: Props) {
   const { lang } = useUILanguage();
   const tr = t[lang].academicCv;
 
