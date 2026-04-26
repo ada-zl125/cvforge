@@ -2,10 +2,10 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ChevronDown, FileDown, FileImage, FileJson, FileUp, Loader2, Settings, Sparkles } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ChevronDown, FileDown, FileImage, FileJson, FileUp, Loader2, Settings, Sparkles } from "lucide-react";
 import { exportResume, exportJson, type ExportFormat } from "@/lib/export";
 import { withId } from "@/lib/json-utils";
-import { defaultCoverLetterContent } from "@/lib/defaults";
+import { defaultCoverLetterContent, TITLE_MAX } from "@/lib/defaults";
 import coverLetterExampleEn from "@/examples/cover-letter-example-en.json";
 import {
   DropdownMenu,
@@ -13,8 +13,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { CoverLetterTemplate, CoverLetterContent } from "@/lib/types/cover-letter";
-import { TITLE_MAX } from "@/lib/defaults";
+import type {
+  CoverLetterTemplate,
+  CoverLetterContent,
+  AddressLine,
+  ParagraphItem,
+} from "@/lib/types/cover-letter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -50,6 +54,7 @@ export function Toolbar({ title, content, template, onTitleChange, onImport }: T
 
   const [exporting, setExporting] = useState(false);
   const [exampleDialogOpen, setExampleDialogOpen] = useState(false);
+  const [importErrorOpen, setImportErrorOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function handleExport(format: ExportFormat) {
@@ -70,14 +75,14 @@ export function Toolbar({ title, content, template, onTitleChange, onImport }: T
       sender: {
         ...defaultCoverLetterContent.sender,
         ...raw.sender,
-        addressLines: withId(raw.sender?.addressLines ?? []),
+        addressLines: withId<AddressLine>(raw.sender?.addressLines ?? []),
       },
       recipient: {
         ...defaultCoverLetterContent.recipient,
         ...raw.recipient,
-        addressLines: withId(raw.recipient?.addressLines ?? []),
+        addressLines: withId<AddressLine>(raw.recipient?.addressLines ?? []),
       },
-      paragraphs: withId(raw.paragraphs ?? []),
+      paragraphs: withId<ParagraphItem>(raw.paragraphs ?? []),
     };
     onImport({ title, template: coverLetterExampleEn.template as CoverLetterTemplate, content: merged });
     setExampleDialogOpen(false);
@@ -109,18 +114,18 @@ export function Toolbar({ title, content, template, onTitleChange, onImport }: T
           sender: {
             ...defaultCoverLetterContent.sender,
             ...raw.sender,
-            addressLines: withId(raw.sender?.addressLines ?? []),
+            addressLines: withId<AddressLine>(raw.sender?.addressLines ?? []),
           },
           recipient: {
             ...defaultCoverLetterContent.recipient,
             ...raw.recipient,
-            addressLines: withId(raw.recipient?.addressLines ?? []),
+            addressLines: withId<AddressLine>(raw.recipient?.addressLines ?? []),
           },
-          paragraphs: withId(raw.paragraphs),
+          paragraphs: withId<ParagraphItem>(raw.paragraphs),
         };
         onImport({ title: parsed.title, template: parsed.template, content: merged });
       } catch {
-        alert(tr.importJsonError);
+        setImportErrorOpen(true);
       }
     };
     reader.readAsText(file);
@@ -235,6 +240,28 @@ export function Toolbar({ title, content, template, onTitleChange, onImport }: T
           </DropdownMenuContent>
         </DropdownMenu>
       </header>
+
+      {/* Import error dialog */}
+      <Dialog open={importErrorOpen} onOpenChange={setImportErrorOpen}>
+        <DialogContent className="editor-dialog overflow-hidden p-0 sm:max-w-[420px]">
+          <DialogHeader className="editor-dialog-header px-5 pb-4 pt-5">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-black/40 bg-black/[0.035]">
+                <AlertTriangle className="h-4 w-4 text-foreground" />
+              </div>
+              <DialogTitle className="text-[15px] font-semibold leading-tight">{tr.importJsonErrorTitle}</DialogTitle>
+            </div>
+            <div className="px-0 pt-1">
+              <p className="text-sm leading-relaxed text-gray-600">{tr.importJsonError}</p>
+            </div>
+          </DialogHeader>
+          <DialogFooter className="editor-dialog-footer">
+            <Button variant="outline" className="editor-dialog-action cursor-pointer" onClick={() => setImportErrorOpen(false)}>
+              {tr.close}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Example confirmation dialog */}
       <Dialog open={exampleDialogOpen} onOpenChange={setExampleDialogOpen}>
