@@ -53,6 +53,8 @@ CVForge is entirely stateless. Your work lives in your browser's local storage a
 | Components | shadcn/ui |
 | Deployment | GitHub Pages (static export) |
 
+The entire codebase was implemented using [Claude Code](https://claude.ai/code) and [OpenAI Codex](https://openai.com/index/openai-codex/).
+
 ## Contributing
 
 Contributions are welcome. Please open an issue first to discuss what you would like to change. When submitting a pull request, make sure it targets the `dev` branch and references the related issue. Branch naming follows the pattern `feature/issue-{N}-short-description`.
