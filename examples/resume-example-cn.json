@@ -68,7 +68,7 @@
         "id": "a1b2c3d4-0003-4000-8000-000000000001",
         "company": "腾讯",
         "position": "算法工程师",
-        "location": "深圳, 中国",
+        "location": "中国, 深圳",
         "startDate": "2023/09",
         "endDate": "2024/09",
         "descriptions": [
@@ -118,7 +118,7 @@
         "institution": "郑州大学",
         "degree": "计算机科学理学学士",
         "field": "",
-        "location": "郑州, 中国",
+        "location": "中国, 郑州",
         "startDate": "2017/09",
         "endDate": "2021/06",
         "extraFields": [
