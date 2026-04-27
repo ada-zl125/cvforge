@@ -50,7 +50,7 @@
         "id": "a1b2c3d4-0002-4000-8000-000000000001",
         "company": "字节跳动",
         "position": "AI工程师",
-        "location": "北京, 中国",
+        "location": "中国, 北京",
         "startDate": "2024/09",
         "endDate": "至今",
         "descriptions": [
@@ -89,7 +89,7 @@
         "institution": "北京大学",
         "degree": "计算机科学理学硕士",
         "field": "",
-        "location": "北京, 中国",
+        "location": "中国, 北京",
         "startDate": "2021/09",
         "endDate": "2023/06",
         "extraFields": [
