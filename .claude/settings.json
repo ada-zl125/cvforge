@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C /Users/zhengyangli/Coding/EasyCV/cvforge checkout -b fix/issue-113-cn-example-location)",
+      "Bash(git -C /Users/zhengyangli/Coding/EasyCV/cvforge commit -m 'fix: correct location format in Chinese resume example *)",
+      "Bash(git -C /Users/zhengyangli/Coding/EasyCV/cvforge push -u origin fix/issue-113-cn-example-location)"
+    ]
+  }
+}

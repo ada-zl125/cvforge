@@ -104,8 +104,15 @@ function CreateDialog({
   const titleTooLong = docTitle.length > TITLE_MAX;
   const canCreate = docTitle.trim().length > 0 && !titleTooLong;
 
+  useEffect(() => {
+    if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setDocTitle("");
+      setDocLang("en");
+    }
+  }, [open]);
+
   function handleOpenChange(next: boolean) {
-    if (next) { setDocTitle(""); setDocLang("en"); }
     onOpenChange(next);
   }
 
@@ -167,7 +174,7 @@ function CreateDialog({
           </div>
         </div>
         <DialogFooter className="entry-create-dialog-footer">
-          <Button variant="outline" className="entry-dialog-cancel cursor-pointer" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" className="entry-dialog-cancel cursor-pointer" onClick={() => handleOpenChange(false)}>
             {tr.cancel}
           </Button>
           <Button variant="outline" className="entry-dialog-action cursor-pointer" onClick={() => canCreate && onCreate(docTitle.trim(), docLang)} disabled={!canCreate}>
