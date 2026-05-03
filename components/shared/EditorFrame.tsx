@@ -117,13 +117,13 @@ export function EditorFrame({ toolbar, form, preview }: EditorFrameProps) {
   const { splitRatio, leftCollapsed, rightCollapsed } = prefs;
   const leftWidth = leftCollapsed ? 0 : rightCollapsed ? 100 : splitRatio;
   const rightWidth = rightCollapsed ? 0 : 100 - splitRatio;
-  const showDivider = !leftCollapsed && !rightCollapsed;
+  const showDivider = !leftCollapsed;
 
   return (
-    <div className="flex h-screen flex-col" data-left-hovered={isLeftHovered ? "true" : "false"}>
+    <div className="flex h-screen flex-col">
       <style>{`
-        [data-left-hovered="true"] [data-toolbar] {
-          border-bottom-color: rgb(0 0 0 / 0.3);
+        .editor-form-pane[data-left-hovered="true"] [data-editor-toolbar-inner] {
+          border-bottom-color: rgb(0 0 0 / 0.2);
           transition: border-bottom-color 0.2s ease-in-out;
         }
       `}</style>
@@ -135,6 +135,7 @@ export function EditorFrame({ toolbar, form, preview }: EditorFrameProps) {
           <div
             className="editor-form-pane relative z-10 shrink-0 border-r border-t border-border flex flex-col transition-colors hover:border-r-foreground/20 hover:border-t-foreground/20"
             style={{ width: `${leftWidth}%` }}
+            data-left-hovered={isLeftHovered ? "true" : "false"}
             onMouseEnter={() => setIsLeftHovered(true)}
             onMouseLeave={() => setIsLeftHovered(false)}
           >
@@ -179,7 +180,7 @@ export function EditorFrame({ toolbar, form, preview }: EditorFrameProps) {
 
         {/* Collapsed left panel button */}
         {leftCollapsed && (
-          <div className="flex shrink-0 items-center border-r border-border px-2">
+          <div className="flex shrink-0 items-start border-r border-border px-2 pt-3">
             <Button
               variant="ghost"
               size="icon-xs"
@@ -197,7 +198,7 @@ export function EditorFrame({ toolbar, form, preview }: EditorFrameProps) {
           <div
             onMouseDown={handleMouseDown}
             className={`w-1 cursor-col-resize transition-colors ${
-              isDragging ? "bg-foreground" : "bg-border hover:bg-foreground"
+              isDragging ? "bg-foreground/50" : "bg-border hover:bg-foreground/50"
             }`}
           />
         )}
