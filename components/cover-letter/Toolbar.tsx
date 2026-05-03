@@ -151,7 +151,7 @@ export function Toolbar({ title, content, template, onTitleChange, onImport }: T
   return (
     <>
       <input ref={fileInputRef} type="file" accept=".json" className="hidden" onChange={handleImportFile} />
-      <header className="editor-toolbar relative z-20 flex h-14 shrink-0 items-center gap-3 border-b border-border bg-card px-4">
+      <header className="editor-toolbar relative z-20 flex h-14 shrink-0 items-center gap-3 border-b border-border bg-card px-4 transition-colors" data-toolbar>
         <Button
           variant="ghost"
           size="icon-sm"
