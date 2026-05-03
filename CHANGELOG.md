@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.1.1] — 2026-05-03
+
+- Fix UI display issues
+- Add responsive layout support for different screen sizes
+- Add collapsible editing panels and resizable layout controls in editor pages
+
 ## [1.0.1] — 2026-04-26
 
 - Remove Address Line fields from resume editor Personal Information (academic CV only)
