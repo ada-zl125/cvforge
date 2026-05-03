@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight, RotateCcw, Maximize2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, RotateCcw, Maximize2, Minimize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface EditorFrameProps {
@@ -17,6 +17,7 @@ interface LayoutPrefs {
   splitRatio: number;
   leftCollapsed: boolean;
   rightCollapsed: boolean;
+  preSplitRatio?: number;
 }
 
 function getInitialPrefs(): LayoutPrefs {
@@ -54,12 +55,24 @@ export function EditorFrame({ toolbar, form, preview }: EditorFrameProps) {
     }));
   };
 
-  const maximizeLeft = () => {
-    setPrefs((prev) => ({
-      ...prev,
-      rightCollapsed: true,
-      leftCollapsed: false,
-    }));
+  const toggleMaximizeLeft = () => {
+    setPrefs((prev) => {
+      if (prev.rightCollapsed) {
+        return {
+          ...prev,
+          rightCollapsed: false,
+          splitRatio: prev.preSplitRatio || DEFAULT_SPLIT_RATIO,
+          preSplitRatio: undefined,
+        };
+      } else {
+        return {
+          ...prev,
+          rightCollapsed: true,
+          leftCollapsed: false,
+          preSplitRatio: prev.splitRatio,
+        };
+      }
+    });
   };
 
   const resetLayout = () => {
@@ -102,7 +115,7 @@ export function EditorFrame({ toolbar, form, preview }: EditorFrameProps) {
   }, [prefs]);
 
   const { splitRatio, leftCollapsed, rightCollapsed } = prefs;
-  const leftWidth = leftCollapsed ? 0 : splitRatio;
+  const leftWidth = leftCollapsed ? 0 : rightCollapsed ? 100 : splitRatio;
   const rightWidth = rightCollapsed ? 0 : 100 - splitRatio;
   const showDivider = !leftCollapsed && !rightCollapsed;
 
@@ -141,11 +154,11 @@ export function EditorFrame({ toolbar, form, preview }: EditorFrameProps) {
                 <Button
                   variant="ghost"
                   size="icon-xs"
-                  onClick={maximizeLeft}
+                  onClick={toggleMaximizeLeft}
                   className="h-6 w-6 text-muted-foreground hover:text-foreground"
-                  title="Maximize left panel"
+                  title={rightCollapsed ? "Restore split layout" : "Maximize left panel"}
                 >
-                  <Maximize2 className="size-4" />
+                  {rightCollapsed ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
                 </Button>
                 <Button
                   variant="ghost"
