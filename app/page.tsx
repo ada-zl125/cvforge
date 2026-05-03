@@ -104,11 +104,15 @@ function CreateDialog({
   const titleTooLong = docTitle.length > TITLE_MAX;
   const canCreate = docTitle.trim().length > 0 && !titleTooLong;
 
-  function handleOpenChange(next: boolean) {
-    if (next) {
+  useEffect(() => {
+    if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDocTitle("");
       setDocLang("en");
     }
+  }, [open]);
+
+  function handleOpenChange(next: boolean) {
     onOpenChange(next);
   }
 
