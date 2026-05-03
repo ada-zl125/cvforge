@@ -10,7 +10,6 @@ interface EditorFrameProps {
   preview: React.ReactNode;
 }
 
-const LAYOUT_STORAGE_KEY = "editor-layout-prefs";
 const DEFAULT_SPLIT_RATIO = 40;
 
 interface LayoutPrefs {
@@ -20,24 +19,13 @@ interface LayoutPrefs {
   preSplitRatio?: number;
 }
 
-function getInitialPrefs(): LayoutPrefs {
-  if (typeof window === "undefined") {
-    return { splitRatio: DEFAULT_SPLIT_RATIO, leftCollapsed: false, rightCollapsed: false };
-  }
-  const saved = localStorage.getItem(LAYOUT_STORAGE_KEY);
-  if (saved) {
-    try {
-      return JSON.parse(saved);
-    } catch {
-      // Ignore parse errors
-    }
-  }
-  return { splitRatio: DEFAULT_SPLIT_RATIO, leftCollapsed: false, rightCollapsed: false };
-}
-
 export function EditorFrame({ toolbar, form, preview }: EditorFrameProps) {
   const contentRef = useRef<HTMLDivElement>(null);
-  const [prefs, setPrefs] = useState<LayoutPrefs>(getInitialPrefs);
+  const [prefs, setPrefs] = useState<LayoutPrefs>({
+    splitRatio: DEFAULT_SPLIT_RATIO,
+    leftCollapsed: false,
+    rightCollapsed: false,
+  });
   const [isDragging, setIsDragging] = useState(false);
   const [isLeftHovered, setIsLeftHovered] = useState(false);
 
@@ -110,9 +98,6 @@ export function EditorFrame({ toolbar, form, preview }: EditorFrameProps) {
     };
   }, [isDragging]);
 
-  useEffect(() => {
-    localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(prefs));
-  }, [prefs]);
 
   const { splitRatio, leftCollapsed, rightCollapsed } = prefs;
   const leftWidth = leftCollapsed ? 0 : rightCollapsed ? 100 : splitRatio;
