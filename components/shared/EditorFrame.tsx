@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, RotateCcw, Maximize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface EditorFrameProps {
@@ -11,6 +11,7 @@ interface EditorFrameProps {
 }
 
 const LAYOUT_STORAGE_KEY = "editor-layout-prefs";
+const DEFAULT_SPLIT_RATIO = 40;
 
 interface LayoutPrefs {
   splitRatio: number;
@@ -20,7 +21,7 @@ interface LayoutPrefs {
 
 function getInitialPrefs(): LayoutPrefs {
   if (typeof window === "undefined") {
-    return { splitRatio: 40, leftCollapsed: false, rightCollapsed: false };
+    return { splitRatio: DEFAULT_SPLIT_RATIO, leftCollapsed: false, rightCollapsed: false };
   }
   const saved = localStorage.getItem(LAYOUT_STORAGE_KEY);
   if (saved) {
@@ -30,7 +31,7 @@ function getInitialPrefs(): LayoutPrefs {
       // Ignore parse errors
     }
   }
-  return { splitRatio: 40, leftCollapsed: false, rightCollapsed: false };
+  return { splitRatio: DEFAULT_SPLIT_RATIO, leftCollapsed: false, rightCollapsed: false };
 }
 
 export function EditorFrame({ toolbar, form, preview }: EditorFrameProps) {
@@ -39,22 +40,32 @@ export function EditorFrame({ toolbar, form, preview }: EditorFrameProps) {
   const [isDragging, setIsDragging] = useState(false);
 
   const toggleLeftCollapse = () => {
-    setPrefs((prev) => {
-      if (prev.leftCollapsed) {
-        return { ...prev, leftCollapsed: false };
-      } else {
-        return { ...prev, leftCollapsed: true, rightCollapsed: false };
-      }
-    });
+    setPrefs((prev) => ({
+      ...prev,
+      leftCollapsed: !prev.leftCollapsed,
+    }));
   };
 
   const toggleRightCollapse = () => {
-    setPrefs((prev) => {
-      if (prev.rightCollapsed) {
-        return { ...prev, rightCollapsed: false };
-      } else {
-        return { ...prev, rightCollapsed: true, leftCollapsed: false };
-      }
+    setPrefs((prev) => ({
+      ...prev,
+      rightCollapsed: !prev.rightCollapsed,
+    }));
+  };
+
+  const expandAll = () => {
+    setPrefs((prev) => ({
+      ...prev,
+      leftCollapsed: false,
+      rightCollapsed: false,
+    }));
+  };
+
+  const resetLayout = () => {
+    setPrefs({
+      splitRatio: DEFAULT_SPLIT_RATIO,
+      leftCollapsed: false,
+      rightCollapsed: false,
     });
   };
 
@@ -102,37 +113,51 @@ export function EditorFrame({ toolbar, form, preview }: EditorFrameProps) {
         {/* Left: Form panel */}
         {!leftCollapsed && (
           <div
-            className="editor-form-pane relative z-10 shrink-0 overflow-y-auto rounded-tr-lg border-r border-t border-border flex flex-col"
+            className="editor-form-pane relative z-10 shrink-0 border-r border-t border-border flex flex-col transition-colors hover:border-r-foreground/20"
             style={{ width: `${leftWidth}%` }}
           >
-            <div className="flex-1 overflow-y-auto">{form}</div>
-            {showDivider && (
-              <div className="flex justify-center border-t border-border py-1">
+            {/* Top action bar */}
+            <div className="flex shrink-0 items-center justify-between border-b border-border px-3 py-2">
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                onClick={toggleLeftCollapse}
+                className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                title="Collapse left panel"
+              >
+                <ChevronLeft className="size-4" />
+              </Button>
+
+              <div className="flex items-center gap-1">
                 <Button
                   variant="ghost"
                   size="icon-xs"
-                  onClick={toggleLeftCollapse}
+                  onClick={expandAll}
                   className="h-6 w-6 text-muted-foreground hover:text-foreground"
-                  title="Collapse left panel"
+                  title="Expand all panels"
                 >
-                  <ChevronLeft className="size-4" />
+                  <Maximize2 className="size-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  onClick={resetLayout}
+                  className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                  title="Reset layout"
+                >
+                  <RotateCcw className="size-4" />
                 </Button>
               </div>
-            )}
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto">{form}</div>
           </div>
         )}
 
-        {/* Draggable divider */}
-        {showDivider && (
-          <div
-            onMouseDown={handleMouseDown}
-            className={`w-1 ${isDragging ? "bg-primary" : "bg-border hover:bg-primary"} cursor-col-resize transition-colors`}
-          />
-        )}
-
         {/* Collapsed left panel button */}
-        {leftCollapsed && !rightCollapsed && (
-          <div className="flex shrink-0 items-center border-b border-r border-border px-2">
+        {leftCollapsed && (
+          <div className="flex shrink-0 items-center border-r border-border px-2">
             <Button
               variant="ghost"
               size="icon-xs"
@@ -145,6 +170,16 @@ export function EditorFrame({ toolbar, form, preview }: EditorFrameProps) {
           </div>
         )}
 
+        {/* Draggable divider */}
+        {showDivider && (
+          <div
+            onMouseDown={handleMouseDown}
+            className={`w-1 cursor-col-resize transition-colors ${
+              isDragging ? "bg-foreground" : "bg-border hover:bg-foreground"
+            }`}
+          />
+        )}
+
         {/* Right: Preview panel */}
         {!rightCollapsed && (
           <div
@@ -152,25 +187,12 @@ export function EditorFrame({ toolbar, form, preview }: EditorFrameProps) {
             style={{ width: `${rightWidth}%` }}
           >
             <div className="flex-1 overflow-y-auto">{preview}</div>
-            {showDivider && (
-              <div className="flex justify-center border-t border-border py-1">
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  onClick={toggleRightCollapse}
-                  className="h-6 w-6 text-muted-foreground hover:text-foreground"
-                  title="Collapse right panel"
-                >
-                  <ChevronRight className="size-4" />
-                </Button>
-              </div>
-            )}
           </div>
         )}
 
         {/* Collapsed right panel button */}
-        {rightCollapsed && !leftCollapsed && (
-          <div className="flex shrink-0 items-center border-b border-border px-2">
+        {rightCollapsed && (
+          <div className="flex shrink-0 items-center border-border px-2">
             <Button
               variant="ghost"
               size="icon-xs"
