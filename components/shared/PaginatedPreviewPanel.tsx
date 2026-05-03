@@ -39,7 +39,7 @@ export function PaginatedPreviewPanel({ children }: PaginatedPreviewPanelProps) 
 
   return (
     <PageBreakProvider>
-    <div className="flex flex-1 items-start justify-center overflow-y-auto bg-muted/50 p-8">
+    <div className="flex flex-1 items-start justify-center overflow-y-auto bg-muted/50 px-8 pt-8 pb-0">
       {/* Hidden export target — captured by lib/export.ts via .preview-a4 > div */}
       <div style={{ position: "fixed", left: "-9999px", top: 0, width: "794px", pointerEvents: "none" }}>
         <div className="preview-a4">
