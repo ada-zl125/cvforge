@@ -206,7 +206,7 @@ export function EditorFrame({ toolbar, form, preview }: EditorFrameProps) {
         {/* Right: Preview panel */}
         {!rightCollapsed && (
           <div
-            className="relative flex flex-1 flex-col overflow-hidden"
+            className="relative flex flex-1 flex-col overflow-hidden bg-muted/50"
             style={{ width: `${rightWidth}%` }}
           >
             <div className="flex-1 overflow-y-auto">{preview}</div>
