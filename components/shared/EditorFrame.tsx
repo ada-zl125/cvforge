@@ -21,11 +21,11 @@ interface LayoutPrefs {
 
 export function EditorFrame({ toolbar, form, preview }: EditorFrameProps) {
   const contentRef = useRef<HTMLDivElement>(null);
-  const [prefs, setPrefs] = useState<LayoutPrefs>({
+  const [prefs, setPrefs] = useState<LayoutPrefs>(() => ({
     splitRatio: DEFAULT_SPLIT_RATIO,
     leftCollapsed: false,
-    rightCollapsed: false,
-  });
+    rightCollapsed: typeof window !== "undefined" && window.innerWidth < 768,
+  }));
   const [isDragging, setIsDragging] = useState(false);
   const [isLeftHovered, setIsLeftHovered] = useState(false);
 
