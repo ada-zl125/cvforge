@@ -50,7 +50,7 @@ export function PaginatedPreviewPanel({ children }: PaginatedPreviewPanelProps) 
       </div>
 
       {/* Visible paginated pages */}
-      <div className="flex flex-col items-center gap-4">
+      <div className="flex flex-col items-center gap-4 pb-8">
         {Array.from({ length: numPages }).map((_, i) => (
           <div
             key={i}
