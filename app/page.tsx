@@ -105,7 +105,10 @@ function CreateDialog({
   const canCreate = docTitle.trim().length > 0 && !titleTooLong;
 
   function handleOpenChange(next: boolean) {
-    if (next) { setDocTitle(""); setDocLang("en"); }
+    if (next) {
+      setDocTitle("");
+      setDocLang("en");
+    }
     onOpenChange(next);
   }
 
@@ -167,7 +170,7 @@ function CreateDialog({
           </div>
         </div>
         <DialogFooter className="entry-create-dialog-footer">
-          <Button variant="outline" className="entry-dialog-cancel cursor-pointer" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" className="entry-dialog-cancel cursor-pointer" onClick={() => handleOpenChange(false)}>
             {tr.cancel}
           </Button>
           <Button variant="outline" className="entry-dialog-action cursor-pointer" onClick={() => canCreate && onCreate(docTitle.trim(), docLang)} disabled={!canCreate}>
