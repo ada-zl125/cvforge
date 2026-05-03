@@ -38,6 +38,7 @@ export function EditorFrame({ toolbar, form, preview }: EditorFrameProps) {
   const contentRef = useRef<HTMLDivElement>(null);
   const [prefs, setPrefs] = useState<LayoutPrefs>(getInitialPrefs);
   const [isDragging, setIsDragging] = useState(false);
+  const [isLeftHovered, setIsLeftHovered] = useState(false);
 
   const toggleLeftCollapse = () => {
     setPrefs((prev) => ({
@@ -53,11 +54,11 @@ export function EditorFrame({ toolbar, form, preview }: EditorFrameProps) {
     }));
   };
 
-  const expandAll = () => {
+  const maximizeLeft = () => {
     setPrefs((prev) => ({
       ...prev,
+      rightCollapsed: true,
       leftCollapsed: false,
-      rightCollapsed: false,
     }));
   };
 
@@ -106,18 +107,26 @@ export function EditorFrame({ toolbar, form, preview }: EditorFrameProps) {
   const showDivider = !leftCollapsed && !rightCollapsed;
 
   return (
-    <div className="flex h-screen flex-col">
+    <div className="flex h-screen flex-col" data-left-hovered={isLeftHovered ? "true" : "false"}>
+      <style>{`
+        [data-left-hovered="true"] [data-toolbar] {
+          border-bottom-color: rgb(0 0 0 / 0.3);
+          transition: border-bottom-color 0.2s ease-in-out;
+        }
+      `}</style>
       {toolbar}
 
       <div ref={contentRef} className="-mt-px flex min-h-0 flex-1 overflow-hidden">
         {/* Left: Form panel */}
         {!leftCollapsed && (
           <div
-            className="editor-form-pane relative z-10 shrink-0 border-r border-t border-border flex flex-col transition-colors hover:border-r-foreground/20"
+            className="editor-form-pane relative z-10 shrink-0 border-r border-t border-border flex flex-col transition-colors hover:border-r-foreground/20 hover:border-t-foreground/20"
             style={{ width: `${leftWidth}%` }}
+            onMouseEnter={() => setIsLeftHovered(true)}
+            onMouseLeave={() => setIsLeftHovered(false)}
           >
             {/* Top action bar */}
-            <div className="flex shrink-0 items-center justify-between border-b border-border px-3 py-2">
+            <div className="flex shrink-0 items-center justify-between border-b border-border transition-colors px-3 py-2" data-editor-toolbar-inner>
               <Button
                 variant="ghost"
                 size="icon-xs"
@@ -132,9 +141,9 @@ export function EditorFrame({ toolbar, form, preview }: EditorFrameProps) {
                 <Button
                   variant="ghost"
                   size="icon-xs"
-                  onClick={expandAll}
+                  onClick={maximizeLeft}
                   className="h-6 w-6 text-muted-foreground hover:text-foreground"
-                  title="Expand all panels"
+                  title="Maximize left panel"
                 >
                   <Maximize2 className="size-4" />
                 </Button>
