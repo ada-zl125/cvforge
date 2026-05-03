@@ -184,9 +184,10 @@ export function Toolbar({ title, content, template, onTitleChange, onImport }: T
           className="btn-hover-border h-8 cursor-pointer gap-1.5 rounded-lg px-3 text-sm font-medium"
           variant="outline"
           onClick={() => setExampleDialogOpen(true)}
+          title={tr.loadExample}
         >
           <Sparkles className="size-4" />
-          {tr.loadExample}
+          <span className="hidden sm:inline">{tr.loadExample}</span>
         </Button>
 
         {/* Import dropdown */}
@@ -195,10 +196,11 @@ export function Toolbar({ title, content, template, onTitleChange, onImport }: T
             <Button
               className="btn-hover-border h-8 cursor-pointer gap-1.5 rounded-lg px-3 text-sm font-medium"
               variant="outline"
+              title={tr.importLabel}
             >
               <FileUp className="size-4" />
-              {tr.importLabel}
-              <ChevronDown className="size-3 opacity-60" />
+              <span className="hidden sm:inline">{tr.importLabel}</span>
+              <ChevronDown className="size-3 opacity-60 hidden sm:inline" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="min-w-44">
@@ -216,12 +218,13 @@ export function Toolbar({ title, content, template, onTitleChange, onImport }: T
               className="btn-hover-border h-8 cursor-pointer gap-1.5 rounded-lg px-3 text-sm font-medium"
               variant="outline"
               disabled={exporting}
+              title={exporting ? tr.exporting : tr.exportLabel}
             >
               {exporting
                 ? <Loader2 className="size-4 animate-spin" />
                 : <FileDown className="size-4" />}
-              {exporting ? tr.exporting : tr.exportLabel}
-              {!exporting && <ChevronDown className="size-3 opacity-60" />}
+              <span className="hidden sm:inline">{exporting ? tr.exporting : tr.exportLabel}</span>
+              {!exporting && <ChevronDown className="size-3 opacity-60 hidden sm:inline" />}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="min-w-44">
