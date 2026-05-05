@@ -82,7 +82,7 @@ export function FormPanel({ content, onChange }: FormPanelProps) {
   }
 
   return (
-    <div className="flex flex-col gap-4 p-5">
+    <div className="flex min-w-0 flex-col gap-4 p-5">
       {/* Toolbar */}
       <div className="flex items-center gap-1.5">
         <Button

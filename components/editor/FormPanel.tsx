@@ -118,7 +118,7 @@ export function FormPanel({ content, onChange, language }: FormPanelProps) {
   }
 
   return (
-    <div className="flex flex-col gap-4 p-5">
+    <div className="flex min-w-0 flex-col gap-4 p-5">
       {/* Form toolbar: Collapse All / Reset */}
       <div className="flex items-center gap-1.5">
         <Button
