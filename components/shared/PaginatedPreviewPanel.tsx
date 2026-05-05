@@ -81,7 +81,6 @@ export function PaginatedPreviewPanel({ children }: PaginatedPreviewPanelProps) 
               position: "relative",
               transform: `scale(${scale})`,
               transformOrigin: "top center",
-              marginBottom: `${(PAGE_H * (scale - 1)) / 2}px`,
             }}
           >
             {/* Inset window preserves TOP/BOTTOM margins on every page */}
