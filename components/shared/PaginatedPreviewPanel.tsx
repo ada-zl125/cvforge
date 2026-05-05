@@ -74,7 +74,15 @@ export function PaginatedPreviewPanel({ children }: PaginatedPreviewPanelProps) 
           <div
             key={i}
             className="overflow-hidden rounded-sm border border-border bg-white shadow-lg transition-colors duration-200 hover:border-black"
-            style={{ width: "794px", height: `${PAGE_H}px`, flexShrink: 0, position: "relative", zoom: scale }}
+            style={{
+              width: "794px",
+              height: `${PAGE_H}px`,
+              flexShrink: 0,
+              position: "relative",
+              transform: `scale(${scale})`,
+              transformOrigin: "top center",
+              marginBottom: `${(PAGE_H * (scale - 1)) / 2}px`,
+            }}
           >
             {/* Inset window preserves TOP/BOTTOM margins on every page */}
             <div
