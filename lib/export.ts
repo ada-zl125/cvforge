@@ -1,5 +1,6 @@
 import { toCanvas } from "html-to-image";
 import jsPDF from "jspdf";
+import { TOP, BOTTOM } from "@/lib/page-constants";
 
 export type ExportFormat = "pdf" | "png";
 
@@ -43,13 +44,16 @@ export async function exportResume(
 
   const A4_W_MM = 210;
   const A4_H_MM = 297;
-  const PAGE_OVERFLOW_EPSILON_MM = 0.5;
+
+  // Effective content height: exclude TOP and BOTTOM margins (matching preview calculation)
+  // The "-8" accounts for alignment/floating-point precision
+  const effectiveHeightPx = canvas.height - TOP - BOTTOM - 8;
 
   // Total rendered height in mm (preserving aspect ratio of canvas mapped to A4 width)
-  const totalHeightMM = (canvas.height / canvas.width) * A4_W_MM;
+  const totalHeightMM = (effectiveHeightPx / canvas.width) * A4_W_MM;
   const pageCount = Math.max(
     1,
-    Math.ceil((totalHeightMM - PAGE_OVERFLOW_EPSILON_MM) / A4_H_MM)
+    Math.ceil(totalHeightMM / A4_H_MM)
   );
 
   const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
