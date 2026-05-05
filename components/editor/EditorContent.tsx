@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { ResumeContent, ResumeTemplate, ResumeLanguage } from "@/lib/types/resume";
 import { defaultResumeContent, RESUME_STORAGE_KEY } from "@/lib/defaults";
 import { useEditorState } from "@/lib/editor-state";
@@ -7,6 +8,7 @@ import { EditorFrame } from "@/components/shared/EditorFrame";
 import { Toolbar } from "./Toolbar";
 import { FormPanel } from "./FormPanel";
 import { PreviewPanel } from "./PreviewPanel";
+import { ChatPanel } from "@/components/shared/ChatPanel";
 
 interface EditorState {
   title: string;
@@ -23,6 +25,8 @@ const initialState: EditorState = {
 };
 
 export function EditorContent() {
+  const [isAgentMode, setIsAgentMode] = useState(false);
+
   const { state, setContent, setStoredState } = useEditorState<
     ResumeContent,
     ResumeTemplate,
@@ -56,8 +60,14 @@ export function EditorContent() {
           onImport={setStoredState}
         />
       }
-      form={<FormPanel content={state.content} onChange={setContent} language={state.language} />}
+      form={
+        isAgentMode
+          ? <ChatPanel docType="resume" content={state.content} onChange={setContent} />
+          : <FormPanel content={state.content} onChange={setContent} language={state.language} />
+      }
       preview={<PreviewPanel content={state.content} language={state.language} />}
+      isAgentMode={isAgentMode}
+      onModeToggle={() => setIsAgentMode((v) => !v)}
     />
   );
 }
