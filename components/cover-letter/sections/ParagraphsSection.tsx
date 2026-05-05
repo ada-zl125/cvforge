@@ -5,6 +5,7 @@ import type { ParagraphItem } from "@/lib/types/cover-letter";
 import { Button } from "@/components/ui/button";
 import { useUILanguage } from "@/lib/ui-language";
 import { t } from "@/lib/translations";
+import { normalizeTextareaValue } from "@/lib/text";
 
 interface Props {
   items: ParagraphItem[];
@@ -55,8 +56,8 @@ export function ParagraphsSection({ items, onChange, collapsed, onToggleCollapse
               <div key={item.id} className="flex gap-1.5">
                 {/* Textarea */}
                 <textarea
-                  value={item.text}
-                  onChange={(e) => update(i, e.target.value)}
+                  value={normalizeTextareaValue(item.text)}
+                  onChange={(e) => update(i, normalizeTextareaValue(e.target.value))}
                   placeholder={tr.paragraphPlaceholder}
                   rows={4}
                   className="flex-1 resize-none rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"

@@ -2,6 +2,7 @@
 
 import { useUILanguage } from "@/lib/ui-language";
 import { t } from "@/lib/translations";
+import { normalizeTextareaValue } from "@/lib/text";
 
 interface ResearchInterestsSectionProps {
   value: string;
@@ -14,8 +15,8 @@ export function ResearchInterestsSection({ value, onChange }: ResearchInterestsS
 
   return (
     <textarea
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
+      value={normalizeTextareaValue(value)}
+      onChange={(e) => onChange(normalizeTextareaValue(e.target.value))}
       placeholder={tr.researchInterestsPlaceholder}
       rows={4}
       className="w-full resize-none rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
