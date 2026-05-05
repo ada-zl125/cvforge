@@ -83,27 +83,28 @@ export function FormPanel({ content, onChange }: FormPanelProps) {
 
   return (
     <div className="flex flex-col gap-4 p-5">
-      {/* Toolbar */}
-      <div className="flex items-center gap-1.5">
-        <Button
-          variant="outline"
-          size="sm"
-          className="btn-hover-border cursor-pointer gap-1.5 text-xs"
-          onClick={toggleAll}
-        >
-          {allCollapsed ? <ChevronsUpDown className="size-3.5" /> : <ChevronsDownUp className="size-3.5" />}
-          {allCollapsed ? tr.expandAll : tr.collapseAll}
-        </Button>
+      <div className="flex items-center justify-end">
+        <div className="flex items-center gap-1.5">
+          <Button
+            variant="outline"
+            size="sm"
+            className="btn-hover-border cursor-pointer gap-1.5 text-xs"
+            onClick={toggleAll}
+          >
+            {allCollapsed ? <ChevronsUpDown className="size-3.5" /> : <ChevronsDownUp className="size-3.5" />}
+            {allCollapsed ? tr.expandAll : tr.collapseAll}
+          </Button>
 
-        <Button
-          variant="outline"
-          size="sm"
-          className="btn-hover-border cursor-pointer gap-1.5 text-xs"
-          onClick={() => setResetOpen(true)}
-        >
-          <RotateCcw className="size-3.5" />
-          {tr.resetBtn}
-        </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="btn-hover-border cursor-pointer gap-1.5 text-xs"
+            onClick={() => setResetOpen(true)}
+          >
+            <RotateCcw className="size-3.5" />
+            {tr.resetBtn}
+          </Button>
+        </div>
       </div>
 
       {/* Sender / Personal Information */}
