@@ -1,13 +1,18 @@
 "use client";
 
 import { useRef, useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight, RotateCcw, Maximize2, Minimize2 } from "lucide-react";
+import { Bot, ChevronLeft, ChevronRight, PenLine, RotateCcw, Maximize2, Minimize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useUILanguage } from "@/lib/ui-language";
+import { t } from "@/lib/translations";
 
 interface EditorFrameProps {
   toolbar: React.ReactNode;
   form: React.ReactNode;
   preview: React.ReactNode;
+  isAgentMode?: boolean;
+  isLLMConfigured?: boolean;
+  onModeToggle?: () => void;
 }
 
 const DEFAULT_SPLIT_RATIO = 40;
@@ -19,7 +24,16 @@ interface LayoutPrefs {
   preSplitRatio?: number;
 }
 
-export function EditorFrame({ toolbar, form, preview }: EditorFrameProps) {
+export function EditorFrame({
+  toolbar,
+  form,
+  preview,
+  isAgentMode = false,
+  isLLMConfigured = false,
+  onModeToggle,
+}: EditorFrameProps) {
+  const { lang } = useUILanguage();
+  const tr = t[lang];
   const contentRef = useRef<HTMLDivElement>(null);
   const [prefs, setPrefs] = useState<LayoutPrefs>(() => ({
     splitRatio: DEFAULT_SPLIT_RATIO,
@@ -28,7 +42,6 @@ export function EditorFrame({ toolbar, form, preview }: EditorFrameProps) {
   }));
   const [isDragging, setIsDragging] = useState(false);
   const [isLeftHovered, setIsLeftHovered] = useState(false);
-
   const toggleLeftCollapse = () => {
     setPrefs((prev) => ({
       ...prev,
@@ -105,6 +118,8 @@ export function EditorFrame({ toolbar, form, preview }: EditorFrameProps) {
   const rightWidth = rightCollapsed ? 0 : 100 - splitRatio;
   const showDivider = !leftCollapsed;
 
+  const shouldBlackHover = isAgentMode && isLLMConfigured;
+
   return (
     <div className={`flex h-screen flex-col ${isDragging ? "select-none" : ""}`}>
       <style>{`
@@ -112,6 +127,12 @@ export function EditorFrame({ toolbar, form, preview }: EditorFrameProps) {
           border-bottom-color: rgb(0 0 0 / 0.2);
           transition: border-bottom-color 0.2s ease-in-out;
         }
+        ${shouldBlackHover ? `
+          .editor-form-pane:hover {
+            border-right-color: rgb(0 0 0) !important;
+            border-top-color: rgb(0 0 0) !important;
+          }
+        ` : ``}
       `}</style>
       {toolbar}
 
@@ -119,7 +140,9 @@ export function EditorFrame({ toolbar, form, preview }: EditorFrameProps) {
         {/* Left: Form panel */}
         {!leftCollapsed && (
           <div
-            className="editor-form-pane relative z-10 shrink-0 border-r border-t border-border flex flex-col transition-colors hover:border-r-foreground/20 hover:border-t-foreground/20"
+            className={`editor-form-pane relative z-10 shrink-0 border-r border-t border-border flex flex-col transition-colors ${
+              shouldBlackHover ? "" : "hover:border-r-foreground/20 hover:border-t-foreground/20"
+            }`}
             style={{ width: `${leftWidth}%` }}
             data-left-hovered={isLeftHovered ? "true" : "false"}
             onMouseEnter={() => setIsLeftHovered(true)}
@@ -138,6 +161,17 @@ export function EditorFrame({ toolbar, form, preview }: EditorFrameProps) {
               </Button>
 
               <div className="flex items-center gap-1">
+                {onModeToggle && (
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    onClick={onModeToggle}
+                    className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                    title={isAgentMode ? tr.agent.switchToEditMode : tr.agent.switchToAgentMode}
+                  >
+                    {isAgentMode ? <PenLine className="size-4" /> : <Bot className="size-4" />}
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   size="icon-xs"
