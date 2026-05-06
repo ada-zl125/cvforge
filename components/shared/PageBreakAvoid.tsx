@@ -28,22 +28,13 @@ function processRoot(cvRoot: HTMLElement): void {
   const els = Array.from(cvRoot.querySelectorAll<HTMLElement>("[data-page-break-avoid]"));
   if (els.length === 0) return;
 
-  // One forced reflow here; no further reflows during the write phase.
-  const rootRect = cvRoot.getBoundingClientRect();
-  const scaleY = rootRect.height > 0 && cvRoot.offsetHeight > 0
-    ? rootRect.height / cvRoot.offsetHeight
-    : 1;
-
   // Phase 1 — batch-read positions and previously applied extra margins.
-  const snapshots = els.map((el) => {
-    const rect = el.getBoundingClientRect();
-    return {
-      el,
-      top: (rect.top - rootRect.top) / scaleY,
-      height: rect.height / scaleY,
-      prev: parseFloat(el.style.getPropertyValue("--page-break-extra")) || 0,
-    };
-  });
+  const snapshots = els.map((el) => ({
+    el,
+    top: el.offsetTop,
+    height: el.offsetHeight,
+    prev: parseFloat(el.style.getPropertyValue("--page-break-extra")) || 0,
+  }));
 
   // Phase 2 — compute needed margins with shift, then write CSS variables.
   // `shift` tracks the cumulative delta of margins changed so far in this pass.

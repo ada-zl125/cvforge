@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { normalizeTextareaValue } from "@/lib/text";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -237,8 +238,8 @@ function ExperienceBlock({
                   <Textarea
                     className="flex-1 resize-y text-xs"
                     rows={2}
-                    value={desc.value}
-                    onChange={(e) => updateDesc(desc.id, e.target.value)}
+                    value={normalizeTextareaValue(desc.value)}
+                    onChange={(e) => updateDesc(desc.id, normalizeTextareaValue(e.target.value))}
                     placeholder={contentZh ? "描述一项职责或成就..." : "Describe a responsibility or achievement..."}
                   />
                   <Button
