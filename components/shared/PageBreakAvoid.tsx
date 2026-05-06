@@ -28,14 +28,11 @@ function processRoot(cvRoot: HTMLElement): void {
   const els = Array.from(cvRoot.querySelectorAll<HTMLElement>("[data-page-break-avoid]"));
   if (els.length === 0) return;
 
-  // One forced reflow here; no further reflows during the write phase.
-  const rootRect = cvRoot.getBoundingClientRect();
-
   // Phase 1 — batch-read positions and previously applied extra margins.
   const snapshots = els.map((el) => ({
     el,
-    top: el.getBoundingClientRect().top,
-    height: el.getBoundingClientRect().height,
+    top: el.offsetTop,
+    height: el.offsetHeight,
     prev: parseFloat(el.style.getPropertyValue("--page-break-extra")) || 0,
   }));
 
@@ -45,7 +42,7 @@ function processRoot(cvRoot: HTMLElement): void {
   // (their DOM positions haven't been updated by the browser yet).
   let shift = 0;
   for (const { el, top, height, prev } of snapshots) {
-    const naturalY = top - rootRect.top - prev + shift;
+    const naturalY = top - prev + shift;
 
     let needed = 0;
     if (naturalY >= TOP && height < CONTENT_H) {

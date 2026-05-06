@@ -2,6 +2,8 @@
 
 import { t } from "@/lib/translations";
 import { useUILanguage } from "@/lib/ui-language";
+import { Textarea } from "@/components/ui/textarea";
+import { normalizeTextareaValue } from "@/lib/text";
 import type { ResumeLanguage } from "@/lib/types/resume";
 
 interface SummarySectionProps {
@@ -15,12 +17,12 @@ export function SummarySection({ value, onChange }: SummarySectionProps) {
   const tr = t[lang];
 
   return (
-    <textarea
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
+    <Textarea
+      value={normalizeTextareaValue(value)}
+      onChange={(e) => onChange(normalizeTextareaValue(e.target.value))}
       placeholder={tr.summaryPlaceholder}
       rows={4}
-      className="w-full resize-none rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+      className="text-sm"
     />
   );
 }
