@@ -11,7 +11,7 @@ import resumeExampleCn from "@/examples/resume-example-cn.json";
 import academicCvExampleEn from "@/examples/academic-cv-example-en.json";
 import academicCvExampleCn from "@/examples/academic-cv-example-cn.json";
 import coverLetterExampleEn from "@/examples/cover-letter-example-en.json";
-import { createTools, type DocType } from "./tools";
+import { createTools, type ClarificationRequest, type DocType } from "./tools";
 import type { LLMConfig } from "./config";
 
 export interface Message {
@@ -37,6 +37,7 @@ interface RunAgentStreamParams<TContent> {
   userMessage: string;
   onTextChunk: (chunk: string) => void;
   onStatusChange?: (status: AgentStatus | null) => void;
+  onClarification?: (request: ClarificationRequest) => void;
   onDone: () => void;
 }
 
@@ -57,6 +58,20 @@ const MODEL_CONTEXT_WINDOWS: Array<[RegExp, number]> = [
   [/mistral/i, 128000],
 ];
 
+const RESUME_CRAFT_RULES = `## Professional Resume/CV Craft Rules
+- **Section item order:** Within dated sections, order entries reverse-chronologically by end date, then start date. Current/ongoing entries come first. For example, a 2025-2026 master's degree should appear before a 2021-2025 bachelor's degree.
+- **Education:** Keep institution names official, and separate degree from field of study when possible. In standalone education degree fields, prefer standard CV credential abbreviations when they are widely recognized and match the examples: "MSc in ...", "BSc in ...", "PhD in ...", "MEng in ...", "BEng in ...", "MA in ...", "BA in ...", "LLM", "LLB", "MBA". Use full degree names in prose paragraphs or when there is no clear standard abbreviation, and respect explicit user requests for full forms. Do not add coursework, GPA, honors, thesis, or awards unless the user provides them.
+- **Experience and projects:** Prefer concise accomplishment bullets that start with strong verbs, name tools/methods when relevant, and include scope or measurable impact when the user provides enough evidence.
+- **Skills:** Group skills by practical categories, keep each group scannable, and avoid duplicates or vague filler.
+- **Professional polish:** Keep wording concise, consistent, and ATS-friendly. Preserve the document language and formatting style shown in the current document and examples.`;
+
+const INFERENCE_RULES = `## Inference and Disclosure Rules
+- You may make **high-confidence, low-risk inferences** to normalize incomplete user wording into professional resume/CV values. Examples: "Huddersfield" in an education context -> "University of Huddersfield"; "Imperial" with London/master context -> "Imperial College London"; a well-known institution/company -> its precise city/country location.
+- Only infer stable public facts or obvious formatting normalizations. Do not infer high-risk personal facts such as GPA, grades, honors, awards, thesis title, exact job title, employment dates, project impact, publication details, salary, visa status, or skills the user did not provide.
+- When confidence is low or the missing/ambiguous detail would materially affect the document, call \`ask_user\` with one focused question instead of updating that field. Do not call document update tools in the same turn for the uncertain field.
+- If you write an inferred or normalized value into the document, call \`record_inference\` with the original wording, inferred value, field, and reason before or alongside the update tool.
+- After tools finish, explicitly tell the user what you inferred and why in one concise sentence.`;
+
 function buildSystemPrompt(docType: DocType): string {
   if (docType === "resume") {
     return `You are an expert resume editor helping professionals build compelling, clear, and impactful resumes.
@@ -76,12 +91,17 @@ Example flow:
 
 ## Important Guidelines
 - **Never invent information.** Only use what the user explicitly tells you.
+- **Careful inference is not invention:** follow the inference rules below for high-confidence, low-risk normalizations; otherwise leave the field blank or ask.
 - **Do not guess missing fields just to satisfy a tool schema.** If a field is unknown, pass an empty string or omit it when allowed, then ask one focused follow-up question.
 - **Location precision:** if a location can be inferred with high confidence from a well-known institution/company/place name, use the full project style (English: "City, Country/Region", e.g. "London, UK"; Chinese: "国家, 城市", e.g. "中国, 北京"). If confidence is not high, leave the location empty and ask.
 - **Use action-verb language** for descriptions (e.g. "Led", "Developed", "Designed", "Improved") when writing bullet points
 - **Dates:** Accept any reasonable format (e.g. "3 years ago", "2023–2024", "Sept 2023 - Present") and normalize to brief format
 - **Descriptions:** Help expand vague statements into concrete accomplishments with measurable impact when possible
 - **Ask clarifying questions** when information is ambiguous or critical details are missing
+
+${RESUME_CRAFT_RULES}
+
+${INFERENCE_RULES}
 
 ## Available Sections
 Personal Info (name, email, phone, location, website), Summary, Experience, Education, Skills, Projects, Awards.
@@ -112,15 +132,21 @@ Example: User mentions a publication. You add it, then ask for the missing detai
 
 ## Important Guidelines
 - **Never invent information.** Only use what the user explicitly tells you.
+- **Careful inference is not invention:** follow the inference rules below for high-confidence, low-risk normalizations; otherwise leave the field blank or ask.
 - **Do not guess missing fields just to satisfy a tool schema.** If a field is unknown, pass an empty string or omit it when allowed, then ask one focused follow-up question.
 - **Location precision:** if a location can be inferred with high confidence from a well-known institution/conference/place name, use the full project style (English: "City, Country/Region", e.g. "Oxford, UK"; Chinese: "国家, 城市", e.g. "中国, 北京"). If confidence is not high, leave the location empty and ask.
+- **Personal address fields:** academic CV personal information uses addressLine1/addressLine2/addressLine3, not a single location field. Put a city/country personal address into addressLine1 unless the user provides multiple address lines.
 - **Citations:** Accept any citation format the user provides; clarify abbreviations if unclear
 - **Dates:** Accept flexible formats and normalize (e.g. "2023–2024", "Summer 2023")
 - **Research descriptions:** Help articulate research contributions and methodologies
 - **Ask clarifying questions** when information is incomplete or ambiguous
 
+${RESUME_CRAFT_RULES}
+
+${INFERENCE_RULES}
+
 ## Available Sections
-Research Interests, Education, Research Experience, Teaching Experience, Industry Experience, Publications, Manuscripts Under Review, Conference Presentations, Grants & Awards, Professional Service, Technical Skills, References.
+Personal Info (name, email, phone, address lines, website), Research Interests, Education, Research Experience, Teaching Experience, Industry Experience, Publications, Manuscripts Under Review, Conference Presentations, Grants & Awards, Professional Service, Technical Skills, References.
 
 ## Tool Behavior
 - For array fields: provide complete, well-formed structures
@@ -148,6 +174,7 @@ Example: User mentions a company. You update the recipient info, then ask: "**Wh
 ## Important Guidelines
 - **Never invent information.** Only use what the user explicitly tells you.
 - **Do not guess missing sender, recipient, address, or role details.** If unknown, omit the field or leave it blank, then ask one focused follow-up question.
+- **Low-confidence details:** when a missing or ambiguous detail is important enough that the letter would be wrong without it, call \`ask_user\` instead of guessing or updating that field.
 - **Tone:** Professional, warm, and conversational (not stuffy)
 - **Length:** Concise and impactful — 3–4 short paragraphs covering: why you're interested, relevant qualifications, why you're a fit, call to action
 - **Personalization:** Encourage the user to reference specific company details, role requirements, and concrete examples
@@ -159,7 +186,7 @@ Sender info (name, address), Recipient info (name, salutation, address), Body pa
 ## Tool Behavior
 - For sender/recipient address: provide address line objects
 - For paragraphs: write clear, concise text
-- If information is incomplete, ask a focused question before calling tools
+- If important information is incomplete and cannot be safely omitted, call \`ask_user\` with a focused question before calling update tools
 - When you need tools, call them first without narrating the tool execution. After all tools finish, respond with a concise result for the user.
 - Always reply to the user after each request. Keep final replies short, clear, and useful: usually 1-2 sentences unless the user asks for detail.
 
@@ -201,13 +228,54 @@ function toolLabel(toolName: string, zh: boolean): string {
   return labels[toolName]?.[zh ? "zh" : "en"] ?? fallback;
 }
 
-function buildFallbackCompletion(toolNames: string[], userMessage: string): string {
-  const zh = isLikelyChinese(userMessage);
-  const uniqueToolNames = Array.from(new Set(toolNames));
-  const changed = uniqueToolNames.map((name) => toolLabel(name, zh)).join(zh ? "、" : ", ");
+function isDocumentUpdateTool(toolName: string): boolean {
+  return toolName !== "record_inference" && toolName !== "ask_user";
+}
 
-  if (zh) return changed ? `已完成，已更新${changed}。` : "已完成更新。";
-  return changed ? `Done. I updated your ${changed}.` : "Done. I updated the document.";
+function formatInferenceDisclosure(inferenceNotes: string[], zh: boolean): string {
+  if (inferenceNotes.length === 0) return "";
+
+  const uniqueNotes = Array.from(new Set(inferenceNotes));
+  if (zh) return `我做了这些高把握推断：${uniqueNotes.join("；")}。`;
+  return `I made these high-confidence inferences: ${uniqueNotes.join("; ")}.`;
+}
+
+function buildFallbackCompletion(toolNames: string[], userMessage: string, inferenceNotes: string[] = []): string {
+  const zh = isLikelyChinese(userMessage);
+  const uniqueToolNames = Array.from(new Set(toolNames.filter(isDocumentUpdateTool)));
+  const changed = uniqueToolNames.map((name) => toolLabel(name, zh)).join(zh ? "、" : ", ");
+  const inferenceDisclosure = formatInferenceDisclosure(inferenceNotes, zh);
+
+  if (zh) {
+    const completion = changed ? `已完成，已更新${changed}。` : "已完成。";
+    return inferenceDisclosure ? `${completion}${inferenceDisclosure}` : completion;
+  }
+
+  const completion = changed ? `Done. I updated your ${changed}.` : "Done.";
+  return inferenceDisclosure ? `${completion} ${inferenceDisclosure}` : completion;
+}
+
+function withInferenceDisclosure(content: string, inferenceNotes: string[], userMessage: string): string {
+  if (inferenceNotes.length === 0) return content;
+  if (/\binfer|\bnormaliz|\bnormalis|推断|推理|规范化/.test(content.toLowerCase())) return content;
+
+  const disclosure = formatInferenceDisclosure(inferenceNotes, isLikelyChinese(userMessage));
+  return disclosure ? `${content.trim()}\n\n${disclosure}` : content;
+}
+
+function normalizeClarificationRequest(args: unknown): ClarificationRequest {
+  const arg = args as Partial<ClarificationRequest> | null;
+  const choices = Array.isArray(arg?.choices)
+    ? arg.choices.map((choice) => String(choice).trim()).filter(Boolean)
+    : undefined;
+
+  return {
+    question: String(arg?.question ?? "").trim() || "Could you clarify this detail?",
+    reason: String(arg?.reason ?? "").trim() || "This detail is ambiguous and should not be guessed.",
+    field: arg?.field ? String(arg.field).trim() : undefined,
+    section: arg?.section ? String(arg.section).trim() : undefined,
+    choices,
+  };
 }
 
 function buildNoResponseFallback(userMessage: string): string {
@@ -314,6 +382,9 @@ Missing information policy:
 - If a tool field is unknown, omit it when optional or use an empty string.
 - Ask one focused follow-up question for the most important missing detail.
 - You may infer common public facts only when highly confident and specific. For example, "Imperial College London" -> "London, UK"; avoid vague values like "UK" when the city is knowable.
+- If a missing or ambiguous detail is too important to leave blank and not safe to infer, call \`ask_user\` before updating that field.
+- If you write inferred or normalized information, use \`record_inference\` and mention the inference in your final reply.
+- Keep dated section arrays in reverse-chronological order, with current/ongoing entries first and unknown dates left after clearly dated entries.
 
 Example JSON reference:
 ${safeExample}`;
@@ -454,6 +525,7 @@ export async function runAgentStream<TContent>(
     userMessage,
     onTextChunk,
     onStatusChange,
+    onClarification,
     onDone,
   } = params;
   const client = new OpenAI({
@@ -462,7 +534,16 @@ export async function runAgentStream<TContent>(
     dangerouslyAllowBrowser: true,
   });
 
-  const tools = createTools(docType, getContent, onContentUpdate);
+  const inferenceNotes: string[] = [];
+  const tools = createTools(
+    docType,
+    getContent,
+    onContentUpdate,
+    (note) => {
+      inferenceNotes.push(note);
+    },
+    onClarification
+  );
   const systemPrompt = buildSystemPrompt(docType);
   const documentContext = buildDocumentContext(docType, getContent());
   const exampleStyleContext = buildExampleStyleContext(docType, getContent(), userMessage);
@@ -502,6 +583,7 @@ export async function runAgentStream<TContent>(
     const successfulToolNames: string[] = [];
     const failedToolNames: string[] = [];
     let emittedFinalText = false;
+    let clarificationRequested = false;
 
     // Agent loop
     for (let loopCount = 0; loopCount < MAX_AGENT_LOOPS; loopCount += 1) {
@@ -569,6 +651,29 @@ export async function runAgentStream<TContent>(
         };
         apiMessages.push(assistantMessage);
 
+        const clarificationCall = completeToolCalls.find(
+          (toolCall) => toolCall.function.name === "ask_user"
+        );
+        if (clarificationCall) {
+          let toolArgs: unknown = {};
+          try {
+            toolArgs = JSON.parse(clarificationCall.function.arguments);
+          } catch {
+            toolArgs = {};
+          }
+          const request = normalizeClarificationRequest(toolArgs);
+          clarificationRequested = true;
+          onStatusChange?.(null);
+
+          if (onClarification) {
+            onClarification(request);
+          } else {
+            onTextChunk(request.question);
+            emittedFinalText = true;
+          }
+          break;
+        }
+
         // Execute tools
         for (const toolCall of completeToolCalls) {
           const tool = tools.find((t) => t.name === toolCall.function.name);
@@ -603,13 +708,14 @@ export async function runAgentStream<TContent>(
         }
       } else if (assistantContent) {
         onStatusChange?.(null);
-        onTextChunk(assistantContent);
+        const finalContent = withInferenceDisclosure(assistantContent, inferenceNotes, userMessage);
+        onTextChunk(finalContent);
         emittedFinalText = true;
 
         // No tool calls, just text content
         apiMessages.push({
           role: "assistant",
-          content: assistantContent,
+          content: finalContent,
         });
         // No more tool calls, agent is done
         break;
@@ -619,9 +725,11 @@ export async function runAgentStream<TContent>(
       }
     }
 
-    if (!emittedFinalText && successfulToolNames.length > 0) {
+    if (clarificationRequested) {
       onStatusChange?.(null);
-      onTextChunk(buildFallbackCompletion(successfulToolNames, userMessage));
+    } else if (!emittedFinalText && successfulToolNames.length > 0) {
+      onStatusChange?.(null);
+      onTextChunk(buildFallbackCompletion(successfulToolNames, userMessage, inferenceNotes));
     } else if (!emittedFinalText && failedToolNames.length > 0) {
       onStatusChange?.(null);
       onTextChunk(buildToolFailureFallback(userMessage));

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useReducer } from "react";
+import { useCallback, useEffect, useReducer, useRef } from "react";
 import { readEditorState, writeEditorState } from "@/lib/storage";
 
 export type EditorState<TContent, TTemplate, TLanguage = never> =
@@ -64,13 +64,23 @@ export function useEditorState<TContent, TTemplate, TLanguage = never>({
     reducer<TContent, TTemplate, TLanguage>,
     { ...initialState, hydrated: false } as EditorState<TContent, TTemplate, TLanguage>,
   );
+  const stateRef = useRef(state);
+
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
 
   useEffect(() => {
     const stored = readEditorState<
       EditorState<TContent, TTemplate, TLanguage>,
       TContent
     >(storageKey, defaultContent);
-    dispatch({ type: "HYDRATE", payload: stored ?? initialState });
+    const next = stored ?? initialState;
+    stateRef.current = {
+      ...next,
+      hydrated: true,
+    } as EditorState<TContent, TTemplate, TLanguage>;
+    dispatch({ type: "HYDRATE", payload: next });
   }, [defaultContent, initialState, storageKey]);
 
   const persist = useCallback(
@@ -82,15 +92,21 @@ export function useEditorState<TContent, TTemplate, TLanguage = never>({
 
   const setContent = useCallback(
     (content: TContent) => {
+      const nextState = { ...stateRef.current, content };
+      stateRef.current = nextState;
       dispatch({ type: "SET_CONTENT", content });
-      const stored = toStoredState(state);
+      const stored = toStoredState(nextState);
       persist({ ...stored, content } as StoredState<TContent, TTemplate, TLanguage>);
     },
-    [persist, state],
+    [persist],
   );
 
   const setStoredState = useCallback(
     (next: StoredState<TContent, TTemplate, TLanguage>) => {
+      stateRef.current = {
+        ...next,
+        hydrated: true,
+      } as EditorState<TContent, TTemplate, TLanguage>;
       dispatch({ type: "SET_STATE", payload: next });
       persist(next);
     },

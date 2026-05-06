@@ -22,6 +22,7 @@ import type {
   AcademicEducationExtraFieldType,
 } from "@/lib/types/academic-cv";
 import type { ContactField, SkillGroup } from "@/lib/types/resume";
+import { formatDegreeField } from "@/lib/json-utils";
 
 const SECTION_TITLES_ZH: Record<AcademicSectionType, string> = {
   researchInterests:       "研究兴趣",
@@ -169,9 +170,7 @@ function AcademicEducationBlock({ items, lang, fontFamily }: { items: AcademicEd
     <section className="mb-2">
       {items.map((edu, index) => {
         const dateText = [edu.startDate, edu.endDate].filter(Boolean).join(" – ");
-        const degreeLine = lang === "zh"
-          ? [edu.field, edu.degree].filter(Boolean).join("")
-          : [edu.degree, edu.field].filter(Boolean).join(" ");
+        const degreeLine = formatDegreeField(edu.degree, edu.field, lang);
         return (
           <PageBreakAvoid key={edu.id} style={index > 0 ? { marginTop: "6px" } : undefined}>
             {index === 0 && <SectionTitle type="education" lang={lang} fontFamily={fontFamily} />}
