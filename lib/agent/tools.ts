@@ -9,10 +9,20 @@ export type DocType = "resume" | "academic-cv" | "cover-letter";
 
 type AnyContent = ResumeContent | AcademicCVContent | CoverLetterContent;
 
+export interface ClarificationRequest {
+  question: string;
+  reason: string;
+  field?: string;
+  section?: string;
+  choices?: string[];
+}
+
 export function createTools<TContent = AnyContent>(
   docType: DocType,
   getContent: () => TContent,
-  onUpdate: (updated: TContent, toolName: string) => void
+  onUpdate: (updated: TContent, toolName: string) => void,
+  onInference?: (note: string) => void,
+  onClarification?: (request: ClarificationRequest) => void
 ): DynamicStructuredTool[] {
   const tools: DynamicStructuredTool[] = [];
 
@@ -28,6 +38,58 @@ export function createTools<TContent = AnyContent>(
       },
     });
   }
+
+  tools.push(
+    new DynamicStructuredTool({
+      name: "ask_user",
+      description:
+        "Ask the user for one focused clarification before editing a low-confidence or high-risk field. Use this instead of guessing when the missing or ambiguous detail could materially affect the document.",
+      schema: z.object({
+        question: z.string().describe("One concise question for the user"),
+        reason: z.string().describe("Brief reason why this cannot be safely inferred"),
+        field: z.string().optional().describe("Suggested field affected, e.g. education.degree"),
+        section: z.string().optional().describe("Suggested section affected, e.g. education"),
+        choices: z.array(z.string()).optional().describe("Optional short answer choices when useful"),
+      }),
+      func: async (args: unknown) => {
+        const arg = args as ClarificationRequest;
+        const request = {
+          question: arg.question?.trim() || "Could you clarify this detail?",
+          reason: arg.reason?.trim() || "This detail is ambiguous and should not be guessed.",
+          field: arg.field?.trim() || undefined,
+          section: arg.section?.trim() || undefined,
+          choices: arg.choices?.map((choice) => choice.trim()).filter(Boolean),
+        };
+
+        onClarification?.(request);
+        return `Asked user for clarification: ${request.question}`;
+      },
+    }),
+    new DynamicStructuredTool({
+      name: "record_inference",
+      description:
+        "Record a high-confidence inference or normalization that will be written to the document. Use before or alongside update tools when filling information the user implied but did not state exactly.",
+      schema: z.object({
+        original: z.string().describe("The user's original wording or incomplete value, e.g. Huddersfield"),
+        inferred: z.string().describe("The normalized or inferred value that will be used, e.g. University of Huddersfield"),
+        reason: z.string().describe("Brief reason why this inference is high-confidence and low-risk"),
+        field: z.string().optional().describe("Optional field or section affected, e.g. education.institution"),
+      }),
+      func: async (args: unknown) => {
+        const arg = args as { original?: string; inferred?: string; reason?: string; field?: string };
+        const original = arg.original?.trim() || "unspecified";
+        const inferred = arg.inferred?.trim() || "unspecified";
+        const reason = arg.reason?.trim() || "high-confidence normalization";
+        const field = arg.field?.trim();
+        const note = field
+          ? `${field}: "${original}" -> "${inferred}" (${reason})`
+          : `"${original}" -> "${inferred}" (${reason})`;
+
+        onInference?.(note);
+        return `Recorded inference: ${note}. Mention this to the user after document updates.`;
+      },
+    })
+  );
 
   const optionalKnown = (description: string) =>
     z.string().optional().describe(`${description}. Omit or use an empty string when unknown; do not invent.`);
@@ -68,7 +130,7 @@ export function createTools<TContent = AnyContent>(
                 })
               ),
             })
-          ),
+          ).describe("Experience entries ordered reverse-chronologically: most recent or ongoing role first."),
         })
       ),
       makeUpdateHandler(
@@ -78,8 +140,8 @@ export function createTools<TContent = AnyContent>(
             z.object({
               id: z.string().optional(),
               institution: z.string(),
-              degree: optionalKnown("Degree, e.g. Bachelor of Science"),
-              field: z.string().optional(),
+              degree: optionalKnown("Degree in CV field style, e.g. MSc in Advanced Computing or BSc in Computer Science"),
+              field: z.string().optional().describe("Optional legacy field of study. Omit when degree already includes the field, e.g. MSc in Computer Science."),
               location: optionalKnown("Location in project style, e.g. Oxford, UK or 中国, 北京"),
               startDate: optionalKnown("Start date"),
               endDate: optionalKnown("End date"),
@@ -94,7 +156,7 @@ export function createTools<TContent = AnyContent>(
                 )
                 .optional(),
             })
-          ),
+          ).describe("Education entries ordered reverse-chronologically: most recent or ongoing degree first."),
         })
       ),
       makeUpdateHandler(
@@ -127,7 +189,7 @@ export function createTools<TContent = AnyContent>(
                 })
               ),
             })
-          ),
+          ).describe("Project entries ordered reverse-chronologically: most recent or ongoing project first."),
         })
       ),
       makeUpdateHandler(
@@ -139,7 +201,7 @@ export function createTools<TContent = AnyContent>(
               award: z.string().describe("Award title or description"),
               date: z.string().describe("Date of award"),
             })
-          ),
+          ).describe("Award entries ordered reverse-chronologically: most recent award first."),
         })
       ),
       makeUpdateHandler(
@@ -159,7 +221,9 @@ export function createTools<TContent = AnyContent>(
           fullName: z.string().optional(),
           email: z.string().optional(),
           phone: z.string().optional(),
-          location: z.string().optional(),
+          addressLine1: z.string().optional().describe("Academic CV personal address line 1"),
+          addressLine2: z.string().optional().describe("Academic CV personal address line 2"),
+          addressLine3: z.string().optional().describe("Academic CV personal address line 3"),
           website: z.string().optional(),
         })
       ),
@@ -176,8 +240,8 @@ export function createTools<TContent = AnyContent>(
             z.object({
               id: z.string().optional(),
               institution: z.string(),
-              degree: optionalKnown("Degree"),
-              field: z.string().optional(),
+              degree: optionalKnown("Degree in CV field style, e.g. PhD in Computer Science, MSc in Advanced Computing, or BSc in Computer Science"),
+              field: z.string().optional().describe("Optional legacy field of study. Omit when degree already includes the field, e.g. PhD in Computer Science."),
               location: optionalKnown("Location in project style, e.g. Oxford, UK or 中国, 北京"),
               startDate: optionalKnown("Start date"),
               endDate: optionalKnown("End date"),
@@ -192,7 +256,7 @@ export function createTools<TContent = AnyContent>(
                 )
                 .optional(),
             })
-          ),
+          ).describe("Education entries ordered reverse-chronologically: most recent or ongoing degree first."),
         })
       ),
       makeUpdateHandler(
@@ -217,7 +281,7 @@ export function createTools<TContent = AnyContent>(
                 )
                 .optional(),
             })
-          ),
+          ).describe("Research experience entries ordered reverse-chronologically: most recent or ongoing role first."),
         })
       ),
       makeUpdateHandler(
@@ -241,7 +305,7 @@ export function createTools<TContent = AnyContent>(
                 )
                 .optional(),
             })
-          ),
+          ).describe("Teaching experience entries ordered reverse-chronologically: most recent or ongoing role first."),
         })
       ),
       makeUpdateHandler(
@@ -265,7 +329,7 @@ export function createTools<TContent = AnyContent>(
                 )
                 .optional(),
             })
-          ),
+          ).describe("Industry experience entries ordered reverse-chronologically: most recent or ongoing role first."),
         })
       ),
       makeUpdateHandler(
@@ -276,7 +340,7 @@ export function createTools<TContent = AnyContent>(
               id: z.string().optional(),
               citation: z.string().describe("Full citation (any format)"),
             })
-          ),
+          ).describe("Publication entries ordered reverse-chronologically when a year is present in the citation."),
         })
       ),
       makeUpdateHandler(
@@ -287,7 +351,7 @@ export function createTools<TContent = AnyContent>(
               id: z.string().optional(),
               citation: z.string(),
             })
-          ),
+          ).describe("Manuscript entries ordered reverse-chronologically when a year is present in the citation."),
         })
       ),
       makeUpdateHandler(
@@ -302,7 +366,7 @@ export function createTools<TContent = AnyContent>(
               date: optionalKnown("Presentation date"),
               type: z.string().optional().describe("e.g. Oral, Poster, Invited"),
             })
-          ),
+          ).describe("Presentation entries ordered reverse-chronologically: most recent presentation first."),
         })
       ),
       makeUpdateHandler(
@@ -314,7 +378,7 @@ export function createTools<TContent = AnyContent>(
               title: z.string(),
               date: z.string(),
             })
-          ),
+          ).describe("Grant and award entries ordered reverse-chronologically: most recent first."),
         })
       ),
       makeUpdateHandler(
@@ -327,7 +391,7 @@ export function createTools<TContent = AnyContent>(
               organization: z.string().describe("e.g. NeurIPS"),
               date: z.string(),
             })
-          ),
+          ).describe("Professional service entries ordered reverse-chronologically: most recent first."),
         })
       ),
       makeUpdateHandler(
@@ -447,7 +511,7 @@ function getToolDescription(docType: DocType, toolName: string): string {
       set_sections: "Set which sections are visible and their order",
     },
     "academic-cv": {
-      update_personal: "Update personal information (name, email, phone, location, website)",
+      update_personal: "Update personal information (name, email, phone, address lines, website)",
       set_research_interests: "Set research interests",
       set_education: "Set education entries",
       set_research_experience: "Set research experience entries",

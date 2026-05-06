@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
-import { Send, SlidersHorizontal, Loader2, AlertCircle, Settings, Eraser, Shrink } from "lucide-react";
+import { Send, SlidersHorizontal, Loader2, AlertCircle, Settings, Eraser, Shrink, HelpCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -23,9 +23,11 @@ import {
 } from "@/lib/agent/chat";
 import {
   isLLMConfigComplete,
+  readLLMConfig,
   type LLMConfig,
+  writeLLMConfig,
 } from "@/lib/agent/config";
-import type { DocType } from "@/lib/agent/tools";
+import type { ClarificationRequest, DocType } from "@/lib/agent/tools";
 import { useUILanguage } from "@/lib/ui-language";
 import { t } from "@/lib/translations";
 
@@ -33,6 +35,15 @@ export interface AgentPanelState {
   messages: Message[];
   activeConfig: LLMConfig | null;
   draftConfig: LLMConfig;
+  pendingClarification: PendingClarification | null;
+}
+
+interface PendingClarification {
+  id: string;
+  originalUserMessage: string;
+  request: ClarificationRequest;
+  history: Message[];
+  documentState: unknown;
 }
 
 export function createInitialAgentPanelState(): AgentPanelState {
@@ -44,6 +55,7 @@ export function createInitialAgentPanelState(): AgentPanelState {
       apiKey: "",
       model: "",
     },
+    pendingClarification: null,
   };
 }
 
@@ -205,6 +217,19 @@ function ContextUsageIndicator({
   );
 }
 
+function formatClarificationMessage(request: ClarificationRequest, lang: "en" | "zh"): string {
+  const scope = request.field || request.section;
+  if (lang === "zh") {
+    const reason = request.reason ? `原因：${request.reason}` : "";
+    const target = scope ? `\n\n相关位置：${scope}` : "";
+    return `我需要先确认一个细节：${request.question}\n\n${reason}${target}`.trim();
+  }
+
+  const reason = request.reason ? `Reason: ${request.reason}` : "";
+  const target = scope ? `\n\nRelated field: ${scope}` : "";
+  return `I need to confirm one detail first: ${request.question}\n\n${reason}${target}`.trim();
+}
+
 function AgentStatusIndicator({
   status,
   thinkingText,
@@ -260,10 +285,11 @@ export function ChatPanel<TContent>({
   const tr = t[lang];
   const agentTr = tr.agent;
 
-  const { messages, activeConfig, draftConfig } = agentState;
+  const { messages, activeConfig, draftConfig, pendingClarification } = agentState;
   const [streamingText, setStreamingText] = useState("");
   const [agentStatus, setAgentStatus] = useState<AgentStatus | null>(null);
   const [inputValue, setInputValue] = useState("");
+  const [clarificationAnswer, setClarificationAnswer] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isCompacting, setIsCompacting] = useState(false);
   const [isSavingConfig, setIsSavingConfig] = useState(false);
@@ -285,6 +311,30 @@ export function ChatPanel<TContent>({
   useEffect(() => {
     setConfigError(null);
   }, [docType]);
+
+  useEffect(() => {
+    const syncStoredConfig = () => {
+      const storedConfig = readLLMConfig();
+      if (!isLLMConfigComplete(storedConfig)) return;
+
+      onAgentStateChange((prev) => {
+        if (isLLMConfigComplete(prev.activeConfig)) return prev;
+        return {
+          ...prev,
+          activeConfig: storedConfig,
+          draftConfig: isLLMConfigComplete(prev.draftConfig)
+            ? prev.draftConfig
+            : storedConfig,
+        };
+      });
+    };
+
+    syncStoredConfig();
+    window.addEventListener("llm-config-change", syncStoredConfig);
+    return () => {
+      window.removeEventListener("llm-config-change", syncStoredConfig);
+    };
+  }, [onAgentStateChange]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -318,9 +368,17 @@ export function ChatPanel<TContent>({
     }));
   };
 
+  const setPendingClarification = (pending: PendingClarification | null) => {
+    onAgentStateChange((prev) => ({
+      ...prev,
+      pendingClarification: pending,
+    }));
+  };
+
   const isConfigured = !!activeConfig;
   const isBusy = isLoading || isCompacting;
-  const isChatDisabled = !isConfigured || isBusy;
+  const hasPendingClarification = !!pendingClarification;
+  const isChatDisabled = !isConfigured || isBusy || hasPendingClarification;
   const hasChatContext = messages.length > 0 || streamingText !== "";
   const contextUsage = activeConfig
     ? estimateAgentContextUsage({
@@ -339,10 +397,12 @@ export function ChatPanel<TContent>({
     streamingTextRef.current = "";
     setAgentStatus(null);
     setError(null);
+    setPendingClarification(null);
+    setClarificationAnswer("");
   };
 
   const handleCompactContext = async () => {
-    if (isBusy || !activeConfig || !isLLMConfigComplete(activeConfig) || messages.length === 0) return;
+    if (isBusy || hasPendingClarification || !activeConfig || !isLLMConfigComplete(activeConfig) || messages.length === 0) return;
 
     setError(null);
     setIsCompacting(true);
@@ -412,12 +472,11 @@ export function ChatPanel<TContent>({
     setInputValue("");
 
     try {
-      // Append user message
-      setMessages((prev) => [...prev, { role: "user", content: userMsg }]);
+      const nextMessages: Message[] = [...messages, { role: "user", content: userMsg }];
+      setMessages(nextMessages);
       setStreamingText("");
       streamingTextRef.current = "";
 
-      // Run agent stream
       await runAgentStream({
         config: activeConfig,
         docType,
@@ -434,6 +493,22 @@ export function ChatPanel<TContent>({
           setStreamingText((prev) => prev + chunk);
         },
         onStatusChange: setAgentStatus,
+        onClarification: (request) => {
+          setPendingClarification({
+            id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+            originalUserMessage: userMsg,
+            request,
+            history: nextMessages,
+            documentState: contentRef.current,
+          });
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: "assistant",
+              content: formatClarificationMessage(request, lang),
+            },
+          ]);
+        },
         onDone: () => {
           if (streamingTextRef.current) {
             setMessages((prev) => [
@@ -485,6 +560,145 @@ export function ChatPanel<TContent>({
     }
   };
 
+  const handleContinueClarification = async () => {
+    const pending = pendingClarification;
+    const answer = clarificationAnswer.trim();
+    if (!pending || !answer || isLoading) return;
+
+    if (!activeConfig || !isLLMConfigComplete(activeConfig)) {
+      setError(agentTr.invalidConfig);
+      setActiveConfig(null);
+      return;
+    }
+
+    const continuationMessage = [
+      `User answered the clarification: ${answer}`,
+      `Clarification question: ${pending.request.question}`,
+      `Continue the original task: ${pending.originalUserMessage}`,
+      "Use the answer to resolve only the pending uncertainty. Keep following all resume/CV rules, and call tools to complete the original task.",
+    ].join("\n");
+    const visibleAnswer =
+      lang === "zh"
+        ? `补充确认：${answer}`
+        : `Clarification: ${answer}`;
+    const historyWithQuestion: Message[] = [
+      ...pending.history,
+      {
+        role: "assistant",
+        content: formatClarificationMessage(pending.request, lang),
+      },
+    ];
+
+    setError(null);
+    setIsLoading(true);
+    setAgentStatus("thinking");
+    setClarificationAnswer("");
+    setPendingClarification(null);
+    setMessages((prev) => [...prev, { role: "user", content: visibleAnswer }]);
+    setStreamingText("");
+    streamingTextRef.current = "";
+
+    try {
+      await runAgentStream({
+        config: activeConfig,
+        docType,
+        getContent: () => contentRef.current,
+        onContentUpdate: (updated) => {
+          contentRef.current = updated;
+          onChange(updated);
+        },
+        history: historyWithQuestion,
+        userMessage: continuationMessage,
+        onTextChunk: (chunk) => {
+          setAgentStatus(null);
+          streamingTextRef.current += chunk;
+          setStreamingText((prev) => prev + chunk);
+        },
+        onStatusChange: setAgentStatus,
+        onClarification: (request) => {
+          setPendingClarification({
+            id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+            originalUserMessage: pending.originalUserMessage,
+            request,
+            history: [
+              ...historyWithQuestion,
+              { role: "user", content: continuationMessage },
+            ],
+            documentState: contentRef.current,
+          });
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: "assistant",
+              content: formatClarificationMessage(request, lang),
+            },
+          ]);
+        },
+        onDone: () => {
+          if (streamingTextRef.current) {
+            setMessages((prev) => [
+              ...prev,
+              {
+                role: "assistant",
+                content: streamingTextRef.current,
+              },
+            ]);
+          }
+          setAgentStatus(null);
+          streamingTextRef.current = "";
+          setStreamingText("");
+        },
+      });
+    } catch (err) {
+      let errorMsg: string = agentTr.requestFailed;
+
+      if (err instanceof Error) {
+        errorMsg = err.message;
+      }
+
+      if (
+        errorMsg.includes("401") ||
+        errorMsg.includes("403") ||
+        errorMsg.includes("unauthorized") ||
+        errorMsg.includes("invalid") ||
+        errorMsg.includes("api key") ||
+        errorMsg.includes("authentication")
+      ) {
+        errorMsg = agentTr.invalidConfig;
+        setActiveConfig(null);
+      }
+
+      setError(errorMsg);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: errorMsg,
+        },
+      ]);
+      streamingTextRef.current = "";
+      setStreamingText("");
+      setAgentStatus(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCancelClarification = () => {
+    if (!pendingClarification || isLoading) return;
+
+    setPendingClarification(null);
+    setClarificationAnswer("");
+    setAgentStatus(null);
+    setMessages((prev) => [
+      ...prev,
+      {
+        role: "assistant",
+        content: agentTr.clarificationCanceled,
+      },
+    ]);
+  };
+
   const handleConfigSave = async () => {
     if (!isLLMConfigComplete(draftConfig)) {
       setConfigError(agentTr.fillAllFields);
@@ -501,6 +715,7 @@ export function ChatPanel<TContent>({
       };
 
       await validateLLMConfig(nextConfig);
+      writeLLMConfig(nextConfig);
       onAgentStateChange((prev) => ({
         ...prev,
         draftConfig: nextConfig,
@@ -538,7 +753,7 @@ export function ChatPanel<TContent>({
             variant="ghost"
             size="icon-sm"
             onClick={handleCompactContext}
-            disabled={!isConfigured || isBusy || messages.length === 0}
+            disabled={!isConfigured || isBusy || hasPendingClarification || messages.length === 0}
             className="text-muted-foreground hover:text-foreground disabled:pointer-events-none disabled:opacity-35"
             title={isCompacting ? agentTr.compactingContextTitle : agentTr.compactContextTitle}
           >
@@ -654,6 +869,75 @@ export function ChatPanel<TContent>({
           <div className="flex items-start gap-2 rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive">
             <AlertCircle className="size-3.5 shrink-0 mt-0.5" />
             <span>{error}</span>
+          </div>
+        )}
+        {pendingClarification && (
+          <div className="rounded-lg border border-gray-200 bg-white p-3 shadow-sm">
+            <div className="mb-2 flex items-start gap-2">
+              <HelpCircle className="mt-0.5 size-4 shrink-0 text-gray-700" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium leading-5 text-gray-950">
+                  {pendingClarification.request.question}
+                </p>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                  {pendingClarification.request.reason}
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={handleCancelClarification}
+                disabled={isLoading}
+                className="shrink-0 text-muted-foreground hover:text-foreground"
+                title={agentTr.cancelTask}
+              >
+                <X className="size-4" />
+              </Button>
+            </div>
+            {pendingClarification.request.choices && pendingClarification.request.choices.length > 0 && (
+              <div className="mb-2 flex flex-wrap gap-1.5">
+                {pendingClarification.request.choices.map((choice) => (
+                  <button
+                    key={choice}
+                    type="button"
+                    onClick={() => setClarificationAnswer(choice)}
+                    className="rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-800 hover:border-gray-400 hover:bg-gray-50"
+                  >
+                    {choice}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="flex gap-2">
+              <Input
+                value={clarificationAnswer}
+                onChange={(e) => setClarificationAnswer(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleContinueClarification();
+                  }
+                }}
+                placeholder={agentTr.clarificationPlaceholder}
+                disabled={isLoading}
+                className="h-9 flex-1"
+              />
+              <Button
+                onClick={handleContinueClarification}
+                disabled={isLoading || !clarificationAnswer.trim()}
+                className="h-9 shrink-0 bg-black px-3 text-xs text-white hover:bg-gray-800 disabled:bg-gray-300 disabled:text-gray-600"
+              >
+                {isLoading ? <Loader2 className="size-3.5 animate-spin" /> : agentTr.continueTask}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleCancelClarification}
+                disabled={isLoading}
+                className="h-9 shrink-0 px-3 text-xs"
+              >
+                {agentTr.cancelTask}
+              </Button>
+            </div>
           </div>
         )}
         <div className="flex gap-2">

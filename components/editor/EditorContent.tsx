@@ -10,6 +10,7 @@ import { FormPanel } from "./FormPanel";
 import { PreviewPanel } from "./PreviewPanel";
 import { ChatPanel, createInitialAgentPanelState } from "@/components/shared/ChatPanel";
 import { isLLMConfigComplete } from "@/lib/agent/config";
+import { stripResumeLegacyContacts } from "@/lib/json-utils";
 
 interface EditorState {
   title: string;
@@ -44,11 +45,16 @@ export function EditorContent() {
       title: newTitle,
       template: newTemplate,
       language: newLanguage,
-      content: state.content,
+      content,
     });
   }
 
   if (!state.hydrated) return null;
+
+  const content = stripResumeLegacyContacts(state.content);
+  const setResumeContent = (nextContent: ResumeContent) => {
+    setContent(stripResumeLegacyContacts(nextContent));
+  };
 
   return (
     <EditorFrame
@@ -57,7 +63,7 @@ export function EditorContent() {
           title={state.title}
           template={state.template}
           language={state.language}
-          content={state.content}
+          content={content}
           onSettingsChange={handleSettingsChange}
           onImport={setStoredState}
         />
@@ -67,15 +73,15 @@ export function EditorContent() {
           ? (
             <ChatPanel
               docType="resume"
-              content={state.content}
-              onChange={setContent}
+              content={content}
+              onChange={setResumeContent}
               agentState={agentState}
               onAgentStateChange={setAgentState}
             />
           )
-          : <FormPanel content={state.content} onChange={setContent} language={state.language} />
+          : <FormPanel content={content} onChange={setResumeContent} language={state.language} />
       }
-      preview={<PreviewPanel content={state.content} language={state.language} />}
+      preview={<PreviewPanel content={content} language={state.language} />}
       isAgentMode={isAgentMode}
       isLLMConfigured={isLLMConfigComplete(agentState.activeConfig)}
       onModeToggle={() => setIsAgentMode((v) => !v)}

@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, ArrowLeft, ChevronDown, FileDown, FileImage, FileJson, FileUp, Loader2, Settings, Sparkles } from "lucide-react";
 import { exportResume, exportJson, type ExportFormat } from "@/lib/export";
-import { withId, mergeDegreeField, stripDegreeField } from "@/lib/json-utils";
+import { withId, mergeDegreeField, stripDegreeField, stripResumeLegacyContacts } from "@/lib/json-utils";
 import { defaultResumeContent, TITLE_MAX } from "@/lib/defaults";
 import resumeExampleEn from "@/examples/resume-example-en.json";
 import resumeExampleCn from "@/examples/resume-example-cn.json";
@@ -91,13 +91,23 @@ export function Toolbar({ title, template, language, content, onSettingsChange, 
       projects: withId<ProjectItem>(raw.projects).map((p) => ({ ...p, descriptions: withId<DescriptionField>(p.descriptions) })),
       awards: withId<AwardItem>(raw.awards),
     };
-    onImport({ title, template: example.template as ResumeTemplate, language: example.language as ResumeLanguage, content: merged });
+    onImport({ title, template: example.template as ResumeTemplate, language: example.language as ResumeLanguage, content: stripResumeLegacyContacts(merged) });
   }
 
   function handleExportJson() {
+    const sanitizedContent = stripResumeLegacyContacts(content);
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { photo: _photo, ...personal } = content.personal;
-    exportJson({ _type: "cvforge-resume", title, template, language, content: { ...content, personal, education: stripDegreeField(content.education) } }, title || "resume");
+    const { photo: _photo, ...personal } = sanitizedContent.personal;
+    exportJson(
+      {
+        _type: "cvforge-resume",
+        title,
+        template,
+        language,
+        content: { ...sanitizedContent, personal, education: stripDegreeField(sanitizedContent.education) },
+      },
+      title || "resume"
+    );
   }
 
   function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -126,7 +136,7 @@ export function Toolbar({ title, template, language, content, onSettingsChange, 
           projects: withId<ProjectItem>(raw.projects).map((p) => ({ ...p, descriptions: withId<DescriptionField>(p.descriptions) })),
           awards: withId<AwardItem>(raw.awards),
         };
-        onImport({ title: parsed.title, template: parsed.template, language: parsed.language, content: merged });
+        onImport({ title: parsed.title, template: parsed.template, language: parsed.language, content: stripResumeLegacyContacts(merged) });
       } catch {
         setImportErrorOpen(true);
       }

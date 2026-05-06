@@ -1,7 +1,7 @@
 import type { ContactField, ContactFieldType, ResumeContent, SectionType } from "@/lib/types/resume";
 import type { AcademicCVContent, AcademicSectionType } from "@/lib/types/academic-cv";
 import type { CoverLetterContent } from "@/lib/types/cover-letter";
-import { withId } from "@/lib/json-utils";
+import { mergeDegreeField, withId } from "@/lib/json-utils";
 import type { DocType } from "./tools";
 
 function ensureUUIDs<T extends { id?: string }>(items: T[]): T[] {
@@ -12,9 +12,119 @@ function text(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
 
+const DEGREE_ABBREVIATIONS: Array<[RegExp, string]> = [
+  [/^doctor of philosophy\b/i, "PhD"],
+  [/^master of science\b/i, "MSc"],
+  [/^bachelor of science\b/i, "BSc"],
+  [/^master of engineering\b/i, "MEng"],
+  [/^bachelor of engineering\b/i, "BEng"],
+  [/^master of arts\b/i, "MA"],
+  [/^bachelor of arts\b/i, "BA"],
+  [/^master of laws\b/i, "LLM"],
+  [/^bachelor of laws\b/i, "LLB"],
+  [/^master of business administration\b/i, "MBA"],
+];
+
+function educationLanguage(degree: string, field: string): "zh" | "en" {
+  return /[\u3400-\u9fff]/.test(`${degree}${field}`) ? "zh" : "en";
+}
+
+function normalizeEducationDegreeAndField(degreeValue: unknown, fieldValue: unknown): { degree: string; field: string } {
+  const degree = normalizeEducationDegree(degreeValue);
+  const field = text(fieldValue).trim();
+  return mergeDegreeField({ degree, field }, educationLanguage(degree, field));
+}
+
+function normalizeEducationDegree(value: unknown): string {
+  const degree = text(value).trim();
+  if (!degree || /[\u3400-\u9fff]/.test(degree)) return degree;
+
+  for (const [pattern, abbreviation] of DEGREE_ABBREVIATIONS) {
+    if (pattern.test(degree)) {
+      return degree.replace(pattern, abbreviation).replace(/^(\S+)\s+in\s+/i, "$1 in ");
+    }
+  }
+
+  return degree;
+}
+
+const MONTHS: Record<string, number> = {
+  jan: 1,
+  january: 1,
+  feb: 2,
+  february: 2,
+  mar: 3,
+  march: 3,
+  apr: 4,
+  april: 4,
+  may: 5,
+  jun: 6,
+  june: 6,
+  jul: 7,
+  july: 7,
+  aug: 8,
+  august: 8,
+  sep: 9,
+  sept: 9,
+  september: 9,
+  oct: 10,
+  october: 10,
+  nov: 11,
+  november: 11,
+  dec: 12,
+  december: 12,
+};
+
+function parseDateScore(value: string): number | null {
+  const normalized = value.trim().toLowerCase();
+  if (!normalized) return null;
+  if (/\b(present|current|ongoing|now)\b|至今|目前|现在/.test(normalized)) return Number.MAX_SAFE_INTEGER;
+
+  const scores: number[] = [];
+  const monthPattern = Object.keys(MONTHS).join("|");
+
+  for (const match of normalized.matchAll(new RegExp(`\\b(${monthPattern})\\s+((?:19|20)\\d{2})\\b`, "g"))) {
+    scores.push(Number(match[2]) * 12 + MONTHS[match[1]]);
+  }
+
+  for (const match of normalized.matchAll(new RegExp(`\\b((?:19|20)\\d{2})\\s+(${monthPattern})\\b`, "g"))) {
+    scores.push(Number(match[1]) * 12 + MONTHS[match[2]]);
+  }
+
+  for (const match of normalized.matchAll(/\b((?:19|20)\d{2})(?:[./-](0?[1-9]|1[0-2]))?\b/g)) {
+    const year = Number(match[1]);
+    const month = match[2] ? Number(match[2]) : 12;
+    scores.push(year * 12 + month);
+  }
+
+  if (scores.length === 0) return null;
+
+  return Math.max(...scores);
+}
+
+function itemDateScore(values: string[]): number | null {
+  for (const value of values) {
+    const score = parseDateScore(value);
+    if (score !== null) return score;
+  }
+  return null;
+}
+
+function sortByMostRecent<T>(items: T[], getDateValues: (item: T) => string[]): T[] {
+  return items
+    .map((item, index) => ({ item, index, score: itemDateScore(getDateValues(item)) }))
+    .sort((a, b) => {
+      if (a.score === null && b.score === null) return a.index - b.index;
+      if (a.score === null) return 1;
+      if (b.score === null) return -1;
+      return b.score - a.score || a.index - b.index;
+    })
+    .map(({ item }) => item);
+}
+
 function updateContactFields(
   contacts: ContactField[],
-  updates: Partial<Record<Extract<ContactFieldType, "email" | "phone" | "location" | "website">, string>>
+  updates: Partial<Record<ContactFieldType, string>>
 ): ContactField[] {
   const next = [...contacts];
 
@@ -93,7 +203,7 @@ function executeResumeToolCall(content: ResumeContent, toolName: string, args: u
     }
     case "set_experience": {
       const arg = args as { items: Array<{ id?: string; company: string; position?: string; location?: string; startDate?: string; endDate?: string; descriptions?: Array<{ id?: string; value: string }> }> };
-      const experience = ensureUUIDs(
+      const experience = sortByMostRecent(ensureUUIDs(
         (arg.items ?? []).map((item) => ({
           ...item,
           company: text(item.company),
@@ -103,23 +213,25 @@ function executeResumeToolCall(content: ResumeContent, toolName: string, args: u
           endDate: text(item.endDate),
           descriptions: ensureUUIDs(item.descriptions ?? []),
         }))
-      ) as typeof content.experience;
+      ) as typeof content.experience, (item) => [item.endDate, item.startDate]);
       return { ...content, experience, sections: setResumeSection(content, "experience", experience.length > 0) };
     }
     case "set_education": {
       const arg = args as { items: Array<{ id?: string; institution: string; degree?: string; field?: string; location?: string; startDate?: string; endDate?: string; extraFields?: Array<{ id?: string; type: "grade" | "awards" | "custom"; label: string; value: string }> }> };
-      const education = ensureUUIDs(
-        (arg.items ?? []).map((e) => ({
-          ...e,
-          institution: text(e.institution),
-          degree: text(e.degree),
-          field: text(e.field),
-          location: text(e.location),
-          startDate: text(e.startDate),
-          endDate: text(e.endDate),
-          extraFields: ensureUUIDs(e.extraFields ?? []),
-        }))
-      ) as typeof content.education;
+      const education = sortByMostRecent(ensureUUIDs(
+        (arg.items ?? []).map((e) => {
+          const degreeAndField = normalizeEducationDegreeAndField(e.degree, e.field);
+          return {
+            ...e,
+            institution: text(e.institution),
+            ...degreeAndField,
+            location: text(e.location),
+            startDate: text(e.startDate),
+            endDate: text(e.endDate),
+            extraFields: ensureUUIDs(e.extraFields ?? []),
+          };
+        })
+      ) as typeof content.education, (item) => [item.endDate, item.startDate]);
       return {
         ...content,
         education,
@@ -133,7 +245,7 @@ function executeResumeToolCall(content: ResumeContent, toolName: string, args: u
     }
     case "set_projects": {
       const arg = args as { items: Array<{ id?: string; name: string; websiteLabel?: string; websiteUrl?: string; startDate?: string; endDate?: string; descriptions?: Array<{ id?: string; value: string }> }> };
-      const projects = ensureUUIDs(
+      const projects = sortByMostRecent(ensureUUIDs(
         (arg.items ?? []).map((p) => ({
           ...p,
           name: text(p.name),
@@ -143,7 +255,7 @@ function executeResumeToolCall(content: ResumeContent, toolName: string, args: u
           endDate: text(p.endDate),
           descriptions: ensureUUIDs(p.descriptions ?? []),
         }))
-      ) as typeof content.projects;
+      ) as typeof content.projects, (item) => [item.endDate, item.startDate]);
       return {
         ...content,
         projects,
@@ -152,7 +264,10 @@ function executeResumeToolCall(content: ResumeContent, toolName: string, args: u
     }
     case "set_awards": {
       const arg = args as { items: Array<{ id?: string; award: string; date: string }> };
-      const awards = ensureUUIDs(arg.items ?? []) as typeof content.awards;
+      const awards = sortByMostRecent(
+        ensureUUIDs(arg.items ?? []) as typeof content.awards,
+        (item) => [item.date]
+      );
       return { ...content, awards, sections: setResumeSection(content, "awards", awards.length > 0) };
     }
     case "set_sections": {
@@ -167,7 +282,15 @@ function executeResumeToolCall(content: ResumeContent, toolName: string, args: u
 function executeAcademicToolCall(content: AcademicCVContent, toolName: string, args: unknown): AcademicCVContent {
   switch (toolName) {
     case "update_personal": {
-      const arg = args as { fullName?: string; email?: string; phone?: string; location?: string; website?: string };
+      const arg = args as {
+        fullName?: string;
+        email?: string;
+        phone?: string;
+        addressLine1?: string;
+        addressLine2?: string;
+        addressLine3?: string;
+        website?: string;
+      };
       return {
         ...content,
         personal: {
@@ -176,7 +299,9 @@ function executeAcademicToolCall(content: AcademicCVContent, toolName: string, a
           contacts: updateContactFields(content.personal.contacts ?? [], {
             email: arg.email,
             phone: arg.phone,
-            location: arg.location,
+            addressLine1: arg.addressLine1,
+            addressLine2: arg.addressLine2,
+            addressLine3: arg.addressLine3,
             website: arg.website,
           }),
         },
@@ -193,18 +318,20 @@ function executeAcademicToolCall(content: AcademicCVContent, toolName: string, a
     }
     case "set_education": {
       const arg = args as { items: Array<{ id?: string; institution: string; degree?: string; field?: string; location?: string; startDate?: string; endDate?: string; extraFields?: Array<{ id?: string; type: "grade" | "researchField" | "awards" | "custom"; label: string; value: string }> }> };
-      const education = ensureUUIDs(
-        (arg.items ?? []).map((e) => ({
-          ...e,
-          institution: text(e.institution),
-          degree: text(e.degree),
-          field: text(e.field),
-          location: text(e.location),
-          startDate: text(e.startDate),
-          endDate: text(e.endDate),
-          extraFields: ensureUUIDs(e.extraFields ?? []),
-        }))
-      ) as typeof content.education;
+      const education = sortByMostRecent(ensureUUIDs(
+        (arg.items ?? []).map((e) => {
+          const degreeAndField = normalizeEducationDegreeAndField(e.degree, e.field);
+          return {
+            ...e,
+            institution: text(e.institution),
+            ...degreeAndField,
+            location: text(e.location),
+            startDate: text(e.startDate),
+            endDate: text(e.endDate),
+            extraFields: ensureUUIDs(e.extraFields ?? []),
+          };
+        })
+      ) as typeof content.education, (item) => [item.endDate, item.startDate]);
       return {
         ...content,
         education,
@@ -213,7 +340,7 @@ function executeAcademicToolCall(content: AcademicCVContent, toolName: string, a
     }
     case "set_research_experience": {
       const arg = args as { items: Array<{ id?: string; organization: string; role?: string; researchGroup?: string; department?: string; location?: string; startDate?: string; endDate?: string; descriptions?: Array<{ id?: string; value: string }> }> };
-      const researchExperience = ensureUUIDs(
+      const researchExperience = sortByMostRecent(ensureUUIDs(
         (arg.items ?? []).map((e) => ({
           ...e,
           organization: text(e.organization),
@@ -225,7 +352,7 @@ function executeAcademicToolCall(content: AcademicCVContent, toolName: string, a
           endDate: text(e.endDate),
           descriptions: ensureUUIDs(e.descriptions ?? []),
         }))
-      ) as typeof content.researchExperience;
+      ) as typeof content.researchExperience, (item) => [item.endDate, item.startDate]);
       return {
         ...content,
         researchExperience,
@@ -234,7 +361,7 @@ function executeAcademicToolCall(content: AcademicCVContent, toolName: string, a
     }
     case "set_teaching_experience": {
       const arg = args as { items: Array<{ id?: string; institution: string; role?: string; location?: string; startDate?: string; endDate?: string; course?: string; descriptions?: Array<{ id?: string; value: string }> }> };
-      const teachingExperience = ensureUUIDs(
+      const teachingExperience = sortByMostRecent(ensureUUIDs(
         (arg.items ?? []).map((e) => ({
           ...e,
           institution: text(e.institution),
@@ -245,7 +372,7 @@ function executeAcademicToolCall(content: AcademicCVContent, toolName: string, a
           course: text(e.course),
           descriptions: ensureUUIDs(e.descriptions ?? []),
         }))
-      ) as typeof content.teachingExperience;
+      ) as typeof content.teachingExperience, (item) => [item.endDate, item.startDate]);
       return {
         ...content,
         teachingExperience,
@@ -254,7 +381,7 @@ function executeAcademicToolCall(content: AcademicCVContent, toolName: string, a
     }
     case "set_industry_experience": {
       const arg = args as { items: Array<{ id?: string; organization: string; role?: string; department?: string; location?: string; startDate?: string; endDate?: string; descriptions?: Array<{ id?: string; value: string }> }> };
-      const industryExperience = ensureUUIDs(
+      const industryExperience = sortByMostRecent(ensureUUIDs(
         (arg.items ?? []).map((e) => ({
           ...e,
           organization: text(e.organization),
@@ -265,7 +392,7 @@ function executeAcademicToolCall(content: AcademicCVContent, toolName: string, a
           endDate: text(e.endDate),
           descriptions: ensureUUIDs(e.descriptions ?? []),
         }))
-      ) as typeof content.industryExperience;
+      ) as typeof content.industryExperience, (item) => [item.endDate, item.startDate]);
       return {
         ...content,
         industryExperience,
@@ -274,12 +401,18 @@ function executeAcademicToolCall(content: AcademicCVContent, toolName: string, a
     }
     case "set_publications": {
       const arg = args as { items: Array<{ id?: string; citation: string }> };
-      const publications = ensureUUIDs(arg.items ?? []) as typeof content.publications;
+      const publications = sortByMostRecent(
+        ensureUUIDs(arg.items ?? []) as typeof content.publications,
+        (item) => [item.citation]
+      );
       return { ...content, publications, sections: setAcademicSection(content, "publications", publications.length > 0) };
     }
     case "set_manuscripts_under_review": {
       const arg = args as { items: Array<{ id?: string; citation: string }> };
-      const manuscriptsUnderReview = ensureUUIDs(arg.items ?? []) as typeof content.manuscriptsUnderReview;
+      const manuscriptsUnderReview = sortByMostRecent(
+        ensureUUIDs(arg.items ?? []) as typeof content.manuscriptsUnderReview,
+        (item) => [item.citation]
+      );
       return {
         ...content,
         manuscriptsUnderReview,
@@ -288,7 +421,7 @@ function executeAcademicToolCall(content: AcademicCVContent, toolName: string, a
     }
     case "set_conference_presentations": {
       const arg = args as { items: Array<{ id?: string; event: string; title: string; location?: string; date?: string; type?: string }> };
-      const conferencePresentations = ensureUUIDs(
+      const conferencePresentations = sortByMostRecent(ensureUUIDs(
         (arg.items ?? []).map((item) => ({
           ...item,
           event: text(item.event),
@@ -297,7 +430,7 @@ function executeAcademicToolCall(content: AcademicCVContent, toolName: string, a
           date: text(item.date),
           type: text(item.type),
         }))
-      ) as typeof content.conferencePresentations;
+      ) as typeof content.conferencePresentations, (item) => [item.date]);
       return {
         ...content,
         conferencePresentations,
@@ -306,12 +439,18 @@ function executeAcademicToolCall(content: AcademicCVContent, toolName: string, a
     }
     case "set_grants_and_awards": {
       const arg = args as { items: Array<{ id?: string; title: string; date: string }> };
-      const grantsAndAwards = ensureUUIDs(arg.items ?? []) as typeof content.grantsAndAwards;
+      const grantsAndAwards = sortByMostRecent(
+        ensureUUIDs(arg.items ?? []) as typeof content.grantsAndAwards,
+        (item) => [item.date]
+      );
       return { ...content, grantsAndAwards, sections: setAcademicSection(content, "grantsAndAwards", grantsAndAwards.length > 0) };
     }
     case "set_professional_service": {
       const arg = args as { items: Array<{ id?: string; role: string; organization: string; date: string }> };
-      const professionalService = ensureUUIDs(arg.items ?? []) as typeof content.professionalService;
+      const professionalService = sortByMostRecent(
+        ensureUUIDs(arg.items ?? []) as typeof content.professionalService,
+        (item) => [item.date]
+      );
       return {
         ...content,
         professionalService,
