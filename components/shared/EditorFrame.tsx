@@ -84,7 +84,8 @@ export function EditorFrame({
     });
   };
 
-  const handleMouseDown = () => {
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
     setIsDragging(true);
   };
 
@@ -120,7 +121,7 @@ export function EditorFrame({
   const shouldBlackHover = isAgentMode && isLLMConfigured;
 
   return (
-    <div className="flex h-screen flex-col">
+    <div className={`flex h-screen flex-col ${isDragging ? "select-none" : ""}`}>
       <style>{`
         .editor-form-pane[data-left-hovered="true"] [data-editor-toolbar-inner] {
           border-bottom-color: rgb(0 0 0 / 0.2);
