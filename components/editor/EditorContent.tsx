@@ -8,7 +8,8 @@ import { EditorFrame } from "@/components/shared/EditorFrame";
 import { Toolbar } from "./Toolbar";
 import { FormPanel } from "./FormPanel";
 import { PreviewPanel } from "./PreviewPanel";
-import { ChatPanel } from "@/components/shared/ChatPanel";
+import { ChatPanel, createInitialAgentPanelState } from "@/components/shared/ChatPanel";
+import { isLLMConfigComplete } from "@/lib/agent/config";
 
 interface EditorState {
   title: string;
@@ -26,6 +27,7 @@ const initialState: EditorState = {
 
 export function EditorContent() {
   const [isAgentMode, setIsAgentMode] = useState(false);
+  const [agentState, setAgentState] = useState(createInitialAgentPanelState);
 
   const { state, setContent, setStoredState } = useEditorState<
     ResumeContent,
@@ -62,11 +64,20 @@ export function EditorContent() {
       }
       form={
         isAgentMode
-          ? <ChatPanel docType="resume" content={state.content} onChange={setContent} />
+          ? (
+            <ChatPanel
+              docType="resume"
+              content={state.content}
+              onChange={setContent}
+              agentState={agentState}
+              onAgentStateChange={setAgentState}
+            />
+          )
           : <FormPanel content={state.content} onChange={setContent} language={state.language} />
       }
       preview={<PreviewPanel content={state.content} language={state.language} />}
       isAgentMode={isAgentMode}
+      isLLMConfigured={isLLMConfigComplete(agentState.activeConfig)}
       onModeToggle={() => setIsAgentMode((v) => !v)}
     />
   );

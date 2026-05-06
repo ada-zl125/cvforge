@@ -8,6 +8,9 @@ interface PaginatedPreviewPanelProps {
   children: React.ReactNode;
 }
 
+const PAGE_W = 794;
+const PREVIEW_PADDING_X = 64;
+
 export function PaginatedPreviewPanel({ children }: PaginatedPreviewPanelProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLDivElement>(null);
@@ -44,8 +47,8 @@ export function PaginatedPreviewPanel({ children }: PaginatedPreviewPanelProps) 
     if (!container) return;
 
     const updateScale = () => {
-      const available = container.clientWidth - 64;
-      setScale(Math.min(1, Math.max(0.3, available / 794)));
+      const available = container.clientWidth - PREVIEW_PADDING_X;
+      setScale(Math.min(1, Math.max(0.3, available / PAGE_W)));
     };
 
     updateScale();
@@ -58,43 +61,56 @@ export function PaginatedPreviewPanel({ children }: PaginatedPreviewPanelProps) 
 
   return (
     <PageBreakProvider>
-    <div ref={containerRef} className="flex flex-1 items-start justify-center overflow-y-auto bg-muted/50 px-8 pt-8 pb-0">
-      {/* Hidden export target — captured by lib/export.ts via .preview-a4 > div */}
-      <div style={{ position: "fixed", left: "-9999px", top: 0, width: "794px", pointerEvents: "none" }}>
-        <div className="preview-a4">
-          <div ref={measureRef}>
-            {children}
-          </div>
-        </div>
-      </div>
-
-      {/* Visible paginated pages */}
-      <div className="flex flex-col items-center gap-4 pb-8">
-        {Array.from({ length: numPages }).map((_, i) => (
-          <div
-            key={i}
-            className="overflow-hidden rounded-sm border border-border bg-white shadow-lg transition-colors duration-200 hover:border-black"
-            style={{ width: "794px", height: `${PAGE_H}px`, flexShrink: 0, position: "relative", zoom: scale }}
-          >
-            {/* Inset window preserves TOP/BOTTOM margins on every page */}
-            <div
-              style={{
-                position: "absolute",
-                top: TOP,
-                left: 0,
-                right: 0,
-                height: CONTENT_H,
-                overflow: "hidden",
-              }}
-            >
-              <div style={{ transform: `translateY(${-(TOP + i * CONTENT_H)}px)` }}>
-                {children}
-              </div>
+      <div ref={containerRef} className="flex flex-1 items-start justify-center overflow-y-auto bg-muted/50 px-8 pt-8 pb-0">
+        {/* Hidden export target — captured by lib/export.ts via .preview-a4 > div */}
+        <div style={{ position: "fixed", left: "-9999px", top: 0, width: "794px", pointerEvents: "none" }}>
+          <div className="preview-a4">
+            <div ref={measureRef}>
+              {children}
             </div>
           </div>
-        ))}
+        </div>
+
+        {/* Visible paginated pages */}
+        <div className="flex flex-col items-center gap-4 pb-8">
+          {Array.from({ length: numPages }).map((_, i) => (
+            <div
+              key={i}
+              className="relative shrink-0"
+              style={{ width: `${PAGE_W * scale}px`, height: `${PAGE_H * scale}px` }}
+            >
+              <div
+                className="overflow-hidden rounded-sm border border-border bg-white shadow-lg transition-colors duration-200 hover:border-black"
+                style={{
+                  width: `${PAGE_W}px`,
+                  height: `${PAGE_H}px`,
+                  position: "absolute",
+                  left: "50%",
+                  top: 0,
+                  transform: `translateX(-50%) scale(${scale})`,
+                  transformOrigin: "top center",
+                }}
+              >
+                {/* Inset window preserves TOP/BOTTOM margins on every page */}
+                <div
+                  style={{
+                    position: "absolute",
+                    top: TOP,
+                    left: 0,
+                    right: 0,
+                    height: CONTENT_H,
+                    overflow: "hidden",
+                  }}
+                >
+                  <div style={{ transform: `translateY(${-(TOP + i * CONTENT_H)}px)` }}>
+                    {children}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
-    </div>
     </PageBreakProvider>
   );
 }

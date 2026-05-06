@@ -30,14 +30,20 @@ function processRoot(cvRoot: HTMLElement): void {
 
   // One forced reflow here; no further reflows during the write phase.
   const rootRect = cvRoot.getBoundingClientRect();
+  const scaleY = rootRect.height > 0 && cvRoot.offsetHeight > 0
+    ? rootRect.height / cvRoot.offsetHeight
+    : 1;
 
   // Phase 1 — batch-read positions and previously applied extra margins.
-  const snapshots = els.map((el) => ({
-    el,
-    top: el.getBoundingClientRect().top,
-    height: el.getBoundingClientRect().height,
-    prev: parseFloat(el.style.getPropertyValue("--page-break-extra")) || 0,
-  }));
+  const snapshots = els.map((el) => {
+    const rect = el.getBoundingClientRect();
+    return {
+      el,
+      top: (rect.top - rootRect.top) / scaleY,
+      height: rect.height / scaleY,
+      prev: parseFloat(el.style.getPropertyValue("--page-break-extra")) || 0,
+    };
+  });
 
   // Phase 2 — compute needed margins with shift, then write CSS variables.
   // `shift` tracks the cumulative delta of margins changed so far in this pass.
@@ -45,7 +51,7 @@ function processRoot(cvRoot: HTMLElement): void {
   // (their DOM positions haven't been updated by the browser yet).
   let shift = 0;
   for (const { el, top, height, prev } of snapshots) {
-    const naturalY = top - rootRect.top - prev + shift;
+    const naturalY = top - prev + shift;
 
     let needed = 0;
     if (naturalY >= TOP && height < CONTENT_H) {
