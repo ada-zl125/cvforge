@@ -27,14 +27,6 @@ Resume state is stored in `localStorage` for session persistence. No server-side
 - Turbopack is used by default (`next dev` / `next build`)
 - React 19.2
 
-## Common Commands
-
-```bash
-npm run dev          # Start dev server (Turbopack)
-npm run build        # Production build
-npm run lint         # ESLint check
-```
-
 ## Project Structure
 
 ```
@@ -54,6 +46,11 @@ components/
 lib/
   types/                    # Document TypeScript types
   export.ts                 # Browser-side PDF/PNG/JSON export helpers
+  agent/                    # AI-powered document editing agent
+    chat.ts                 # OpenAI streaming agent loop + system prompts
+    tools.ts                # LangChain DynamicStructuredTool definitions (per doc type)
+    executor.ts             # Pure functions: apply tool args → new content state
+    config.ts               # LLM config read/write via localStorage
 ```
 
 ## GitHub Workflow
