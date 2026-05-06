@@ -3,7 +3,6 @@
 import { useRef, useState, useEffect } from "react";
 import { Bot, ChevronLeft, ChevronRight, PenLine, RotateCcw, Maximize2, Minimize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { isLLMConfigComplete, readLLMConfig } from "@/lib/agent/config";
 import { useUILanguage } from "@/lib/ui-language";
 import { t } from "@/lib/translations";
 
@@ -12,6 +11,7 @@ interface EditorFrameProps {
   form: React.ReactNode;
   preview: React.ReactNode;
   isAgentMode?: boolean;
+  isLLMConfigured?: boolean;
   onModeToggle?: () => void;
 }
 
@@ -24,7 +24,14 @@ interface LayoutPrefs {
   preSplitRatio?: number;
 }
 
-export function EditorFrame({ toolbar, form, preview, isAgentMode = false, onModeToggle }: EditorFrameProps) {
+export function EditorFrame({
+  toolbar,
+  form,
+  preview,
+  isAgentMode = false,
+  isLLMConfigured = false,
+  onModeToggle,
+}: EditorFrameProps) {
   const { lang } = useUILanguage();
   const tr = t[lang];
   const contentRef = useRef<HTMLDivElement>(null);
@@ -35,20 +42,6 @@ export function EditorFrame({ toolbar, form, preview, isAgentMode = false, onMod
   }));
   const [isDragging, setIsDragging] = useState(false);
   const [isLeftHovered, setIsLeftHovered] = useState(false);
-  const [isLLMConfigured, setIsLLMConfigured] = useState(false);
-
-  useEffect(() => {
-    const refreshConfigState = () => {
-      setIsLLMConfigured(isLLMConfigComplete(readLLMConfig()));
-    };
-
-    refreshConfigState();
-    window.addEventListener("llm-config-change", refreshConfigState);
-    return () => {
-      window.removeEventListener("llm-config-change", refreshConfigState);
-    };
-  }, []);
-
   const toggleLeftCollapse = () => {
     setPrefs((prev) => ({
       ...prev,

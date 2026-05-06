@@ -29,6 +29,9 @@ export function createTools<TContent = AnyContent>(
     });
   }
 
+  const optionalKnown = (description: string) =>
+    z.string().optional().describe(`${description}. Omit or use an empty string when unknown; do not invent.`);
+
   if (docType === "resume") {
     tools.push(
       makeUpdateHandler(
@@ -54,10 +57,10 @@ export function createTools<TContent = AnyContent>(
             z.object({
               id: z.string().optional(),
               company: z.string(),
-              position: z.string(),
-              location: z.string(),
-              startDate: z.string().describe("e.g. Sept 2023"),
-              endDate: z.string().describe("e.g. Present or Aug 2024"),
+              position: optionalKnown("Position/title"),
+              location: optionalKnown("Location in project style, e.g. London, UK or 中国, 北京"),
+              startDate: optionalKnown("Start date, e.g. Sept 2023 or 2024/09"),
+              endDate: optionalKnown("End date, e.g. Present, Aug 2024, or 至今"),
               descriptions: z.array(
                 z.object({
                   id: z.string().optional(),
@@ -75,11 +78,11 @@ export function createTools<TContent = AnyContent>(
             z.object({
               id: z.string().optional(),
               institution: z.string(),
-              degree: z.string().describe("e.g. Bachelor of Science"),
+              degree: optionalKnown("Degree, e.g. Bachelor of Science"),
               field: z.string().optional(),
-              location: z.string(),
-              startDate: z.string(),
-              endDate: z.string(),
+              location: optionalKnown("Location in project style, e.g. Oxford, UK or 中国, 北京"),
+              startDate: optionalKnown("Start date"),
+              endDate: optionalKnown("End date"),
               extraFields: z
                 .array(
                   z.object({
@@ -115,8 +118,8 @@ export function createTools<TContent = AnyContent>(
               name: z.string(),
               websiteLabel: z.string().optional().describe("e.g. GitHub, Website"),
               websiteUrl: z.string().optional().describe("Full URL"),
-              startDate: z.string(),
-              endDate: z.string(),
+              startDate: optionalKnown("Start date"),
+              endDate: optionalKnown("End date"),
               descriptions: z.array(
                 z.object({
                   id: z.string().optional(),
@@ -173,11 +176,11 @@ export function createTools<TContent = AnyContent>(
             z.object({
               id: z.string().optional(),
               institution: z.string(),
-              degree: z.string(),
+              degree: optionalKnown("Degree"),
               field: z.string().optional(),
-              location: z.string(),
-              startDate: z.string(),
-              endDate: z.string(),
+              location: optionalKnown("Location in project style, e.g. Oxford, UK or 中国, 北京"),
+              startDate: optionalKnown("Start date"),
+              endDate: optionalKnown("End date"),
               extraFields: z
                 .array(
                   z.object({
@@ -199,12 +202,12 @@ export function createTools<TContent = AnyContent>(
             z.object({
               id: z.string().optional(),
               organization: z.string(),
-              role: z.string(),
+              role: optionalKnown("Role/title"),
               researchGroup: z.string().optional(),
               department: z.string().optional(),
-              location: z.string(),
-              startDate: z.string(),
-              endDate: z.string(),
+              location: optionalKnown("Location in project style, e.g. Oxford, UK or 中国, 北京"),
+              startDate: optionalKnown("Start date"),
+              endDate: optionalKnown("End date"),
               descriptions: z
                 .array(
                   z.object({
@@ -224,10 +227,10 @@ export function createTools<TContent = AnyContent>(
             z.object({
               id: z.string().optional(),
               institution: z.string(),
-              role: z.string(),
-              location: z.string(),
-              startDate: z.string(),
-              endDate: z.string(),
+              role: optionalKnown("Role/title"),
+              location: optionalKnown("Location in project style, e.g. Oxford, UK or 中国, 北京"),
+              startDate: optionalKnown("Start date"),
+              endDate: optionalKnown("End date"),
               course: z.string().optional(),
               descriptions: z
                 .array(
@@ -248,11 +251,11 @@ export function createTools<TContent = AnyContent>(
             z.object({
               id: z.string().optional(),
               organization: z.string(),
-              role: z.string(),
+              role: optionalKnown("Role/title"),
               department: z.string().optional(),
-              location: z.string(),
-              startDate: z.string(),
-              endDate: z.string(),
+              location: optionalKnown("Location in project style, e.g. London, UK or 中国, 北京"),
+              startDate: optionalKnown("Start date"),
+              endDate: optionalKnown("End date"),
               descriptions: z
                 .array(
                   z.object({
@@ -295,8 +298,8 @@ export function createTools<TContent = AnyContent>(
               id: z.string().optional(),
               event: z.string(),
               title: z.string(),
-              location: z.string(),
-              date: z.string(),
+              location: optionalKnown("Location in project style, e.g. London, UK or 美国, 新奥尔良"),
+              date: optionalKnown("Presentation date"),
               type: z.string().optional().describe("e.g. Oral, Poster, Invited"),
             })
           ),
