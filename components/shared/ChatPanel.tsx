@@ -7,6 +7,7 @@ import { Send, SlidersHorizontal, Loader2, AlertCircle, Settings, Eraser, Shrink
 import { Button } from "@/components/ui/button";
 import AnimatedContent from "@/components/AnimatedContent";
 import FadeContent from "@/components/FadeContent";
+import ShinyText from "@/components/ShinyText";
 import SpotlightCard from "@/components/SpotlightCard";
 import {
   Dialog,
@@ -325,29 +326,12 @@ function AgentStatusIndicator({
   thinkingText: string;
   workingText: string;
 }) {
-  const [phase, setPhase] = useState<AgentStatus>(status);
-
-  useEffect(() => {
-    setPhase(status);
-  }, [status]);
-
-  useEffect(() => {
-    const intervalId = window.setInterval(() => {
-      setPhase((prev) => (prev === "thinking" ? "working" : "thinking"));
-    }, 1800);
-
-    return () => window.clearInterval(intervalId);
-  }, []);
+  const text = status === "thinking" ? thinkingText : workingText;
 
   return (
     <div className="flex items-center gap-2.5 py-1 text-xs text-muted-foreground">
       <AgentAvatar size="sm" active />
-      <span>{phase === "thinking" ? thinkingText : workingText}</span>
-      <span className="flex gap-0.5" aria-hidden="true">
-        <span className="h-1 w-1 animate-pulse rounded-full bg-gray-400" />
-        <span className="h-1 w-1 animate-pulse rounded-full bg-gray-400 [animation-delay:160ms]" />
-        <span className="h-1 w-1 animate-pulse rounded-full bg-gray-400 [animation-delay:320ms]" />
-      </span>
+      <ShinyText text={text} className="font-medium" />
     </div>
   );
 }
