@@ -2,11 +2,13 @@
 
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
-import { Send, SlidersHorizontal, Loader2, AlertCircle, Settings, Eraser, Shrink, HelpCircle, X } from "lucide-react";
+import remarkGfm from "remark-gfm";
+import { Send, SlidersHorizontal, Loader2, AlertCircle, Settings, Eraser, Shrink, HelpCircle, RotateCcw, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -28,6 +30,7 @@ import {
   writeLLMConfig,
 } from "@/lib/agent/config";
 import type { ClarificationRequest, DocType } from "@/lib/agent/tools";
+import { buildAgentChange, contentSignature, type AgentChange } from "@/lib/agent/change-tracking";
 import { useUILanguage } from "@/lib/ui-language";
 import { t } from "@/lib/translations";
 
@@ -36,6 +39,7 @@ export interface AgentPanelState {
   activeConfig: LLMConfig | null;
   draftConfig: LLMConfig;
   pendingClarification: PendingClarification | null;
+  lastChange: AgentChange | null;
 }
 
 interface PendingClarification {
@@ -56,6 +60,7 @@ export function createInitialAgentPanelState(): AgentPanelState {
       model: "",
     },
     pendingClarification: null,
+    lastChange: null,
   };
 }
 
@@ -63,6 +68,7 @@ interface ChatPanelProps<TContent> {
   docType: DocType;
   content: TContent;
   onChange: (content: TContent) => void;
+  onReviewChange?: (change: AgentChange | null) => void;
   agentState: AgentPanelState;
   onAgentStateChange: Dispatch<SetStateAction<AgentPanelState>>;
 }
@@ -146,12 +152,35 @@ const markdownComponents: Components = {
       {children}
     </blockquote>
   ),
+  table: ({ children }) => (
+    <div className="mb-3 max-w-full overflow-x-auto rounded-lg border border-gray-200 last:mb-0">
+      <table className="w-full min-w-[520px] border-collapse text-left text-xs">
+        {children}
+      </table>
+    </div>
+  ),
+  thead: ({ children }) => <thead className="bg-gray-50">{children}</thead>,
+  tr: ({ children }) => (
+    <tr className="border-b border-gray-200 last:border-b-0">{children}</tr>
+  ),
+  th: ({ children }) => (
+    <th className="px-3 py-2 font-semibold leading-5 text-gray-950">
+      {children}
+    </th>
+  ),
+  td: ({ children }) => (
+    <td className="align-top px-3 py-2 leading-5 text-gray-700">
+      {children}
+    </td>
+  ),
 };
 
 function AssistantMarkdown({ content, streaming = false }: { content: string; streaming?: boolean }) {
   return (
     <div className="w-full min-w-0 break-words text-sm text-gray-950">
-      <ReactMarkdown components={markdownComponents}>{content}</ReactMarkdown>
+      <ReactMarkdown components={markdownComponents} remarkPlugins={[remarkGfm]}>
+        {content}
+      </ReactMarkdown>
       {streaming && <span className="animate-pulse">▌</span>}
     </div>
   );
@@ -274,10 +303,57 @@ function AgentStatusIndicator({
   );
 }
 
+function ChangeCard({
+  change,
+  latestChangeId,
+  canUndo,
+  onUndo,
+  onReview,
+  reviewLabel,
+}: {
+  change: AgentChange;
+  latestChangeId?: string;
+  canUndo: boolean;
+  onUndo: (change: AgentChange) => void;
+  onReview: (change: AgentChange) => void;
+  reviewLabel: string;
+}) {
+  const isLatest = change.id === latestChangeId;
+  return (
+    <div className="flex justify-start">
+      <div className="flex max-w-[85%] items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700 shadow-sm">
+        <span className="font-medium text-emerald-700">+{change.addedWords}</span>
+        <span className="font-medium text-red-700">-{change.removedWords}</span>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 gap-1 px-2 text-xs"
+          onClick={() => onUndo(change)}
+          disabled={!isLatest || !canUndo}
+          title={!isLatest || !canUndo ? "Undo is only available for the latest unchanged agent edit" : "Undo"}
+        >
+          <RotateCcw className="size-3.5" />
+          Undo
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 gap-1 px-2 text-xs"
+          onClick={() => onReview(change)}
+        >
+          <Eye className="size-3.5" />
+          {reviewLabel}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export function ChatPanel<TContent>({
   docType,
   content,
   onChange,
+  onReviewChange,
   agentState,
   onAgentStateChange,
 }: ChatPanelProps<TContent>) {
@@ -285,7 +361,7 @@ export function ChatPanel<TContent>({
   const tr = t[lang];
   const agentTr = tr.agent;
 
-  const { messages, activeConfig, draftConfig, pendingClarification } = agentState;
+  const { messages, activeConfig, draftConfig, pendingClarification, lastChange } = agentState;
   const [streamingText, setStreamingText] = useState("");
   const [agentStatus, setAgentStatus] = useState<AgentStatus | null>(null);
   const [inputValue, setInputValue] = useState("");
@@ -300,8 +376,13 @@ export function ChatPanel<TContent>({
   const [configError, setConfigError] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesRef = useRef(messages);
   const contentRef = useRef(content);
   const streamingTextRef = useRef("");
+
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
 
   useEffect(() => {
     contentRef.current = content;
@@ -342,12 +423,15 @@ export function ChatPanel<TContent>({
   }, [agentStatus, messages, streamingText]);
 
   const setMessages = (updater: SetStateAction<Message[]>) => {
+    const nextMessages =
+      typeof updater === "function"
+        ? (updater as (messages: Message[]) => Message[])(messagesRef.current)
+        : updater;
+
+    messagesRef.current = nextMessages;
     onAgentStateChange((prev) => ({
       ...prev,
-      messages:
-        typeof updater === "function"
-          ? (updater as (messages: Message[]) => Message[])(prev.messages)
-          : updater,
+      messages: nextMessages,
     }));
   };
 
@@ -388,6 +472,53 @@ export function ChatPanel<TContent>({
         history: messages,
       })
     : null;
+  const canUndoLastChange =
+    !!lastChange && contentSignature(content) === lastChange.afterSignature;
+
+  const setLastChange = (change: AgentChange | null) => {
+    onAgentStateChange((prev) => ({
+      ...prev,
+      lastChange: change,
+    }));
+  };
+
+  const recordAgentChange = (before: unknown, after: unknown, toolNames: string[]) => {
+    const change = buildAgentChange(before, after, toolNames);
+    if (!change) return;
+
+    setLastChange(change);
+    onReviewChange?.(null);
+    setMessages((prev) => [
+      ...prev,
+      {
+        role: "assistant",
+        kind: "change-card",
+        content: "",
+        change,
+      },
+    ]);
+  };
+
+  const handleUndoChange = (change: AgentChange) => {
+    if (change.id !== lastChange?.id || contentSignature(contentRef.current) !== change.afterSignature) return;
+
+    contentRef.current = change.before as TContent;
+    onChange(change.before as TContent);
+    setLastChange(null);
+    onReviewChange?.(null);
+    setMessages((prev) => [
+      ...prev,
+      {
+        role: "assistant",
+        content: agentTr.undoChangeNotice,
+      },
+    ]);
+  };
+
+  const handleReviewChange = (change: AgentChange) => {
+    onReviewChange?.(null);
+    window.setTimeout(() => onReviewChange?.(change), 0);
+  };
 
   const handleClearContext = () => {
     if (isBusy || !hasChatContext) return;
@@ -399,6 +530,8 @@ export function ChatPanel<TContent>({
     setError(null);
     setPendingClarification(null);
     setClarificationAnswer("");
+    setLastChange(null);
+    onReviewChange?.(null);
   };
 
   const handleCompactContext = async () => {
@@ -472,7 +605,11 @@ export function ChatPanel<TContent>({
     setInputValue("");
 
     try {
-      const nextMessages: Message[] = [...messages, { role: "user", content: userMsg }];
+      const history = messagesRef.current;
+      const nextMessages: Message[] = [...history, { role: "user", content: userMsg }];
+      const beforeContent = contentRef.current;
+      let latestContent = beforeContent;
+      const changedToolNames: string[] = [];
       setMessages(nextMessages);
       setStreamingText("");
       streamingTextRef.current = "";
@@ -481,11 +618,13 @@ export function ChatPanel<TContent>({
         config: activeConfig,
         docType,
         getContent: () => contentRef.current,
-        onContentUpdate: (updated) => {
+        onContentUpdate: (updated, toolName) => {
           contentRef.current = updated;
+          latestContent = updated;
+          changedToolNames.push(toolName);
           onChange(updated);
         },
-        history: messages,
+        history,
         userMessage: userMsg,
         onTextChunk: (chunk) => {
           setAgentStatus(null);
@@ -522,6 +661,7 @@ export function ChatPanel<TContent>({
           setAgentStatus(null);
           streamingTextRef.current = "";
           setStreamingText("");
+          recordAgentChange(beforeContent, latestContent, changedToolNames);
         },
       });
     } catch (err) {
@@ -599,12 +739,17 @@ export function ChatPanel<TContent>({
     streamingTextRef.current = "";
 
     try {
+      const beforeContent = contentRef.current;
+      let latestContent = beforeContent;
+      const changedToolNames: string[] = [];
       await runAgentStream({
         config: activeConfig,
         docType,
         getContent: () => contentRef.current,
-        onContentUpdate: (updated) => {
+        onContentUpdate: (updated, toolName) => {
           contentRef.current = updated;
+          latestContent = updated;
+          changedToolNames.push(toolName);
           onChange(updated);
         },
         history: historyWithQuestion,
@@ -647,6 +792,7 @@ export function ChatPanel<TContent>({
           setAgentStatus(null);
           streamingTextRef.current = "";
           setStreamingText("");
+          recordAgentChange(beforeContent, latestContent, changedToolNames);
         },
       });
     } catch (err) {
@@ -830,6 +976,20 @@ export function ChatPanel<TContent>({
                 );
               }
 
+              if (msg.kind === "change-card" && msg.change) {
+                return (
+                  <ChangeCard
+                    key={idx}
+                    change={msg.change}
+                    latestChangeId={lastChange?.id}
+                    canUndo={canUndoLastChange}
+                    onUndo={handleUndoChange}
+                    onReview={handleReviewChange}
+                    reviewLabel={agentTr.reviewChange}
+                  />
+                );
+              }
+
               if (isUser) {
                 return (
                   <div key={idx} className="flex justify-end">
@@ -871,75 +1031,6 @@ export function ChatPanel<TContent>({
             <span>{error}</span>
           </div>
         )}
-        {pendingClarification && (
-          <div className="rounded-lg border border-gray-200 bg-white p-3 shadow-sm">
-            <div className="mb-2 flex items-start gap-2">
-              <HelpCircle className="mt-0.5 size-4 shrink-0 text-gray-700" />
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium leading-5 text-gray-950">
-                  {pendingClarification.request.question}
-                </p>
-                <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                  {pendingClarification.request.reason}
-                </p>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                onClick={handleCancelClarification}
-                disabled={isLoading}
-                className="shrink-0 text-muted-foreground hover:text-foreground"
-                title={agentTr.cancelTask}
-              >
-                <X className="size-4" />
-              </Button>
-            </div>
-            {pendingClarification.request.choices && pendingClarification.request.choices.length > 0 && (
-              <div className="mb-2 flex flex-wrap gap-1.5">
-                {pendingClarification.request.choices.map((choice) => (
-                  <button
-                    key={choice}
-                    type="button"
-                    onClick={() => setClarificationAnswer(choice)}
-                    className="rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-800 hover:border-gray-400 hover:bg-gray-50"
-                  >
-                    {choice}
-                  </button>
-                ))}
-              </div>
-            )}
-            <div className="flex gap-2">
-              <Input
-                value={clarificationAnswer}
-                onChange={(e) => setClarificationAnswer(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleContinueClarification();
-                  }
-                }}
-                placeholder={agentTr.clarificationPlaceholder}
-                disabled={isLoading}
-                className="h-9 flex-1"
-              />
-              <Button
-                onClick={handleContinueClarification}
-                disabled={isLoading || !clarificationAnswer.trim()}
-                className="h-9 shrink-0 bg-black px-3 text-xs text-white hover:bg-gray-800 disabled:bg-gray-300 disabled:text-gray-600"
-              >
-                {isLoading ? <Loader2 className="size-3.5 animate-spin" /> : agentTr.continueTask}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleCancelClarification}
-                disabled={isLoading}
-                className="h-9 shrink-0 px-3 text-xs"
-              >
-                {agentTr.cancelTask}
-              </Button>
-            </div>
-          </div>
-        )}
         <div className="flex gap-2">
           <textarea
             value={inputValue}
@@ -968,6 +1059,89 @@ export function ChatPanel<TContent>({
           </Button>
         </div>
       </div>
+
+      {/* Clarification Dialog */}
+      <Dialog
+        open={!!pendingClarification}
+        onOpenChange={(open) => {
+          if (!open) handleCancelClarification();
+        }}
+      >
+        <DialogContent className="editor-dialog overflow-hidden p-0 sm:max-w-[420px]">
+          <DialogHeader className="editor-dialog-header place-items-start px-5 pb-4 pt-4">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-black/40 bg-black/[0.035]">
+                <HelpCircle className="h-4 w-4 text-foreground" />
+              </div>
+              <div className="min-w-0">
+                <DialogTitle className="text-[15px] font-semibold">
+                  {agentTr.clarificationDialogTitle}
+                </DialogTitle>
+                {pendingClarification?.request.reason && (
+                  <DialogDescription className="mt-2 text-xs leading-5">
+                    {pendingClarification.request.reason}
+                  </DialogDescription>
+                )}
+              </div>
+            </div>
+          </DialogHeader>
+
+          {pendingClarification && (
+            <div className="grid gap-4 px-5 pb-5 pt-3">
+              <p className="text-sm font-medium leading-6 text-gray-950">
+                {pendingClarification.request.question}
+              </p>
+              {pendingClarification.request.choices && pendingClarification.request.choices.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {pendingClarification.request.choices.map((choice) => (
+                    <button
+                      key={choice}
+                      type="button"
+                      onClick={() => setClarificationAnswer(choice)}
+                      className="rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-800 hover:border-gray-400 hover:bg-gray-50"
+                    >
+                      {choice}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <Input
+                value={clarificationAnswer}
+                onChange={(e) => setClarificationAnswer(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleContinueClarification();
+                  }
+                }}
+                placeholder={agentTr.clarificationPlaceholder}
+                disabled={isLoading}
+                className="editor-dialog-input h-10"
+                autoFocus
+              />
+            </div>
+          )}
+
+          <DialogFooter className="editor-dialog-footer">
+            <Button
+              variant="outline"
+              className="editor-dialog-cancel cursor-pointer"
+              onClick={handleCancelClarification}
+              disabled={isLoading}
+            >
+              {agentTr.cancelTask}
+            </Button>
+            <Button
+              variant="outline"
+              className="editor-dialog-action cursor-pointer"
+              onClick={handleContinueClarification}
+              disabled={isLoading || !clarificationAnswer.trim()}
+            >
+              {isLoading ? <Loader2 className="size-3.5 animate-spin" /> : agentTr.continueTask}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Config Dialog */}
       <Dialog

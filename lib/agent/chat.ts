@@ -13,11 +13,13 @@ import academicCvExampleCn from "@/examples/academic-cv-example-cn.json";
 import coverLetterExampleEn from "@/examples/cover-letter-example-en.json";
 import { createTools, type ClarificationRequest, type DocType } from "./tools";
 import type { LLMConfig } from "./config";
+import type { AgentChange } from "./change-tracking";
 
 export interface Message {
   role: "user" | "assistant";
   content: string;
-  kind?: "context-summary";
+  kind?: "context-summary" | "change-card";
+  change?: AgentChange;
 }
 
 export type AgentStatus = "thinking" | "working";
@@ -72,6 +74,10 @@ const INFERENCE_RULES = `## Inference and Disclosure Rules
 - If you write an inferred or normalized value into the document, call \`record_inference\` with the original wording, inferred value, field, and reason before or alongside the update tool.
 - After tools finish, explicitly tell the user what you inferred and why in one concise sentence.`;
 
+const RESPONSE_FORMAT_RULES = `## Response Formatting
+- Use normal Markdown for readable replies.
+- If you use a Markdown table, each row must be on its own line, including the header separator row. Never inline multiple table rows in one paragraph.`;
+
 function buildSystemPrompt(docType: DocType): string {
   if (docType === "resume") {
     return `You are an expert resume editor helping professionals build compelling, clear, and impactful resumes.
@@ -102,6 +108,8 @@ Example flow:
 ${RESUME_CRAFT_RULES}
 
 ${INFERENCE_RULES}
+
+${RESPONSE_FORMAT_RULES}
 
 ## Available Sections
 Personal Info (name, email, phone, location, website), Summary, Experience, Education, Skills, Projects, Awards.
@@ -145,6 +153,8 @@ ${RESUME_CRAFT_RULES}
 
 ${INFERENCE_RULES}
 
+${RESPONSE_FORMAT_RULES}
+
 ## Available Sections
 Personal Info (name, email, phone, address lines, website), Research Interests, Education, Research Experience, Teaching Experience, Industry Experience, Publications, Manuscripts Under Review, Conference Presentations, Grants & Awards, Professional Service, Technical Skills, References.
 
@@ -179,6 +189,8 @@ Example: User mentions a company. You update the recipient info, then ask: "**Wh
 - **Length:** Concise and impactful — 3–4 short paragraphs covering: why you're interested, relevant qualifications, why you're a fit, call to action
 - **Personalization:** Encourage the user to reference specific company details, role requirements, and concrete examples
 - **Ask clarifying questions** when information is vague or key details are missing
+
+${RESPONSE_FORMAT_RULES}
 
 ## Available Sections
 Sender info (name, address), Recipient info (name, salutation, address), Body paragraphs, Date.
@@ -416,6 +428,7 @@ export function estimateAgentContextUsage<TContent>({
   history: Message[];
 }): AgentContextUsage {
   const serializedHistory = history
+    .filter((message) => message.kind !== "change-card")
     .map((message) => {
       const role =
         message.kind === "context-summary"
@@ -443,6 +456,7 @@ export function estimateAgentContextUsage<TContent>({
 
 function buildCompactTranscript(history: Message[]): string {
   const transcript = history
+    .filter((message) => message.kind !== "change-card")
     .map((message) => {
       const label =
         message.kind === "context-summary"
@@ -563,7 +577,7 @@ export async function runAgentStream<TContent>(
     { role: "system", content: systemPrompt },
     { role: "system", content: documentContext },
     { role: "system", content: exampleStyleContext },
-    ...history.map((msg): ChatCompletionMessageParam => {
+    ...history.filter((msg) => msg.kind !== "change-card").map((msg): ChatCompletionMessageParam => {
       if (msg.kind === "context-summary") {
         return {
           role: "system",
