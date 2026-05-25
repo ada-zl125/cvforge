@@ -9,11 +9,12 @@ interface PreviewPanelProps {
   content: ResumeContent;
   language: ResumeLanguage;
   reviewChange?: AgentChange | null;
+  isStreaming?: boolean;
 }
 
-export function PreviewPanel({ content, language, reviewChange }: PreviewPanelProps) {
+export function PreviewPanel({ content, language, reviewChange, isStreaming = false }: PreviewPanelProps) {
   return (
-    <PaginatedPreviewPanel reviewChange={reviewChange}>
+    <PaginatedPreviewPanel reviewChange={reviewChange} isStreaming={isStreaming}>
       <GeneralTemplate content={content} language={language} />
     </PaginatedPreviewPanel>
   );

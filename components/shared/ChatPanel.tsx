@@ -3,12 +3,14 @@
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Send, SlidersHorizontal, Loader2, AlertCircle, Settings, Eraser, Shrink, HelpCircle, RotateCcw, Eye } from "lucide-react";
+import { Send, SlidersHorizontal, Loader2, AlertCircle, Settings, Eraser, Shrink, RotateCcw, Eye, FilePenLine, WandSparkles, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import AnimatedContent from "@/components/AnimatedContent";
+import FadeContent from "@/components/FadeContent";
+import SpotlightCard from "@/components/SpotlightCard";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -48,6 +50,7 @@ interface PendingClarification {
   request: ClarificationRequest;
   history: Message[];
   documentState: unknown;
+  clarificationCount: number;
 }
 
 export function createInitialAgentPanelState(): AgentPanelState {
@@ -69,6 +72,7 @@ interface ChatPanelProps<TContent> {
   content: TContent;
   onChange: (content: TContent) => void;
   onReviewChange?: (change: AgentChange | null) => void;
+  onAgentRunningChange?: (running: boolean) => void;
   agentState: AgentPanelState;
   onAgentStateChange: Dispatch<SetStateAction<AgentPanelState>>;
 }
@@ -186,6 +190,59 @@ function AssistantMarkdown({ content, streaming = false }: { content: string; st
   );
 }
 
+function AgentAvatar({ size = "md", active = false }: { size?: "sm" | "md" | "lg"; active?: boolean }) {
+  const sizeClass = size === "lg" ? "size-10" : size === "sm" ? "size-5" : "size-7";
+  const iconClass = size === "lg" ? "size-6" : size === "sm" ? "size-3.5" : "size-4";
+
+  return (
+    <div
+      className={`agent-avatar ${active ? "agent-avatar-active" : ""} ${sizeClass} relative flex shrink-0 items-center justify-center text-gray-950`}
+      aria-hidden="true"
+    >
+      <WandSparkles className={iconClass} />
+    </div>
+  );
+}
+
+function AgentEmptyState({
+  title,
+  description,
+  suggestions,
+  onPickSuggestion,
+}: {
+  title: string;
+  description: string;
+  suggestions: string[];
+  onPickSuggestion: (suggestion: string) => void;
+}) {
+  return (
+    <FadeContent
+      className="flex h-full items-center justify-center"
+      duration={420}
+      threshold={0}
+      initialOpacity={0}
+    >
+      <div className="mx-auto flex max-w-sm flex-col items-center px-6 text-center">
+        <AgentAvatar size="lg" active />
+        <div className="mt-4 text-sm font-semibold text-gray-950">{title}</div>
+        <p className="mt-1 text-sm leading-6 text-muted-foreground">{description}</p>
+        <div className="mt-4 flex flex-wrap justify-center gap-2">
+          {suggestions.map((suggestion) => (
+            <button
+              key={suggestion}
+              type="button"
+              onClick={() => onPickSuggestion(suggestion)}
+              className="rounded-full border border-black/10 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:border-black/30 hover:bg-gray-50 hover:text-gray-950"
+            >
+              {suggestion}
+            </button>
+          ))}
+        </div>
+      </div>
+    </FadeContent>
+  );
+}
+
 function ContextSummaryMessage({
   content,
   label,
@@ -284,15 +341,7 @@ function AgentStatusIndicator({
 
   return (
     <div className="flex items-center gap-2.5 py-1 text-xs text-muted-foreground">
-      <div className="relative h-5 w-6 shrink-0 animate-[bounce_1.8s_ease-in-out_infinite]" aria-hidden="true">
-        <span className="absolute left-0.5 top-1 h-3.5 w-5 rounded-full border border-gray-300 bg-white shadow-sm" />
-        <span className="absolute left-1 top-0.5 h-2 w-2 rotate-45 rounded-[2px] border-l border-t border-gray-300 bg-white" />
-        <span className="absolute right-1 top-0.5 h-2 w-2 rotate-45 rounded-[2px] border-l border-t border-gray-300 bg-white" />
-        <span className="absolute left-[7px] top-[9px] h-1 w-1 rounded-full bg-gray-500" />
-        <span className="absolute right-[7px] top-[9px] h-1 w-1 rounded-full bg-gray-500" />
-        <span className="absolute left-[11px] top-[11px] h-0.5 w-0.5 rounded-full bg-gray-400" />
-        <span className="absolute -right-1.5 top-2 h-2.5 w-2.5 rounded-full border-r border-t border-gray-300" />
-      </div>
+      <AgentAvatar size="sm" active />
       <span>{phase === "thinking" ? thinkingText : workingText}</span>
       <span className="flex gap-0.5" aria-hidden="true">
         <span className="h-1 w-1 animate-pulse rounded-full bg-gray-400" />
@@ -320,8 +369,15 @@ function ChangeCard({
 }) {
   const isLatest = change.id === latestChangeId;
   return (
-    <div className="flex justify-start">
-      <div className="flex max-w-[85%] items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700 shadow-sm">
+    <div className="flex justify-center py-1">
+      <SpotlightCard
+        className="rounded-full border border-black/10 bg-white"
+        spotlightColor="rgba(0, 0, 0, 0.055)"
+      >
+      <div className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-gray-700">
+        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gray-100 text-gray-700">
+          <FilePenLine className="size-3.5" />
+        </div>
         <span className="font-medium text-emerald-700">+{change.addedWords}</span>
         <span className="font-medium text-red-700">-{change.removedWords}</span>
         <Button
@@ -345,6 +401,7 @@ function ChangeCard({
           {reviewLabel}
         </Button>
       </div>
+      </SpotlightCard>
     </div>
   );
 }
@@ -354,6 +411,7 @@ export function ChatPanel<TContent>({
   content,
   onChange,
   onReviewChange,
+  onAgentRunningChange,
   agentState,
   onAgentStateChange,
 }: ChatPanelProps<TContent>) {
@@ -379,6 +437,7 @@ export function ChatPanel<TContent>({
   const messagesRef = useRef(messages);
   const contentRef = useRef(content);
   const streamingTextRef = useRef("");
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     messagesRef.current = messages;
@@ -387,6 +446,17 @@ export function ChatPanel<TContent>({
   useEffect(() => {
     contentRef.current = content;
   }, [content]);
+
+  useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort();
+      onAgentRunningChange?.(false);
+    };
+  }, [onAgentRunningChange]);
+
+  useEffect(() => {
+    onAgentRunningChange?.(isLoading);
+  }, [isLoading, onAgentRunningChange]);
 
   // Reset config when re-entering page (docType change)
   useEffect(() => {
@@ -474,6 +544,24 @@ export function ChatPanel<TContent>({
     : null;
   const canUndoLastChange =
     !!lastChange && contentSignature(content) === lastChange.afterSignature;
+  const agentDocLabel =
+    docType === "cover-letter"
+      ? agentTr.coverLetter
+      : docType === "academic-cv"
+        ? agentTr.academicCv
+        : agentTr.resume;
+  const promptSuggestions =
+    lang === "zh"
+      ? [
+          "帮我润色项目经历",
+          "让表达更有说服力",
+          "检查是否适合一页",
+        ]
+      : [
+          "Polish my project bullets",
+          "Make the tone stronger",
+          "Check if this fits one page",
+        ];
 
   const setLastChange = (change: AgentChange | null) => {
     onAgentStateChange((prev) => ({
@@ -497,6 +585,14 @@ export function ChatPanel<TContent>({
         change,
       },
     ]);
+  };
+
+  const isAbortError = (err: unknown) =>
+    err instanceof Error && err.name === "AbortError";
+
+  const handleCancelRunningTask = () => {
+    abortControllerRef.current?.abort();
+    setAgentStatus(null);
   };
 
   const handleUndoChange = (change: AgentChange) => {
@@ -603,13 +699,15 @@ export function ChatPanel<TContent>({
     setIsLoading(true);
     setAgentStatus("thinking");
     setInputValue("");
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+    const beforeContent = contentRef.current;
+    let latestContent = beforeContent;
+    const changedToolNames: string[] = [];
 
     try {
       const history = messagesRef.current;
       const nextMessages: Message[] = [...history, { role: "user", content: userMsg }];
-      const beforeContent = contentRef.current;
-      let latestContent = beforeContent;
-      const changedToolNames: string[] = [];
       setMessages(nextMessages);
       setStreamingText("");
       streamingTextRef.current = "";
@@ -626,6 +724,7 @@ export function ChatPanel<TContent>({
         },
         history,
         userMessage: userMsg,
+        signal: abortController.signal,
         onTextChunk: (chunk) => {
           setAgentStatus(null);
           streamingTextRef.current += chunk;
@@ -639,14 +738,8 @@ export function ChatPanel<TContent>({
             request,
             history: nextMessages,
             documentState: contentRef.current,
+            clarificationCount: 1,
           });
-          setMessages((prev) => [
-            ...prev,
-            {
-              role: "assistant",
-              content: formatClarificationMessage(request, lang),
-            },
-          ]);
         },
         onDone: () => {
           if (streamingTextRef.current) {
@@ -665,6 +758,21 @@ export function ChatPanel<TContent>({
         },
       });
     } catch (err) {
+      if (isAbortError(err)) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: agentTr.taskCanceled,
+          },
+        ]);
+        streamingTextRef.current = "";
+        setStreamingText("");
+        setAgentStatus(null);
+        recordAgentChange(beforeContent, latestContent, changedToolNames);
+        return;
+      }
+
       let errorMsg: string = agentTr.requestFailed;
 
       if (err instanceof Error) {
@@ -696,6 +804,9 @@ export function ChatPanel<TContent>({
       setStreamingText("");
       setAgentStatus(null);
     } finally {
+      if (abortControllerRef.current === abortController) {
+        abortControllerRef.current = null;
+      }
       setIsLoading(false);
     }
   };
@@ -715,7 +826,10 @@ export function ChatPanel<TContent>({
       `User answered the clarification: ${answer}`,
       `Clarification question: ${pending.request.question}`,
       `Continue the original task: ${pending.originalUserMessage}`,
-      "Use the answer to resolve only the pending uncertainty. Keep following all resume/CV rules, and call tools to complete the original task.",
+      `Clarification round: ${pending.clarificationCount}`,
+      "Use the answer to resolve only the pending uncertainty.",
+      "If the original task now has enough required information, stop asking questions, call the document update tools, and reply with a normal completion message.",
+      "Only call ask_user again when another required detail from the same original task is still missing, cannot be inferred, and cannot be safely omitted. If you ask again, ask exactly one small question.",
     ].join("\n");
     const visibleAnswer =
       lang === "zh"
@@ -737,11 +851,13 @@ export function ChatPanel<TContent>({
     setMessages((prev) => [...prev, { role: "user", content: visibleAnswer }]);
     setStreamingText("");
     streamingTextRef.current = "";
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+    const beforeContent = contentRef.current;
+    let latestContent = beforeContent;
+    const changedToolNames: string[] = [];
 
     try {
-      const beforeContent = contentRef.current;
-      let latestContent = beforeContent;
-      const changedToolNames: string[] = [];
       await runAgentStream({
         config: activeConfig,
         docType,
@@ -754,6 +870,7 @@ export function ChatPanel<TContent>({
         },
         history: historyWithQuestion,
         userMessage: continuationMessage,
+        signal: abortController.signal,
         onTextChunk: (chunk) => {
           setAgentStatus(null);
           streamingTextRef.current += chunk;
@@ -770,14 +887,8 @@ export function ChatPanel<TContent>({
               { role: "user", content: continuationMessage },
             ],
             documentState: contentRef.current,
+            clarificationCount: pending.clarificationCount + 1,
           });
-          setMessages((prev) => [
-            ...prev,
-            {
-              role: "assistant",
-              content: formatClarificationMessage(request, lang),
-            },
-          ]);
         },
         onDone: () => {
           if (streamingTextRef.current) {
@@ -796,6 +907,21 @@ export function ChatPanel<TContent>({
         },
       });
     } catch (err) {
+      if (isAbortError(err)) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: agentTr.taskCanceled,
+          },
+        ]);
+        streamingTextRef.current = "";
+        setStreamingText("");
+        setAgentStatus(null);
+        recordAgentChange(beforeContent, latestContent, changedToolNames);
+        return;
+      }
+
       let errorMsg: string = agentTr.requestFailed;
 
       if (err instanceof Error) {
@@ -826,6 +952,9 @@ export function ChatPanel<TContent>({
       setStreamingText("");
       setAgentStatus(null);
     } finally {
+      if (abortControllerRef.current === abortController) {
+        abortControllerRef.current = null;
+      }
       setIsLoading(false);
     }
   };
@@ -878,10 +1007,19 @@ export function ChatPanel<TContent>({
   };
 
   return (
-    <div className="flex h-full flex-col bg-background">
+    <div className="flex h-full flex-col bg-[#fbfbfa]">
       {/* Top bar */}
-      <div className="flex items-center justify-between border-b border-border bg-card px-4 py-3 shrink-0">
-        <h2 className="text-sm font-semibold">{agentTr.agentMode}</h2>
+      <SpotlightCard
+        className="shrink-0 border-b border-black/10 bg-white"
+        spotlightColor="rgba(0, 0, 0, 0.045)"
+      >
+      <div className="flex items-center justify-between px-3 py-2.5">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <AgentAvatar active={isConfigured} />
+          <div className="min-w-0">
+            <h2 className="text-sm font-semibold leading-5 text-gray-950">{agentTr.agentMode}</h2>
+          </div>
+        </div>
         <div className="flex items-center gap-1">
           <ContextUsageIndicator
             usage={contextUsage}
@@ -923,6 +1061,7 @@ export function ChatPanel<TContent>({
             variant="ghost"
             size="icon-sm"
             onClick={() => setConfigOpen(true)}
+            disabled={hasPendingClarification}
             className="text-muted-foreground hover:text-foreground"
             title={agentTr.configureTitle}
           >
@@ -930,6 +1069,7 @@ export function ChatPanel<TContent>({
           </Button>
         </div>
       </div>
+      </SpotlightCard>
 
       {/* Messages */}
       <div
@@ -942,25 +1082,29 @@ export function ChatPanel<TContent>({
         onMouseLeave={() => setIsHoveringChat(false)}
       >
         {!isConfigured ? (
-          <div className="flex items-start gap-3 text-sm text-muted-foreground">
-            <AlertCircle className="size-4 shrink-0 mt-0.5" />
-            <div>
-              <p className="font-medium mb-1">
-                {agentTr.configurePanelTitle}
-              </p>
-              <p>{agentTr.configureHint}</p>
-            </div>
-          </div>
+          <FadeContent duration={360} threshold={0} initialOpacity={0}>
+            <SpotlightCard
+              className="rounded-md border border-dashed border-black/12 bg-white px-3 py-3"
+              spotlightColor="rgba(0, 0, 0, 0.05)"
+            >
+              <div className="flex items-start gap-3 text-sm text-muted-foreground">
+                <AlertCircle className="size-4 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-medium mb-1 text-gray-950">
+                    {agentTr.configurePanelTitle}
+                  </p>
+                  <p>{agentTr.configureHint}</p>
+                </div>
+              </div>
+            </SpotlightCard>
+          </FadeContent>
         ) : messages.length === 0 && streamingText === "" ? (
-          <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
-            {agentTr.startConversation(
-              docType === "cover-letter"
-                ? agentTr.coverLetter
-                : docType === "academic-cv"
-                  ? agentTr.academicCv
-                  : agentTr.resume
-            )}
-          </div>
+          <AgentEmptyState
+            title={agentTr.emptyTitle}
+            description={agentTr.startConversation(agentDocLabel)}
+            suggestions={promptSuggestions}
+            onPickSuggestion={setInputValue}
+          />
         ) : (
           <>
             {messages.map((msg, idx) => {
@@ -992,22 +1136,34 @@ export function ChatPanel<TContent>({
 
               if (isUser) {
                 return (
-                  <div key={idx} className="flex justify-end">
-                    <div className="max-w-[85%] whitespace-pre-wrap break-words rounded-2xl border border-gray-200 bg-gray-100 px-3 py-2 text-sm leading-6 text-gray-950">
+                  <AnimatedContent
+                    key={idx}
+                    distance={10}
+                    duration={0.28}
+                    threshold={0}
+                    className="flex justify-end"
+                  >
+                    <div className="max-w-[85%] whitespace-pre-wrap break-words rounded-2xl border border-black/10 bg-gray-100 px-3 py-2 text-sm leading-6 text-gray-950">
                       {msg.content}
                     </div>
-                  </div>
+                  </AnimatedContent>
                 );
               }
 
               return (
-                <div key={idx} className="flex justify-start py-1">
+                <AnimatedContent
+                  key={idx}
+                  distance={10}
+                  duration={0.28}
+                  threshold={0}
+                  className="w-full py-1"
+                >
                   <AssistantMarkdown content={msg.content} />
-                </div>
+                </AnimatedContent>
               );
             })}
             {streamingText && (
-              <div className="flex justify-start py-1">
+              <div className="w-full py-1">
                 <AssistantMarkdown content={streamingText} streaming />
               </div>
             )}
@@ -1024,87 +1180,55 @@ export function ChatPanel<TContent>({
       </div>
 
       {/* Input area */}
-      <div className="border-t border-border bg-card p-3 shrink-0 space-y-2">
+      <div className="border-t border-black/10 bg-white p-3 shrink-0 space-y-2">
         {error && (
           <div className="flex items-start gap-2 rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive">
             <AlertCircle className="size-3.5 shrink-0 mt-0.5" />
             <span>{error}</span>
           </div>
         )}
-        <div className="flex gap-2">
-          <textarea
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                handleSend();
-              }
-            }}
-            placeholder={isConfigured ? agentTr.inputPlaceholder : agentTr.disabledPlaceholder}
-            disabled={isChatDisabled}
-            className="flex-1 min-h-10 max-h-24 resize-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 disabled:opacity-50 focus:border-gray-600 focus:outline-none"
-          />
-          <Button
-            size="icon-sm"
-            onClick={handleSend}
-            disabled={isChatDisabled || !inputValue.trim()}
-            className="shrink-0 self-end bg-black text-white hover:bg-gray-800 disabled:bg-gray-300 disabled:text-gray-600"
+        {pendingClarification ? (
+          <SpotlightCard
+            className="rounded-md border border-black/12 bg-[#fbfbfa] p-3"
+            spotlightColor="rgba(0, 0, 0, 0.045)"
           >
-            {isLoading ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <Send className="size-4" />
-            )}
-          </Button>
-        </div>
-      </div>
-
-      {/* Clarification Dialog */}
-      <Dialog
-        open={!!pendingClarification}
-        onOpenChange={(open) => {
-          if (!open) handleCancelClarification();
-        }}
-      >
-        <DialogContent className="editor-dialog overflow-hidden p-0 sm:max-w-[420px]">
-          <DialogHeader className="editor-dialog-header place-items-start px-5 pb-4 pt-4">
-            <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-black/40 bg-black/[0.035]">
-                <HelpCircle className="h-4 w-4 text-foreground" />
-              </div>
+            <div className="mb-3 flex items-start gap-2">
+              <AgentAvatar size="sm" active />
               <div className="min-w-0">
-                <DialogTitle className="text-[15px] font-semibold">
+                <div className="text-xs font-semibold uppercase tracking-[0.12em] text-gray-500">
                   {agentTr.clarificationDialogTitle}
-                </DialogTitle>
-                {pendingClarification?.request.reason && (
-                  <DialogDescription className="mt-2 text-xs leading-5">
+                </div>
+                <p className="mt-1 text-sm font-medium leading-6 text-gray-950">
+                  {pendingClarification.request.question}
+                </p>
+                {pendingClarification.request.reason && (
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
                     {pendingClarification.request.reason}
-                  </DialogDescription>
+                  </p>
                 )}
               </div>
             </div>
-          </DialogHeader>
 
-          {pendingClarification && (
-            <div className="grid gap-4 px-5 pb-5 pt-3">
-              <p className="text-sm font-medium leading-6 text-gray-950">
-                {pendingClarification.request.question}
-              </p>
-              {pendingClarification.request.choices && pendingClarification.request.choices.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {pendingClarification.request.choices.map((choice) => (
-                    <button
-                      key={choice}
-                      type="button"
-                      onClick={() => setClarificationAnswer(choice)}
-                      className="rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-800 hover:border-gray-400 hover:bg-gray-50"
-                    >
-                      {choice}
-                    </button>
-                  ))}
-                </div>
-              )}
+            {pendingClarification.request.choices && pendingClarification.request.choices.length > 0 && (
+              <div className="mb-3 flex flex-wrap gap-1.5">
+                {pendingClarification.request.choices.map((choice) => (
+                  <button
+                    key={choice}
+                    type="button"
+                    onClick={() => setClarificationAnswer(choice)}
+                    className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                      clarificationAnswer === choice
+                        ? "border-black bg-black text-white"
+                        : "border-black/10 bg-white text-gray-800 hover:border-black/30 hover:bg-gray-50"
+                    }`}
+                  >
+                    {choice}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className="flex gap-2">
               <Input
                 value={clarificationAnswer}
                 onChange={(e) => setClarificationAnswer(e.target.value)}
@@ -1116,32 +1240,58 @@ export function ChatPanel<TContent>({
                 }}
                 placeholder={agentTr.clarificationPlaceholder}
                 disabled={isLoading}
-                className="editor-dialog-input h-10"
+                className="editor-dialog-input h-9 flex-1"
                 autoFocus
               />
+              <Button
+                variant="outline"
+                className="editor-dialog-cancel h-9 cursor-pointer"
+                onClick={handleCancelClarification}
+                disabled={isLoading}
+              >
+                {agentTr.cancelTask}
+              </Button>
+              <Button
+                variant="outline"
+                className="editor-dialog-action h-9 cursor-pointer"
+                onClick={handleContinueClarification}
+                disabled={isLoading || !clarificationAnswer.trim()}
+              >
+                {isLoading ? <Loader2 className="size-3.5 animate-spin" /> : agentTr.continueTask}
+              </Button>
             </div>
-          )}
-
-          <DialogFooter className="editor-dialog-footer">
+          </SpotlightCard>
+        ) : (
+          <div className="flex gap-2">
+            <textarea
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSend();
+                }
+              }}
+              placeholder={isConfigured ? agentTr.inputPlaceholder : agentTr.disabledPlaceholder}
+              disabled={isChatDisabled}
+              className="flex-1 min-h-10 max-h-24 resize-none rounded-md border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 disabled:opacity-50 focus:border-gray-600 focus:outline-none"
+            />
             <Button
-              variant="outline"
-              className="editor-dialog-cancel cursor-pointer"
-              onClick={handleCancelClarification}
-              disabled={isLoading}
+              size="icon-sm"
+              onClick={isLoading ? handleCancelRunningTask : handleSend}
+              disabled={isLoading ? false : isChatDisabled || !inputValue.trim()}
+              className="shrink-0 self-end rounded-full bg-black text-white hover:bg-gray-800 disabled:bg-gray-300 disabled:text-gray-600"
+              title={isLoading ? agentTr.cancelRunningTaskTitle : undefined}
             >
-              {agentTr.cancelTask}
+              {isLoading ? (
+                <Square className="size-3.5 fill-current" />
+              ) : (
+                <Send className="size-4" />
+              )}
             </Button>
-            <Button
-              variant="outline"
-              className="editor-dialog-action cursor-pointer"
-              onClick={handleContinueClarification}
-              disabled={isLoading || !clarificationAnswer.trim()}
-            >
-              {isLoading ? <Loader2 className="size-3.5 animate-spin" /> : agentTr.continueTask}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+        )}
+      </div>
 
       {/* Config Dialog */}
       <Dialog

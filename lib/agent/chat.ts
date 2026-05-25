@@ -37,6 +37,7 @@ interface RunAgentStreamParams<TContent> {
   onContentUpdate: (updated: TContent, toolName: string) => void;
   history: Message[];
   userMessage: string;
+  signal?: AbortSignal;
   onTextChunk: (chunk: string) => void;
   onStatusChange?: (status: AgentStatus | null) => void;
   onClarification?: (request: ClarificationRequest) => void;
@@ -74,6 +75,18 @@ const INFERENCE_RULES = `## Inference and Disclosure Rules
 - If you write an inferred or normalized value into the document, call \`record_inference\` with the original wording, inferred value, field, and reason before or alongside the update tool.
 - After tools finish, explicitly tell the user what you inferred and why in one concise sentence.`;
 
+const CLARIFICATION_RULES = `## Blocking Clarification Workflow
+- Only use \`ask_user\` during the clarification phase of the user's original task, when they gave partial structured information and a required detail is missing, ambiguous, and cannot be safely inferred.
+- Do not use \`ask_user\` for every improvement, optional detail, minor blank field, style preference, or nice-to-have polish. If the document can be accurately updated by omitting the detail, update it and mention the omission in the final reply.
+- Ask one small question at a time. You may ask multiple sequential questions only when each answer resolves a necessary missing detail for the same original task.
+- Once the necessary details for a professional entry are available, stop calling \`ask_user\`, call the document update tools, and give a normal completion reply.
+- Use 2-3 choices only when they are natural short answers. Otherwise omit choices so the user can type a custom answer.
+- Education examples: institutions are provided but degree/program or graduation year/date is missing -> call \`ask_user\` for the next missing core detail before \`set_education\`. Infer stable institution locations when high-confidence; ask location only when it is required and not inferable.
+- Experience examples: organization is provided but role/title or dates are missing -> call \`ask_user\` for the next missing core detail before \`set_experience\` unless the user explicitly asks for a placeholder.
+- Project examples: project name is provided but the user's role, dates, or impact is essential to the requested update -> call \`ask_user\` for the next missing core detail before \`set_projects\`.
+- Academic examples: publication or presentation title is provided but venue, year, authorship, or status is essential -> call \`ask_user\` for the next missing core detail before the relevant update tool.
+- Cover letter examples: target role, company, sender identity, or required recipient details are missing and cannot be safely omitted -> call \`ask_user\` for the next missing core detail before updating the letter.`;
+
 const RESPONSE_FORMAT_RULES = `## Response Formatting
 - Use normal Markdown for readable replies.
 - If you use a Markdown table, each row must be on its own line, including the header separator row. Never inline multiple table rows in one paragraph.`;
@@ -87,27 +100,32 @@ Your job is to help the user add, update, or refine information in their resume 
 
 ## When the User Provides Information
 1. **Extract all the details** the user mentioned
-2. **Use the tools immediately** to update the document with what you have
-3. **Confirm what you added** in a brief, friendly message
-4. **Ask one focused follow-up question** about missing critical details (role, accomplishment, date) — not a list of everything
+2. **Decide whether a blocking clarification is needed** for missing core structured fields
+3. **Use the tools** to update the document when the information is sufficient, or call \`ask_user\` only when a required detail is missing and not inferable
+4. **Confirm what you added** in a brief, friendly message
+5. **Use \`ask_user\` for focused follow-up questions** about missing critical details instead of plain text
 
 Example flow:
+- User: "My name is Zhengyang Li, graduated from University of Huddersfield and Imperial College London"
+- You: Call \`ask_user\` with one small question such as "What degree or program should I list for each university?" Then, only if still necessary, ask a separate date question. After degree/program and dates are known, call \`set_education\` and reply normally.
 - User: "I worked at Google for 3 years"
-- You: Call \`set_experience\` with company="Google", position="[unclear]", dates, descriptions=[]. Then respond: "Added Google to your experience. **What was your role or title there?**"
+- You: Call \`ask_user\` with question="What was your role or title at Google, and roughly when did you work there?" before calling \`set_experience\`.
 
 ## Important Guidelines
 - **Never invent information.** Only use what the user explicitly tells you.
 - **Careful inference is not invention:** follow the inference rules below for high-confidence, low-risk normalizations; otherwise leave the field blank or ask.
-- **Do not guess missing fields just to satisfy a tool schema.** If a field is unknown, pass an empty string or omit it when allowed, then ask one focused follow-up question.
+- **Do not guess missing fields just to satisfy a tool schema.** If a core field is unknown, call \`ask_user\` before updating that structured item.
 - **Location precision:** if a location can be inferred with high confidence from a well-known institution/company/place name, use the full project style (English: "City, Country/Region", e.g. "London, UK"; Chinese: "国家, 城市", e.g. "中国, 北京"). If confidence is not high, leave the location empty and ask.
 - **Use action-verb language** for descriptions (e.g. "Led", "Developed", "Designed", "Improved") when writing bullet points
 - **Dates:** Accept any reasonable format (e.g. "3 years ago", "2023–2024", "Sept 2023 - Present") and normalize to brief format
 - **Descriptions:** Help expand vague statements into concrete accomplishments with measurable impact when possible
-- **Ask clarifying questions** when information is ambiguous or critical details are missing
+- **Call \`ask_user\`** only when information is ambiguous or critical details are missing and cannot be safely inferred or omitted
 
 ${RESUME_CRAFT_RULES}
 
 ${INFERENCE_RULES}
+
+${CLARIFICATION_RULES}
 
 ${RESPONSE_FORMAT_RULES}
 
@@ -118,8 +136,8 @@ Only add sections with content. Never create empty sections.
 ## Tool Behavior
 - For array fields (experience, education, skills, etc.): provide complete, well-formed data structures
 - Always include required fields; optional fields can be omitted
-- If the user hasn't provided enough detail for a tool call, ask clarifying questions first
-- When adding an entry with partial information, keep unknown optional details blank instead of inventing them. Example: school known but degree/date unknown -> set institution and any high-confidence location, leave degree/dates empty, then ask for the most important missing detail.
+- If the user hasn't provided enough core detail for a structured tool call, call \`ask_user\` for the next missing required detail first
+- When adding an entry with partial information, keep minor unknown optional details blank instead of inventing them. If a core detail is missing, call \`ask_user\` one small question at a time before updating. Example: school known but degree/date unknown -> ask degree/program first, then date only if still needed, then update education after the user answers.
 - When you need tools, call them first without narrating the tool execution. After all tools finish, respond with a concise result for the user.
 - Always reply to the user after each request. Keep final replies short, clear, and useful: usually 1-2 sentences unless the user asks for detail.
 
@@ -132,26 +150,29 @@ Help the user add, update, or refine information in their academic CV. Work conv
 
 ## When the User Provides Information
 1. **Extract all the details** they mentioned
-2. **Use the tools immediately** to update the document
-3. **Confirm what you added** in a brief message
-4. **Ask one focused follow-up question** about missing critical details — not a list
+2. **Decide whether a blocking clarification is needed** for missing core structured fields
+3. **Use the tools** to update the document when information is sufficient, or call \`ask_user\` only when a required detail is missing and not inferable
+4. **Confirm what you added** in a brief message
+5. **Use \`ask_user\` for focused follow-up questions** about missing critical details
 
-Example: User mentions a publication. You add it, then ask for the missing detail (venue/journal name, publication year, etc.)
+Example: User mentions a publication title without venue or year. You call \`ask_user\` for the missing venue/year before adding it.
 
 ## Important Guidelines
 - **Never invent information.** Only use what the user explicitly tells you.
 - **Careful inference is not invention:** follow the inference rules below for high-confidence, low-risk normalizations; otherwise leave the field blank or ask.
-- **Do not guess missing fields just to satisfy a tool schema.** If a field is unknown, pass an empty string or omit it when allowed, then ask one focused follow-up question.
+- **Do not guess missing fields just to satisfy a tool schema.** If a core field is unknown, call \`ask_user\` before updating that structured item.
 - **Location precision:** if a location can be inferred with high confidence from a well-known institution/conference/place name, use the full project style (English: "City, Country/Region", e.g. "Oxford, UK"; Chinese: "国家, 城市", e.g. "中国, 北京"). If confidence is not high, leave the location empty and ask.
 - **Personal address fields:** academic CV personal information uses addressLine1/addressLine2/addressLine3, not a single location field. Put a city/country personal address into addressLine1 unless the user provides multiple address lines.
 - **Citations:** Accept any citation format the user provides; clarify abbreviations if unclear
 - **Dates:** Accept flexible formats and normalize (e.g. "2023–2024", "Summer 2023")
 - **Research descriptions:** Help articulate research contributions and methodologies
-- **Ask clarifying questions** when information is incomplete or ambiguous
+- **Call \`ask_user\`** only when information is incomplete or ambiguous and should block the next edit because it cannot be safely inferred or omitted
 
 ${RESUME_CRAFT_RULES}
 
 ${INFERENCE_RULES}
+
+${CLARIFICATION_RULES}
 
 ${RESPONSE_FORMAT_RULES}
 
@@ -161,8 +182,8 @@ Personal Info (name, email, phone, address lines, website), Research Interests, 
 ## Tool Behavior
 - For array fields: provide complete, well-formed structures
 - Include required fields; optional fields can be omitted
-- If you lack detail, ask questions first before making a tool call
-- When adding an entry with partial information, keep unknown optional details blank instead of inventing them. Example: institution known but dates/degree unknown -> set the institution and any high-confidence location, leave missing fields empty, then ask for the most important missing detail.
+- If you lack core detail, call \`ask_user\` for the next missing required detail before making a structured update tool call
+- When adding an entry with partial information, keep minor unknown optional details blank instead of inventing them. If a core detail is missing, call \`ask_user\` one small question at a time before updating. Example: institution known but dates/degree unknown -> ask degree/program first, then date only if still needed, then update education after the user answers.
 - When you need tools, call them first without narrating the tool execution. After all tools finish, respond with a concise result for the user.
 - Always reply to the user after each request. Keep final replies short, clear, and useful: usually 1-2 sentences unless the user asks for detail.
 
@@ -175,20 +196,23 @@ Help the user write and refine their cover letter. Work conversationally to gath
 
 ## When the User Provides Information
 1. **Extract all details** they mentioned
-2. **Use the tools immediately** to update the letter
-3. **Confirm what you added** in a brief message
-4. **Ask one focused follow-up question** about missing details
+2. **Decide whether a blocking clarification is needed** for missing core fields
+3. **Use the tools** to update the letter when information is sufficient, or call \`ask_user\` only when a required detail is missing and not inferable
+4. **Confirm what you added** in a brief message
+5. **Use \`ask_user\` for focused follow-up questions** about missing details
 
-Example: User mentions a company. You update the recipient info, then ask: "**Who is the hiring manager or what title should I address the letter to?**"
+Example: User asks for a cover letter but gives only a company name and no target role. You call \`ask_user\` with question="What role are you applying for at this company?" before drafting or updating the body.
 
 ## Important Guidelines
 - **Never invent information.** Only use what the user explicitly tells you.
-- **Do not guess missing sender, recipient, address, or role details.** If unknown, omit the field or leave it blank, then ask one focused follow-up question.
+- **Do not guess missing sender, recipient, address, or role details.** If a core detail is unknown and needed, call \`ask_user\` before updating.
 - **Low-confidence details:** when a missing or ambiguous detail is important enough that the letter would be wrong without it, call \`ask_user\` instead of guessing or updating that field.
 - **Tone:** Professional, warm, and conversational (not stuffy)
 - **Length:** Concise and impactful — 3–4 short paragraphs covering: why you're interested, relevant qualifications, why you're a fit, call to action
 - **Personalization:** Encourage the user to reference specific company details, role requirements, and concrete examples
-- **Ask clarifying questions** when information is vague or key details are missing
+- **Call \`ask_user\`** only when information is vague or key details are missing and should block the next edit because they cannot be safely inferred or omitted
+
+${CLARIFICATION_RULES}
 
 ${RESPONSE_FORMAT_RULES}
 
@@ -290,6 +314,69 @@ function normalizeClarificationRequest(args: unknown): ClarificationRequest {
   };
 }
 
+function stripMarkdown(text: string): string {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/\[(.*?)\]\([^)]*\)/g, "$1")
+    .trim();
+}
+
+function extractFirstQuestion(text: string): string | null {
+  const normalized = stripMarkdown(text).replace(/\s+/g, " ");
+  const match = normalized.match(/(?:^|[.!。]\s+)([^.!。?？]*[?？])/);
+  const question = match?.[1] ?? normalized.match(/([^.!。?？]*[?？])/)?.[1];
+  return question?.trim() || null;
+}
+
+function inferClarificationTarget(text: string, userMessage: string): Pick<ClarificationRequest, "field" | "section"> {
+  const combined = `${text} ${userMessage}`.toLowerCase();
+
+  if (/education|university|college|school|degree|graduat|学位|毕业|学校|大学|教育/.test(combined)) {
+    return { section: "education", field: "education" };
+  }
+  if (/experience|worked|company|role|title|position|job|工作|公司|职位|头衔|经历/.test(combined)) {
+    return { section: "experience", field: "experience" };
+  }
+  if (/project|portfolio|impact|项目|作品|成果/.test(combined)) {
+    return { section: "projects", field: "projects" };
+  }
+  if (/publication|paper|journal|venue|conference|论文|期刊|会议|发表/.test(combined)) {
+    return { section: "publications", field: "publications" };
+  }
+  if (/cover letter|recipient|hiring manager|target role|求职信|收件人|招聘|岗位/.test(combined)) {
+    return { section: "cover-letter", field: "cover-letter" };
+  }
+
+  return {};
+}
+
+function buildClarificationFromAssistantText(
+  assistantContent: string,
+  userMessage: string
+): ClarificationRequest | null {
+  if (/^User answered the clarification:/i.test(userMessage.trim())) return null;
+
+  const question = extractFirstQuestion(assistantContent);
+  if (!question) return null;
+
+  const combined = `${assistantContent} ${userMessage}`;
+  const hasMissingSignal =
+    /\b(missing|clarify|provide|need|degree|graduation|year|date|role|title|position|venue|journal)\b/i.test(assistantContent) ||
+    /缺少|补充|确认|请问|哪年|时间|日期|学位|专业|职位|头衔|期刊|会议/.test(assistantContent);
+  const hasStructuredSignal =
+    /\b(resume|cv|education|experience|project|publication|cover letter|graduated|worked|university|college|company)\b/i.test(combined) ||
+    /简历|履历|教育|经历|项目|论文|求职信|毕业|工作|大学|学校|公司/.test(combined);
+
+  if (!hasMissingSignal || !hasStructuredSignal) return null;
+
+  return {
+    question,
+    reason: "This detail is needed before making a complete structured document update.",
+    ...inferClarificationTarget(assistantContent, userMessage),
+  };
+}
+
 function buildNoResponseFallback(userMessage: string): string {
   return isLikelyChinese(userMessage)
     ? "我这次没有生成有效回复，请再试一次。"
@@ -300,6 +387,16 @@ function buildToolFailureFallback(userMessage: string): string {
   return isLikelyChinese(userMessage)
     ? "我没能完成这次更新，请检查信息后再试一次。"
     : "I could not complete that update. Please check the details and try again.";
+}
+
+function isAbortError(error: unknown): boolean {
+  return error instanceof Error && (error.name === "AbortError" || error.message === "Request was aborted.");
+}
+
+function throwIfAborted(signal?: AbortSignal): void {
+  if (!signal?.aborted) return;
+
+  throw new DOMException("Agent task was canceled.", "AbortError");
 }
 
 function compactDocumentValue(value: unknown): unknown {
@@ -392,9 +489,11 @@ ${languageRules}
 Missing information policy:
 - Prefer partial-but-accurate updates over fabricated complete entries.
 - If a tool field is unknown, omit it when optional or use an empty string.
-- Ask one focused follow-up question for the most important missing detail.
+- For missing core structured fields that are required for the original task and cannot be inferred or safely omitted, call \`ask_user\` instead of asking only in assistant text.
+- Ask one focused question for the next most important missing detail. Do not ask for optional details just because a field exists.
 - You may infer common public facts only when highly confident and specific. For example, "Imperial College London" -> "London, UK"; avoid vague values like "UK" when the city is knowable.
 - If a missing or ambiguous detail is too important to leave blank and not safe to infer, call \`ask_user\` before updating that field.
+- Once the necessary details are available, stop asking and update the document.
 - If you write inferred or normalized information, use \`record_inference\` and mention the inference in your final reply.
 - Keep dated section arrays in reverse-chronological order, with current/ongoing entries first and unknown dates left after clearly dated entries.
 
@@ -537,6 +636,7 @@ export async function runAgentStream<TContent>(
     onContentUpdate,
     history,
     userMessage,
+    signal,
     onTextChunk,
     onStatusChange,
     onClarification,
@@ -601,6 +701,7 @@ export async function runAgentStream<TContent>(
 
     // Agent loop
     for (let loopCount = 0; loopCount < MAX_AGENT_LOOPS; loopCount += 1) {
+      throwIfAborted(signal);
       onStatusChange?.(successfulToolNames.length > 0 ? "working" : "thinking");
 
       // Create streaming completion
@@ -610,13 +711,14 @@ export async function runAgentStream<TContent>(
         tools: toolDefs.length > 0 ? toolDefs : undefined,
         tool_choice: toolDefs.length > 0 ? "auto" : undefined,
         stream: true,
-      });
+      }, { signal });
 
       let assistantContent = "";
       const toolCalls: ChatCompletionMessageToolCall[] = [];
 
       // Process stream
       for await (const chunk of stream) {
+        throwIfAborted(signal);
         const delta = chunk.choices[0]?.delta;
         if (!delta) continue;
 
@@ -655,6 +757,8 @@ export async function runAgentStream<TContent>(
           toolCall.function.arguments
       );
 
+      throwIfAborted(signal);
+
       if (completeToolCalls.length > 0) {
         onStatusChange?.("working");
 
@@ -690,6 +794,7 @@ export async function runAgentStream<TContent>(
 
         // Execute tools
         for (const toolCall of completeToolCalls) {
+          throwIfAborted(signal);
           const tool = tools.find((t) => t.name === toolCall.function.name);
           if (!tool) {
             failedToolNames.push(toolCall.function.name);
@@ -704,6 +809,7 @@ export async function runAgentStream<TContent>(
           try {
             const toolArgs = JSON.parse(toolCall.function.arguments);
             const result = await tool.func(toolArgs);
+            throwIfAborted(signal);
             successfulToolNames.push(toolCall.function.name);
 
             apiMessages.push({
@@ -722,6 +828,16 @@ export async function runAgentStream<TContent>(
         }
       } else if (assistantContent) {
         onStatusChange?.(null);
+        const textClarification = onClarification
+          ? buildClarificationFromAssistantText(assistantContent, userMessage)
+          : null;
+
+        if (textClarification) {
+          clarificationRequested = true;
+          onClarification?.(textClarification);
+          break;
+        }
+
         const finalContent = withInferenceDisclosure(assistantContent, inferenceNotes, userMessage);
         onTextChunk(finalContent);
         emittedFinalText = true;
@@ -753,13 +869,16 @@ export async function runAgentStream<TContent>(
     }
   } catch (error) {
     onStatusChange?.(null);
+    if (isAbortError(error) || signal?.aborted) {
+      throw new DOMException("Agent task was canceled.", "AbortError");
+    }
     if (error instanceof Error) {
       throw error;
     }
     throw new Error("Agent stream failed");
   } finally {
     onStatusChange?.(null);
-    onDone();
+    if (!signal?.aborted) onDone();
   }
 }
 

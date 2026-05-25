@@ -4,23 +4,14 @@ import { useState, useCallback, useMemo } from "react";
 import {
   Search, GraduationCap, FlaskConical, BookOpen, Briefcase, BookMarked,
   FileText, Mic, Award, Users, Wrench, UserCheck,
-  ChevronDown, ChevronUp, Plus, Trash2, ChevronsUpDown, ChevronsDownUp, RotateCcw,
+  ChevronDown, ChevronUp, Plus, Trash2, ChevronsUpDown, ChevronsDownUp,
 } from "lucide-react";
 import type { AcademicCVContent, AcademicSectionType, ResumeLanguage } from "@/lib/types/academic-cv";
-import { defaultAcademicCVContent } from "@/lib/defaults";
 import { useUILanguage } from "@/lib/ui-language";
 import { t } from "@/lib/translations";
+import AnimatedContent from "@/components/AnimatedContent";
+import SpotlightCard from "@/components/SpotlightCard";
 import { Button } from "@/components/ui/button";
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogAction,
-  AlertDialogCancel,
-} from "@/components/ui/alert-dialog";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -89,8 +80,6 @@ export function FormPanel({ content, onChange, language }: FormPanelProps) {
     for (const s of activeSections) map[s] = true;
     return map;
   });
-  const [resetOpen, setResetOpen] = useState(false);
-
   const allCollapsed = personalCollapsed && activeSections.every((s) => sectionCollapsed[s] !== false);
 
   const toggleAll = useCallback(() => {
@@ -128,17 +117,15 @@ export function FormPanel({ content, onChange, language }: FormPanelProps) {
     onChange({ ...content, sections: next });
   }
 
-  function handleReset() {
-    onChange(defaultAcademicCVContent);
-    setPersonalCollapsed(true);
-    setSectionCollapsed({});
-    setResetOpen(false);
-  }
-
   return (
-    <div className="flex min-w-0 flex-col gap-4 p-5">
+    <div className="flex min-w-0 flex-col gap-3 p-3">
       {/* Form toolbar */}
-      <div className="flex items-center gap-1.5">
+      <AnimatedContent
+        distance={14}
+        duration={0.45}
+        threshold={0}
+        className="flex items-center gap-1.5"
+      >
         <Button
           variant="outline"
           size="sm"
@@ -149,16 +136,7 @@ export function FormPanel({ content, onChange, language }: FormPanelProps) {
           {allCollapsed ? tr.expandAll : tr.collapseAll}
         </Button>
 
-        <Button
-          variant="outline"
-          size="sm"
-          className="btn-hover-border cursor-pointer gap-1.5 text-xs"
-          onClick={() => setResetOpen(true)}
-        >
-          <RotateCcw className="size-3.5" />
-          {tr.resetBtn}
-        </Button>
-      </div>
+      </AnimatedContent>
 
       {/* Personal Information — fixed, cannot be removed */}
       <PersonalSection
@@ -191,7 +169,7 @@ export function FormPanel({ content, onChange, language }: FormPanelProps) {
       {/* Add section button */}
       {availableSections.length > 0 && (
         <DropdownMenu>
-          <DropdownMenuTrigger className="add-section-btn flex h-9 w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-dashed border-border text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground">
+          <DropdownMenuTrigger className="add-section-btn flex h-9 w-full cursor-pointer items-center justify-center gap-1.5 rounded-md border border-dashed border-border text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground">
             <Plus className="size-4" />
             {tr.addSection}
           </DropdownMenuTrigger>
@@ -213,32 +191,6 @@ export function FormPanel({ content, onChange, language }: FormPanelProps) {
         </DropdownMenu>
       )}
 
-      {/* Reset confirmation dialog */}
-      <AlertDialog open={resetOpen} onOpenChange={setResetOpen}>
-        <AlertDialogContent size="sm" className="editor-dialog overflow-hidden p-0">
-          <AlertDialogHeader className="editor-dialog-header place-items-start px-5 pb-4 pt-5 text-left">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-black/40 bg-black/[0.035]">
-                <RotateCcw className="h-4 w-4 text-foreground" />
-              </div>
-              <AlertDialogTitle className="text-[15px] font-semibold leading-tight">{tr.resetTitle}</AlertDialogTitle>
-            </div>
-            <AlertDialogDescription className="pt-1 text-sm leading-relaxed text-gray-600">
-              {tr.resetDesc}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="editor-dialog-footer">
-            <AlertDialogCancel className="editor-dialog-cancel cursor-pointer">{tr.cancel}</AlertDialogCancel>
-            <AlertDialogAction
-              variant="outline"
-              className="editor-dialog-soft-action cursor-pointer"
-              onClick={handleReset}
-            >
-              {tr.resetConfirm}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
@@ -277,7 +229,10 @@ function CollapsibleSection({
   const sectionLabel = lang === "zh" ? meta.labelZh : meta.label;
 
   return (
-    <section className="section-card rounded-lg border border-border">
+    <SpotlightCard
+      className="section-card rounded-md border border-black/10 bg-white"
+      spotlightColor="rgba(0, 0, 0, 0.065)"
+    >
       {/* Header */}
       <div className="section-header flex items-stretch justify-between px-4">
         <button
@@ -317,7 +272,7 @@ function CollapsibleSection({
 
       {/* Content */}
       {!collapsed && (
-        <div className="border-t border-border px-4 pb-4 pt-3">
+        <div className="border-t border-black/10 bg-white/42 px-4 pb-4 pt-3">
           {type === "researchInterests" && (
             <ResearchInterestsSection
               value={content.researchInterests ?? ""}
@@ -406,6 +361,6 @@ function CollapsibleSection({
           )}
         </div>
       )}
-    </section>
+    </SpotlightCard>
   );
 }

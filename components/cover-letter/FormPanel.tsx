@@ -1,23 +1,14 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { ChevronDown, ChevronUp, ChevronsUpDown, ChevronsDownUp, Plus, RotateCcw, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, ChevronsUpDown, ChevronsDownUp, Plus, Trash2 } from "lucide-react";
 import type { CoverLetterContent } from "@/lib/types/cover-letter";
-import { defaultCoverLetterContent } from "@/lib/defaults";
 import { useUILanguage } from "@/lib/ui-language";
 import { t } from "@/lib/translations";
 import { Button } from "@/components/ui/button";
+import AnimatedContent from "@/components/AnimatedContent";
+import SpotlightCard from "@/components/SpotlightCard";
 import { normalizeTextareaValue } from "@/lib/text";
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogAction,
-  AlertDialogCancel,
-} from "@/components/ui/alert-dialog";
 import { SenderSection } from "./sections/SenderSection";
 import { RecipientSection } from "./sections/RecipientSection";
 
@@ -34,8 +25,6 @@ export function FormPanel({ content, onChange }: FormPanelProps) {
   const [senderCollapsed, setSenderCollapsed] = useState(false);
   const [recipientCollapsed, setRecipientCollapsed] = useState(false);
   const [paragraphCollapsed, setParagraphCollapsed] = useState<Record<string, boolean>>({});
-  const [resetOpen, setResetOpen] = useState(false);
-
   const allCollapsed =
     senderCollapsed &&
     recipientCollapsed &&
@@ -74,18 +63,15 @@ export function FormPanel({ content, onChange }: FormPanelProps) {
     onChange({ ...content, paragraphs: next });
   }
 
-  function handleReset() {
-    onChange(defaultCoverLetterContent);
-    setSenderCollapsed(false);
-    setRecipientCollapsed(false);
-    setParagraphCollapsed({});
-    setResetOpen(false);
-  }
-
   return (
-    <div className="flex min-w-0 flex-col gap-4 p-5">
+    <div className="flex min-w-0 flex-col gap-3 p-3">
       {/* Toolbar */}
-      <div className="flex items-center gap-1.5">
+      <AnimatedContent
+        distance={14}
+        duration={0.45}
+        threshold={0}
+        className="flex items-center gap-1.5"
+      >
         <Button
           variant="outline"
           size="sm"
@@ -96,16 +82,7 @@ export function FormPanel({ content, onChange }: FormPanelProps) {
           {allCollapsed ? tr.expandAll : tr.collapseAll}
         </Button>
 
-        <Button
-          variant="outline"
-          size="sm"
-          className="btn-hover-border cursor-pointer gap-1.5 text-xs"
-          onClick={() => setResetOpen(true)}
-        >
-          <RotateCcw className="size-3.5" />
-          {tr.resetBtn}
-        </Button>
-      </div>
+      </AnimatedContent>
 
       {/* Sender / Personal Information */}
       <SenderSection
@@ -129,7 +106,11 @@ export function FormPanel({ content, onChange }: FormPanelProps) {
       {content.paragraphs.map((para, i) => {
         const isCollapsed = paragraphCollapsed[para.id] ?? true;
         return (
-          <section key={para.id} className="section-card rounded-lg border border-border">
+          <SpotlightCard
+            key={para.id}
+            className="section-card rounded-md border border-black/10 bg-white"
+            spotlightColor="rgba(0, 0, 0, 0.065)"
+          >
             <div className="section-header flex items-stretch justify-between px-4">
               <button
                 type="button"
@@ -167,7 +148,7 @@ export function FormPanel({ content, onChange }: FormPanelProps) {
             </div>
 
             {!isCollapsed && (
-              <div className="border-t border-border px-4 pb-4 pt-3">
+              <div className="border-t border-black/10 bg-white/42 px-4 pb-4 pt-3">
                 <textarea
                   value={normalizeTextareaValue(para.text)}
                   onChange={(e) => updateParagraph(para.id, normalizeTextareaValue(e.target.value))}
@@ -177,44 +158,19 @@ export function FormPanel({ content, onChange }: FormPanelProps) {
                 />
               </div>
             )}
-          </section>
+          </SpotlightCard>
         );
       })}
 
       {/* Add Paragraph */}
       <button
         type="button"
-        className="add-section-btn flex h-9 w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-dashed border-border text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+        className="add-section-btn flex h-9 w-full cursor-pointer items-center justify-center gap-1.5 rounded-md border border-dashed border-border text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
         onClick={addParagraph}
       >
         <Plus className="size-4" />
         {cl.addParagraph}
       </button>
-
-      {/* Reset dialog */}
-      <AlertDialog open={resetOpen} onOpenChange={setResetOpen}>
-        <AlertDialogContent size="sm" className="editor-dialog overflow-hidden p-0">
-          <AlertDialogHeader className="editor-dialog-header place-items-start px-5 pb-4 pt-5 text-left">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-black/40 bg-black/[0.035]">
-                <RotateCcw className="h-4 w-4 text-foreground" />
-              </div>
-              <AlertDialogTitle className="text-[15px] font-semibold leading-tight">{cl.resetTitle}</AlertDialogTitle>
-            </div>
-            <AlertDialogDescription className="pt-1 text-sm leading-relaxed text-gray-600">{cl.resetDesc}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="editor-dialog-footer">
-            <AlertDialogCancel className="editor-dialog-cancel cursor-pointer">{tr.cancel}</AlertDialogCancel>
-            <AlertDialogAction
-              variant="outline"
-              className="editor-dialog-soft-action cursor-pointer"
-              onClick={handleReset}
-            >
-              {tr.resetConfirm}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
