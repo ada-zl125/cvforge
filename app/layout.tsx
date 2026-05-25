@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import ClickSpark from "@/components/ClickSpark";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { UILanguageProvider } from "@/lib/ui-language";
 import "./globals.css";
@@ -37,7 +38,17 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
           <UILanguageProvider>
             <TooltipProvider>
-              {children}
+              <ClickSpark
+                sparkColor="#111111"
+                sparkSize={8}
+                sparkRadius={18}
+                sparkCount={8}
+                duration={360}
+                easing="ease-out"
+                extraScale={1.1}
+              >
+                {children}
+              </ClickSpark>
             </TooltipProvider>
           </UILanguageProvider>
         </body>
