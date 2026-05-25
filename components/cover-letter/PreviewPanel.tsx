@@ -8,11 +8,12 @@ import type { AgentChange } from "@/lib/agent/change-tracking";
 interface Props {
   content: CoverLetterContent;
   reviewChange?: AgentChange | null;
+  isStreaming?: boolean;
 }
 
-export function PreviewPanel({ content, reviewChange }: Props) {
+export function PreviewPanel({ content, reviewChange, isStreaming = false }: Props) {
   return (
-    <PaginatedPreviewPanel reviewChange={reviewChange}>
+    <PaginatedPreviewPanel reviewChange={reviewChange} isStreaming={isStreaming}>
       <CoverLetterTemplate content={content} />
     </PaginatedPreviewPanel>
   );

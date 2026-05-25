@@ -9,11 +9,12 @@ interface PreviewPanelProps {
   content: AcademicCVContent;
   language: ResumeLanguage;
   reviewChange?: AgentChange | null;
+  isStreaming?: boolean;
 }
 
-export function PreviewPanel({ content, language, reviewChange }: PreviewPanelProps) {
+export function PreviewPanel({ content, language, reviewChange, isStreaming = false }: PreviewPanelProps) {
   return (
-    <PaginatedPreviewPanel reviewChange={reviewChange}>
+    <PaginatedPreviewPanel reviewChange={reviewChange} isStreaming={isStreaming}>
       <AcademicTemplate content={content} language={language} />
     </PaginatedPreviewPanel>
   );

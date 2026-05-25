@@ -43,13 +43,13 @@ export function createTools<TContent = AnyContent>(
     new DynamicStructuredTool({
       name: "ask_user",
       description:
-        "Ask the user for one focused clarification before editing a low-confidence or high-risk field. Use this instead of guessing when the missing or ambiguous detail could materially affect the document.",
+        "Ask the user for one focused clarification before continuing a structured document edit. Use this only when a required detail from the user's original task is missing, ambiguous, cannot be safely inferred, and cannot be safely omitted; do not use it for optional details or general follow-up.",
       schema: z.object({
         question: z.string().describe("One concise question for the user"),
         reason: z.string().describe("Brief reason why this cannot be safely inferred"),
         field: z.string().optional().describe("Suggested field affected, e.g. education.degree"),
         section: z.string().optional().describe("Suggested section affected, e.g. education"),
-        choices: z.array(z.string()).optional().describe("Optional short answer choices when useful"),
+        choices: z.array(z.string()).optional().describe("Optional short answer choices only when natural; omit when the user should type a custom answer"),
       }),
       func: async (args: unknown) => {
         const arg = args as ClarificationRequest;

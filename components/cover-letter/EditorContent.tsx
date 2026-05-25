@@ -26,6 +26,7 @@ const initialState: EditorState = {
 
 export function CoverLetterEditorContent() {
   const [isAgentMode, setIsAgentMode] = useState(false);
+  const [isAgentRunning, setIsAgentRunning] = useState(false);
   const [agentState, setAgentState] = useState(createInitialAgentPanelState);
   const [reviewChange, setReviewChange] = useState<AgentChange | null>(null);
 
@@ -62,8 +63,10 @@ export function CoverLetterEditorContent() {
           title={state.title}
           content={state.content}
           template={state.template}
+          isAgentMode={isAgentMode}
           onTitleChange={handleTitleChange}
           onImport={setStoredState}
+          onModeToggle={() => setIsAgentMode((v) => !v)}
         />
       }
       form={
@@ -74,16 +77,16 @@ export function CoverLetterEditorContent() {
               content={state.content}
               onChange={setCoverLetterContent}
               onReviewChange={setReviewChange}
+              onAgentRunningChange={setIsAgentRunning}
               agentState={agentState}
               onAgentStateChange={setAgentState}
             />
           )
           : <FormPanel content={state.content} onChange={setCoverLetterContent} />
       }
-      preview={<PreviewPanel content={state.content} reviewChange={reviewChange} />}
+      preview={<PreviewPanel content={state.content} reviewChange={reviewChange} isStreaming={isAgentRunning} />}
       isAgentMode={isAgentMode}
       isLLMConfigured={isLLMConfigComplete(agentState.activeConfig)}
-      onModeToggle={() => setIsAgentMode((v) => !v)}
     />
   );
 }

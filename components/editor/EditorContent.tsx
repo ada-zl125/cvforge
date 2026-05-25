@@ -29,6 +29,7 @@ const initialState: EditorState = {
 
 export function EditorContent() {
   const [isAgentMode, setIsAgentMode] = useState(false);
+  const [isAgentRunning, setIsAgentRunning] = useState(false);
   const [agentState, setAgentState] = useState(createInitialAgentPanelState);
   const [reviewChange, setReviewChange] = useState<AgentChange | null>(null);
 
@@ -70,8 +71,10 @@ export function EditorContent() {
           template={state.template}
           language={state.language}
           content={content}
+          isAgentMode={isAgentMode}
           onSettingsChange={handleSettingsChange}
           onImport={setStoredState}
+          onModeToggle={() => setIsAgentMode((v) => !v)}
         />
       }
       form={
@@ -82,16 +85,16 @@ export function EditorContent() {
               content={content}
               onChange={setResumeContent}
               onReviewChange={setReviewChange}
+              onAgentRunningChange={setIsAgentRunning}
               agentState={agentState}
               onAgentStateChange={setAgentState}
             />
           )
           : <FormPanel content={content} onChange={setResumeContent} language={state.language} />
       }
-      preview={<PreviewPanel content={content} language={state.language} reviewChange={reviewChange} />}
+      preview={<PreviewPanel content={content} language={state.language} reviewChange={reviewChange} isStreaming={isAgentRunning} />}
       isAgentMode={isAgentMode}
       isLLMConfigured={isLLMConfigComplete(agentState.activeConfig)}
-      onModeToggle={() => setIsAgentMode((v) => !v)}
     />
   );
 }
