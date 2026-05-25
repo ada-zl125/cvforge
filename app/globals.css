@@ -547,6 +547,66 @@ button.editor-dialog-action:not(:disabled):hover {
   color: var(--foreground) !important;
   box-shadow: none;
 }
+
+.shiny-text {
+  display: inline-block;
+  color: var(--shiny-text-color, rgb(17 17 17 / 0.38));
+  background: linear-gradient(
+    var(--shiny-text-spread, 120deg),
+    var(--shiny-text-color, rgb(17 17 17 / 0.38)) 38%,
+    var(--shiny-text-shine-color, rgb(17 17 17 / 0.92)) 50%,
+    var(--shiny-text-color, rgb(17 17 17 / 0.38)) 62%
+  );
+  background-size: 260% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shiny-text var(--shiny-text-speed, 2s) linear infinite;
+  animation-delay: var(--shiny-text-delay, 0s);
+  will-change: background-position;
+}
+
+.shiny-text-disabled {
+  animation: none;
+}
+
+.shiny-text-right {
+  animation-name: shiny-text-right;
+}
+
+.shiny-text-yoyo {
+  animation-direction: alternate;
+}
+
+.shiny-text-pause-on-hover:hover {
+  animation-play-state: paused;
+}
+
+@keyframes shiny-text {
+  0% {
+    background-position: 180% 0;
+  }
+  100% {
+    background-position: -180% 0;
+  }
+}
+
+@keyframes shiny-text-right {
+  0% {
+    background-position: -180% 0;
+  }
+  100% {
+    background-position: 180% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shiny-text {
+    animation: none;
+    color: var(--shiny-text-shine-color, rgb(17 17 17 / 0.68));
+    -webkit-text-fill-color: currentColor;
+  }
+}
 /* Preview A4 area hover: border → black */
 .preview-a4 {
   transition: border-color 200ms ease-out, box-shadow 200ms ease-out;
