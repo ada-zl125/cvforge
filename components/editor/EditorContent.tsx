@@ -1,6 +1,5 @@
 "use client";
 
-import { useCallback, useState, type SetStateAction } from "react";
 import type { ResumeContent, ResumeTemplate, ResumeLanguage } from "@/lib/types/resume";
 import { defaultResumeContent, RESUME_AGENT_STORAGE_KEY, RESUME_STORAGE_KEY } from "@/lib/defaults";
 import { useEditorState } from "@/lib/editor-state";
@@ -8,15 +7,10 @@ import { EditorFrame } from "@/components/shared/EditorFrame";
 import { Toolbar } from "./Toolbar";
 import { FormPanel } from "./FormPanel";
 import { PreviewPanel } from "./PreviewPanel";
-import {
-  ChatPanel,
-  readAgentPanelSessionState,
-  writeAgentPanelSessionState,
-  type AgentPanelState,
-} from "@/components/shared/ChatPanel";
-import { isLLMConfigComplete } from "@/lib/agent/config";
+import { ChatPanel } from "@/components/shared/ChatPanel";
+import { useAgentEditorState } from "@/components/shared/useAgentEditorState";
+import { useReviewableContent } from "@/components/shared/useReviewableContent";
 import { stripResumeLegacyContacts } from "@/lib/json-utils";
-import { contentSignature, type AgentChange } from "@/lib/agent/change-tracking";
 
 interface EditorState {
   title: string;
@@ -33,20 +27,6 @@ const initialState: EditorState = {
 };
 
 export function EditorContent() {
-  const [isAgentMode, setIsAgentMode] = useState(false);
-  const [isAgentRunning, setIsAgentRunning] = useState(false);
-  const [agentState, setAgentState] = useState(() => readAgentPanelSessionState(RESUME_AGENT_STORAGE_KEY));
-  const [reviewChange, setReviewChange] = useState<AgentChange | null>(null);
-  const setPersistedAgentState = useCallback((value: SetStateAction<AgentPanelState>) => {
-    setAgentState((prev) => {
-      const next = typeof value === "function"
-        ? (value as (state: AgentPanelState) => AgentPanelState)(prev)
-        : value;
-      writeAgentPanelSessionState(RESUME_AGENT_STORAGE_KEY, next);
-      return next;
-    });
-  }, []);
-
   const { state, setContent, setStoredState } = useEditorState<
     ResumeContent,
     ResumeTemplate,
@@ -55,6 +35,23 @@ export function EditorContent() {
     storageKey: RESUME_STORAGE_KEY,
     initialState,
     defaultContent: defaultResumeContent,
+  });
+  const {
+    isAgentMode,
+    isAgentRunning,
+    agentState,
+    isLLMConfigured,
+    setIsAgentRunning,
+    setAgentState,
+    toggleAgentMode,
+  } = useAgentEditorState(RESUME_AGENT_STORAGE_KEY);
+  const {
+    content,
+    reviewChange,
+    setContent: setResumeContent,
+    setReviewChange,
+  } = useReviewableContent(state.content, setContent, {
+    normalize: stripResumeLegacyContacts,
   });
 
   function handleSettingsChange(newTitle: string, newLanguage: ResumeLanguage, newTemplate: ResumeTemplate) {
@@ -68,15 +65,6 @@ export function EditorContent() {
 
   if (!state.hydrated) return null;
 
-  const content = stripResumeLegacyContacts(state.content);
-  const setResumeContent = (nextContent: ResumeContent) => {
-    const normalized = stripResumeLegacyContacts(nextContent);
-    if (reviewChange && contentSignature(normalized) !== reviewChange.afterSignature) {
-      setReviewChange(null);
-    }
-    setContent(normalized);
-  };
-
   return (
     <EditorFrame
       toolbar={
@@ -88,7 +76,7 @@ export function EditorContent() {
           isAgentMode={isAgentMode}
           onSettingsChange={handleSettingsChange}
           onImport={setStoredState}
-          onModeToggle={() => setIsAgentMode((v) => !v)}
+          onModeToggle={toggleAgentMode}
         />
       }
       form={
@@ -102,14 +90,14 @@ export function EditorContent() {
               onReviewChange={setReviewChange}
               onAgentRunningChange={setIsAgentRunning}
               agentState={agentState}
-              onAgentStateChange={setPersistedAgentState}
+              onAgentStateChange={setAgentState}
             />
           )
           : <FormPanel content={content} onChange={setResumeContent} language={state.language} />
       }
       preview={<PreviewPanel content={content} language={state.language} reviewChange={reviewChange} isStreaming={isAgentRunning} />}
       isAgentMode={isAgentMode}
-      isLLMConfigured={isLLMConfigComplete(agentState.activeConfig)}
+      isLLMConfigured={isLLMConfigured}
     />
   );
 }

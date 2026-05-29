@@ -15,6 +15,7 @@ import { createTools, type ClarificationRequest, type DocType, type DocumentLang
 import type { LLMConfig } from "./config";
 import type { AgentChange } from "./change-tracking";
 import { buildReferenceContext, type AgentContextSource } from "./context-sources";
+import { normalizeAssistantText } from "./text-normalization";
 
 export interface Message {
   role: "user" | "assistant";
@@ -441,94 +442,20 @@ function buildFallbackCompletion(toolNames: string[], documentLanguage: Document
 
   if (zh) {
     const completion = changed ? `已完成, 已更新${changed}。` : "已完成。";
-    return sanitizeUserFacingText(inferenceDisclosure ? `${completion}${inferenceDisclosure}` : completion, documentLanguage);
+    return normalizeAssistantText(inferenceDisclosure ? `${completion}${inferenceDisclosure}` : completion, documentLanguage);
   }
 
   const completion = changed ? `Done. I updated your ${changed}.` : "Done.";
-  return sanitizeUserFacingText(inferenceDisclosure ? `${completion} ${inferenceDisclosure}` : completion, documentLanguage);
-}
-
-function normalizeEnglishPunctuation(text: string): string {
-  return text
-    .replace(/^(\s*)-\s+/gm, "$1* ")
-    .replace(/\s*->\s*/g, " to ")
-    .replace(/\s*[—–]\s*/g, ", ")
-    .replace(/[，。；：？！、（）【】“”‘’《》…]/g, (char) => ({
-      "，": ", ",
-      "。": ".",
-      "；": "; ",
-      "：": ": ",
-      "？": "?",
-      "！": "!",
-      "、": ", ",
-      "（": "(",
-      "）": ")",
-      "【": "[",
-      "】": "]",
-      "“": "\"",
-      "”": "\"",
-      "‘": "'",
-      "’": "'",
-      "《": "<",
-      "》": ">",
-      "…": "...",
-    }[char] ?? char))
-    .replace(/\s+([,.;:!?，。；：！？])/g, "$1")
-    .replace(/([,;:])\s*/g, "$1 ")
-    .replace(/([,，])\s*([。.!?！？])/g, "$2")
-    .replace(/\s{2,}/g, " ")
-    .trim();
-}
-
-function normalizeChineseDocumentPunctuation(text: string): string {
-  const hasChinese = /\p{Script=Han}/u.test(text);
-  return text
-    .replace(/^(\s*)-\s+/gm, "$1* ")
-    .replace(/\s*->\s*/g, " 到 ")
-    .replace(/\s*[—–]\s*/g, ", ")
-    .replace(/[，；：？！、（）【】“”‘’《》…]/g, (char) => ({
-      "，": ", ",
-      "；": "; ",
-      "：": ": ",
-      "？": "?",
-      "！": "!",
-      "、": ", ",
-      "（": "(",
-      "）": ")",
-      "【": "[",
-      "】": "]",
-      "“": "\"",
-      "”": "\"",
-      "‘": "'",
-      "’": "'",
-      "《": "<",
-      "》": ">",
-      "…": "...",
-    }[char] ?? char))
-    .replace(hasChinese ? /(?<![\w./@-])\.(?=\s|$)/g : /\.(?!)/g, "。")
-    .replace(hasChinese ? /(?<=[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}A-Za-z])\.(?=\s|$)/gu : /\.(?!)/g, "。")
-    .replace(/\s+([,.;:!?。])/g, "$1")
-    .replace(/([,;:])\s*/g, "$1 ")
-    .replace(/([,，])\s*([。.!?！？])/g, "$2")
-    .replace(/([\p{Script=Han}])([A-Za-z0-9][A-Za-z0-9+#./-]*)/gu, "$1 $2")
-    .replace(/([A-Za-z0-9][A-Za-z0-9+#./-]*)([\p{Script=Han}])/gu, "$1 $2")
-    .replace(/\s{2,}/g, " ")
-    .trim();
-}
-
-function sanitizeUserFacingText(text: string, documentLanguage: DocumentLanguage = "en"): string {
-  return documentLanguage === "zh"
-    ? normalizeChineseDocumentPunctuation(text)
-    : normalizeEnglishPunctuation(text);
+  return normalizeAssistantText(inferenceDisclosure ? `${completion} ${inferenceDisclosure}` : completion, documentLanguage);
 }
 
 function withInferenceDisclosure(content: string, inferenceNotes: string[], documentLanguage: DocumentLanguage): string {
-  const sanitizedContent = sanitizeUserFacingText(content, documentLanguage);
+  const sanitizedContent = normalizeAssistantText(content, documentLanguage);
   if (inferenceNotes.length === 0) return sanitizedContent;
   if (/\binfer|\bnormaliz|\bnormalis|推断|推理|规范化/.test(sanitizedContent.toLowerCase())) return sanitizedContent;
 
   const disclosure = formatInferenceDisclosure(inferenceNotes, documentLanguage === "zh");
-  return disclosure ? `${sanitizedContent}\n\n${sanitizeUserFacingText(disclosure, documentLanguage)}` : sanitizedContent;
+  return disclosure ? `${sanitizedContent}\n\n${normalizeAssistantText(disclosure, documentLanguage)}` : sanitizedContent;
 }
 
 function normalizeClarificationRequest(args: unknown, documentLanguage: DocumentLanguage): ClarificationRequest {
@@ -538,11 +465,11 @@ function normalizeClarificationRequest(args: unknown, documentLanguage: Document
     : undefined;
 
   return {
-    question: sanitizeUserFacingText(String(arg?.question ?? "").trim(), documentLanguage) || "Could you clarify this detail?",
-    reason: sanitizeUserFacingText(String(arg?.reason ?? "").trim(), documentLanguage) || "This detail is ambiguous and should not be guessed.",
+    question: normalizeAssistantText(String(arg?.question ?? "").trim(), documentLanguage) || "Could you clarify this detail?",
+    reason: normalizeAssistantText(String(arg?.reason ?? "").trim(), documentLanguage) || "This detail is ambiguous and should not be guessed.",
     field: arg?.field ? String(arg.field).trim() : undefined,
     section: arg?.section ? String(arg.section).trim() : undefined,
-    choices: choices?.map((choice) => sanitizeUserFacingText(choice, documentLanguage)),
+    choices: choices?.map((choice) => normalizeAssistantText(choice, documentLanguage)),
   };
 }
 

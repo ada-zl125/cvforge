@@ -1,6 +1,5 @@
 "use client";
 
-import { useCallback, useState, type SetStateAction } from "react";
 import type { CoverLetterContent, CoverLetterTemplate } from "@/lib/types/cover-letter";
 import { defaultCoverLetterContent, COVER_LETTER_AGENT_STORAGE_KEY, COVER_LETTER_STORAGE_KEY } from "@/lib/defaults";
 import { useEditorState } from "@/lib/editor-state";
@@ -8,14 +7,9 @@ import { EditorFrame } from "@/components/shared/EditorFrame";
 import { Toolbar } from "./Toolbar";
 import { FormPanel } from "./FormPanel";
 import { PreviewPanel } from "./PreviewPanel";
-import {
-  ChatPanel,
-  readAgentPanelSessionState,
-  writeAgentPanelSessionState,
-  type AgentPanelState,
-} from "@/components/shared/ChatPanel";
-import { isLLMConfigComplete } from "@/lib/agent/config";
-import { contentSignature, type AgentChange } from "@/lib/agent/change-tracking";
+import { ChatPanel } from "@/components/shared/ChatPanel";
+import { useAgentEditorState } from "@/components/shared/useAgentEditorState";
+import { useReviewableContent } from "@/components/shared/useReviewableContent";
 
 interface EditorState {
   title: string;
@@ -30,20 +24,6 @@ const initialState: EditorState = {
 };
 
 export function CoverLetterEditorContent() {
-  const [isAgentMode, setIsAgentMode] = useState(false);
-  const [isAgentRunning, setIsAgentRunning] = useState(false);
-  const [agentState, setAgentState] = useState(() => readAgentPanelSessionState(COVER_LETTER_AGENT_STORAGE_KEY));
-  const [reviewChange, setReviewChange] = useState<AgentChange | null>(null);
-  const setPersistedAgentState = useCallback((value: SetStateAction<AgentPanelState>) => {
-    setAgentState((prev) => {
-      const next = typeof value === "function"
-        ? (value as (state: AgentPanelState) => AgentPanelState)(prev)
-        : value;
-      writeAgentPanelSessionState(COVER_LETTER_AGENT_STORAGE_KEY, next);
-      return next;
-    });
-  }, []);
-
   const { state, setContent, setStoredState } = useEditorState<
     CoverLetterContent,
     CoverLetterTemplate
@@ -52,6 +32,21 @@ export function CoverLetterEditorContent() {
     initialState,
     defaultContent: defaultCoverLetterContent,
   });
+  const {
+    isAgentMode,
+    isAgentRunning,
+    agentState,
+    isLLMConfigured,
+    setIsAgentRunning,
+    setAgentState,
+    toggleAgentMode,
+  } = useAgentEditorState(COVER_LETTER_AGENT_STORAGE_KEY);
+  const {
+    content,
+    reviewChange,
+    setContent: setCoverLetterContent,
+    setReviewChange,
+  } = useReviewableContent(state.content, setContent);
 
   function handleTitleChange(newTitle: string) {
     setStoredState({
@@ -63,24 +58,17 @@ export function CoverLetterEditorContent() {
 
   if (!state.hydrated) return null;
 
-  const setCoverLetterContent = (nextContent: CoverLetterContent) => {
-    if (reviewChange && contentSignature(nextContent) !== reviewChange.afterSignature) {
-      setReviewChange(null);
-    }
-    setContent(nextContent);
-  };
-
   return (
     <EditorFrame
       toolbar={
         <Toolbar
           title={state.title}
-          content={state.content}
+          content={content}
           template={state.template}
           isAgentMode={isAgentMode}
           onTitleChange={handleTitleChange}
           onImport={setStoredState}
-          onModeToggle={() => setIsAgentMode((v) => !v)}
+          onModeToggle={toggleAgentMode}
         />
       }
       form={
@@ -89,19 +77,19 @@ export function CoverLetterEditorContent() {
             <ChatPanel
               docType="cover-letter"
               documentLanguage="en"
-              content={state.content}
+              content={content}
               onChange={setCoverLetterContent}
               onReviewChange={setReviewChange}
               onAgentRunningChange={setIsAgentRunning}
               agentState={agentState}
-              onAgentStateChange={setPersistedAgentState}
+              onAgentStateChange={setAgentState}
             />
           )
-          : <FormPanel content={state.content} onChange={setCoverLetterContent} />
+          : <FormPanel content={content} onChange={setCoverLetterContent} />
       }
-      preview={<PreviewPanel content={state.content} reviewChange={reviewChange} isStreaming={isAgentRunning} />}
+      preview={<PreviewPanel content={content} reviewChange={reviewChange} isStreaming={isAgentRunning} />}
       isAgentMode={isAgentMode}
-      isLLMConfigured={isLLMConfigComplete(agentState.activeConfig)}
+      isLLMConfigured={isLLMConfigured}
     />
   );
 }
