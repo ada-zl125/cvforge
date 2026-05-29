@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Send, SlidersHorizontal, Loader2, AlertCircle, Settings, Eraser, Shrink, RotateCcw, Eye, FilePenLine, WandSparkles, Square } from "lucide-react";
+import { Send, SlidersHorizontal, Loader2, AlertCircle, Settings, Eraser, Shrink, RotateCcw, Eye, FilePenLine, WandSparkles, Square, Paperclip, LinkIcon, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import AnimatedContent from "@/components/AnimatedContent";
 import FadeContent from "@/components/FadeContent";
@@ -34,6 +34,14 @@ import {
 } from "@/lib/agent/config";
 import type { ClarificationRequest, DocType } from "@/lib/agent/tools";
 import { buildAgentChange, contentSignature, type AgentChange } from "@/lib/agent/change-tracking";
+import {
+  CONTEXT_MAX_FILE_BYTES,
+  CONTEXT_MAX_FILE_SOURCES,
+  isLinkedInProfileUrl,
+  isSupportedTextFile,
+  truncateContextText,
+  type AgentContextSource,
+} from "@/lib/agent/context-sources";
 import { useUILanguage } from "@/lib/ui-language";
 import { t } from "@/lib/translations";
 
@@ -43,6 +51,7 @@ export interface AgentPanelState {
   draftConfig: LLMConfig;
   pendingClarification: PendingClarification | null;
   lastChange: AgentChange | null;
+  contextSources: AgentContextSource[];
 }
 
 interface PendingClarification {
@@ -53,6 +62,8 @@ interface PendingClarification {
   documentState: unknown;
   clarificationCount: number;
 }
+
+const MAX_CLARIFICATION_ROUNDS = 2;
 
 export function createInitialAgentPanelState(): AgentPanelState {
   return {
@@ -65,6 +76,7 @@ export function createInitialAgentPanelState(): AgentPanelState {
     },
     pendingClarification: null,
     lastChange: null,
+    contextSources: [],
   };
 }
 
@@ -403,7 +415,7 @@ export function ChatPanel<TContent>({
   const tr = t[lang];
   const agentTr = tr.agent;
 
-  const { messages, activeConfig, draftConfig, pendingClarification, lastChange } = agentState;
+  const { messages, activeConfig, draftConfig, pendingClarification, lastChange, contextSources = [] } = agentState;
   const [streamingText, setStreamingText] = useState("");
   const [agentStatus, setAgentStatus] = useState<AgentStatus | null>(null);
   const [inputValue, setInputValue] = useState("");
@@ -412,8 +424,12 @@ export function ChatPanel<TContent>({
   const [isCompacting, setIsCompacting] = useState(false);
   const [isSavingConfig, setIsSavingConfig] = useState(false);
   const [configOpen, setConfigOpen] = useState(false);
+  const [contextOpen, setContextOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isHoveringChat, setIsHoveringChat] = useState(false);
+  const [linkedinUrl, setLinkedinUrl] = useState("");
+  const [contextError, setContextError] = useState<string | null>(null);
+  const [isAddingLink, setIsAddingLink] = useState(false);
 
   const [configError, setConfigError] = useState<string | null>(null);
 
@@ -513,6 +529,19 @@ export function ChatPanel<TContent>({
     }));
   };
 
+  const setContextSources = (updater: SetStateAction<AgentContextSource[]>) => {
+    onAgentStateChange((prev) => {
+      const current = prev.contextSources ?? [];
+      return {
+        ...prev,
+        contextSources:
+          typeof updater === "function"
+            ? (updater as (sources: AgentContextSource[]) => AgentContextSource[])(current)
+            : updater,
+      };
+    });
+  };
+
   const isConfigured = !!activeConfig;
   const isBusy = isLoading || isCompacting;
   const hasPendingClarification = !!pendingClarification;
@@ -524,6 +553,7 @@ export function ChatPanel<TContent>({
         docType,
         content,
         history: messages,
+        referenceSources: contextSources,
       })
     : null;
   const canUndoLastChange =
@@ -708,6 +738,7 @@ export function ChatPanel<TContent>({
         },
         history,
         userMessage: userMsg,
+        referenceSources: contextSources,
         signal: abortController.signal,
         onTextChunk: (chunk) => {
           setAgentStatus(null);
@@ -806,15 +837,21 @@ export function ChatPanel<TContent>({
       return;
     }
 
+    const canAskAnotherClarification = pending.clarificationCount < MAX_CLARIFICATION_ROUNDS;
     const continuationMessage = [
       `User answered the clarification: ${answer}`,
       `Clarification question: ${pending.request.question}`,
       `Continue the original task: ${pending.originalUserMessage}`,
+      pending.request.section ? `Clarification section scope: ${pending.request.section}` : null,
+      pending.request.field ? `Clarification field scope: ${pending.request.field}` : null,
       `Clarification round: ${pending.clarificationCount}`,
       "Use the answer to resolve only the pending uncertainty.",
       "If the original task now has enough required information, stop asking questions, call the document update tools, and reply with a normal completion message.",
-      "Only call ask_user again when another required detail from the same original task is still missing, cannot be inferred, and cannot be safely omitted. If you ask again, ask exactly one small question.",
-    ].join("\n");
+      "Stay within the same requested section scope for any further clarification. Do not ask about other sections unless the user's original task explicitly requested them.",
+      canAskAnotherClarification
+        ? "Only call ask_user again when another required detail from the same original task is still missing, cannot be inferred, and cannot be safely omitted. If you ask again, ask exactly one small question."
+        : "Do not call ask_user again. If a detail is still missing, make the safest partial update or ask in normal chat.",
+    ].filter(Boolean).join("\n");
     const visibleAnswer =
       lang === "zh"
         ? `补充确认：${answer}`
@@ -854,6 +891,7 @@ export function ChatPanel<TContent>({
         },
         history: historyWithQuestion,
         userMessage: continuationMessage,
+        referenceSources: contextSources,
         signal: abortController.signal,
         onTextChunk: (chunk) => {
           setAgentStatus(null);
@@ -958,6 +996,107 @@ export function ChatPanel<TContent>({
     ]);
   };
 
+  const handleFileContextUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? []);
+    event.target.value = "";
+    if (files.length === 0) return;
+
+    setContextError(null);
+
+    const nextSources: AgentContextSource[] = [];
+    const existingFileCount = contextSources.filter((source) => source.type === "file").length;
+    const availableFileSlots = Math.max(0, CONTEXT_MAX_FILE_SOURCES - existingFileCount);
+    if (availableFileSlots <= 0) {
+      setContextError(agentTr.contextTooManyFiles(CONTEXT_MAX_FILE_SOURCES));
+      return;
+    }
+
+    const selectedFiles = files.slice(0, availableFileSlots);
+    if (files.length > availableFileSlots) {
+      setContextError(agentTr.contextTooManyFiles(CONTEXT_MAX_FILE_SOURCES));
+    }
+
+    for (const file of selectedFiles) {
+      if (!isSupportedTextFile(file)) {
+        setContextError(agentTr.contextUnsupportedFile(file.name));
+        continue;
+      }
+
+      if (file.size > CONTEXT_MAX_FILE_BYTES) {
+        setContextError(agentTr.contextFileTooLarge(file.name));
+        continue;
+      }
+
+      try {
+        const text = truncateContextText(await file.text());
+        if (!text) {
+          setContextError(agentTr.contextEmptyFile(file.name));
+          continue;
+        }
+
+        nextSources.push({
+          id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          type: "file",
+          name: file.name,
+          text,
+          size: file.size,
+          createdAt: Date.now(),
+        });
+      } catch {
+        setContextError(agentTr.contextReadFailed(file.name));
+      }
+    }
+
+    if (nextSources.length > 0) {
+      setContextSources((prev) => [...prev, ...nextSources].slice(-8));
+    }
+  };
+
+  const handleAddLinkedInContext = async () => {
+    const url = linkedinUrl.trim();
+    if (!url || isAddingLink) return;
+
+    if (!isLinkedInProfileUrl(url)) {
+      setContextError(agentTr.contextInvalidLinkedIn);
+      return;
+    }
+
+    setIsAddingLink(true);
+    setContextError(null);
+
+    try {
+      const response = await fetch("/api/context/linkedin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok || typeof data.text !== "string") {
+        throw new Error(typeof data.error === "string" ? data.error : agentTr.contextLinkedInFailed);
+      }
+
+      const profileName = new URL(url).pathname.split("/").filter(Boolean).at(1) ?? "LinkedIn profile";
+      const source: AgentContextSource = {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        type: "linkedin",
+        name: `LinkedIn: ${profileName}`,
+        url,
+        text: truncateContextText(data.text),
+        createdAt: Date.now(),
+      };
+      setContextSources((prev) => [
+        ...prev,
+        source,
+      ].slice(-8));
+      setLinkedinUrl("");
+    } catch (err) {
+      setContextError(err instanceof Error ? err.message : agentTr.contextLinkedInFailed);
+    } finally {
+      setIsAddingLink(false);
+    }
+  };
+
   const handleConfigSave = async () => {
     if (!isLLMConfigComplete(draftConfig)) {
       setConfigError(agentTr.fillAllFields);
@@ -1040,6 +1179,24 @@ export function ChatPanel<TContent>({
             title={agentTr.clearContextTitle}
           >
             <Eraser className="size-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => {
+              setContextOpen(true);
+              setContextError(null);
+            }}
+            disabled={isBusy}
+            className="relative text-muted-foreground hover:text-foreground disabled:pointer-events-none disabled:opacity-35"
+            title={agentTr.contextTitle}
+          >
+            <Paperclip className="size-4" />
+            {contextSources.length > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-black px-1 text-[9px] font-semibold leading-none text-white">
+                {contextSources.length}
+              </span>
+            )}
           </Button>
           <Button
             variant="ghost"
@@ -1276,6 +1433,143 @@ export function ChatPanel<TContent>({
           </div>
         )}
       </div>
+
+      {/* Context Dialog */}
+      <Dialog
+        open={contextOpen}
+        onOpenChange={(open) => {
+          setContextOpen(open);
+          if (!open) setContextError(null);
+        }}
+      >
+        <DialogContent className="editor-dialog overflow-hidden p-0 sm:max-w-[460px]">
+          <DialogHeader className="editor-dialog-header place-items-start px-5 pb-4 pt-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-black/40 bg-black/[0.035]">
+                <Paperclip className="h-4 w-4 text-foreground" />
+              </div>
+              <DialogTitle className="text-[15px] font-semibold">
+                {agentTr.contextTitle}
+              </DialogTitle>
+            </div>
+          </DialogHeader>
+
+          <div className="grid gap-4 px-5 pb-5 pt-3">
+            {contextError && (
+              <div className="flex items-start gap-2 rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                <AlertCircle className="size-3.5 shrink-0 mt-0.5" />
+                <span>{contextError}</span>
+              </div>
+            )}
+
+            <div className="rounded-md border border-black/10 bg-white p-3">
+              <div className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-950">
+                <Upload className="size-4" />
+                {agentTr.contextUploadTitle}
+              </div>
+              <p className="mb-3 text-xs leading-5 text-muted-foreground">
+                {agentTr.contextUploadHint}
+              </p>
+              <label
+                className={`editor-dialog-upload-button flex h-10 items-center justify-center rounded-md border px-3 text-sm font-medium ${
+                  contextSources.filter((source) => source.type === "file").length >= CONTEXT_MAX_FILE_SOURCES
+                    ? "pointer-events-none opacity-50"
+                    : "cursor-pointer"
+                }`}
+              >
+                Click here to upload files
+                <input
+                  type="file"
+                  multiple
+                  accept=".txt,.md,.markdown,.json,.csv,.tsv,.xml,.html,.htm,.log,.yaml,.yml,text/*,application/json,application/xml"
+                  onChange={handleFileContextUpload}
+                  className="sr-only"
+                  disabled={contextSources.filter((source) => source.type === "file").length >= CONTEXT_MAX_FILE_SOURCES}
+                />
+              </label>
+            </div>
+
+            <div className="rounded-md border border-black/10 bg-white p-3">
+              <div className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-950">
+                <LinkIcon className="size-4" />
+                {agentTr.contextLinkedInTitle}
+              </div>
+              <p className="mb-3 text-xs leading-5 text-muted-foreground">
+                {agentTr.contextLinkedInHint}
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  value={linkedinUrl}
+                  onChange={(event) => setLinkedinUrl(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      handleAddLinkedInContext();
+                    }
+                  }}
+                  placeholder="https://www.linkedin.com/in/username"
+                  className="editor-dialog-input h-10 flex-1"
+                />
+                <Button
+                  variant="outline"
+                  className="editor-dialog-action h-10 cursor-pointer"
+                  onClick={handleAddLinkedInContext}
+                  disabled={!linkedinUrl.trim() || isAddingLink}
+                >
+                  {isAddingLink ? <Loader2 className="size-3.5 animate-spin" /> : agentTr.contextAdd}
+                </Button>
+              </div>
+            </div>
+
+            <div className="grid gap-2">
+              <div className="text-xs font-semibold uppercase tracking-[0.12em] text-gray-500">
+                {agentTr.contextSourcesTitle}
+              </div>
+              {contextSources.length === 0 ? (
+                <div className="rounded-md border border-dashed border-black/12 bg-[#fbfbfa] px-3 py-3 text-xs text-muted-foreground">
+                  {agentTr.contextEmpty}
+                </div>
+              ) : (
+                <div className="grid gap-2">
+                  {contextSources.map((source) => (
+                    <div
+                      key={source.id}
+                      className="flex items-center gap-2 rounded-md border border-black/10 bg-[#fbfbfa] px-3 py-2"
+                    >
+                      {source.type === "linkedin" ? <LinkIcon className="size-4 shrink-0 text-gray-600" /> : <FilePenLine className="size-4 shrink-0 text-gray-600" />}
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-medium text-gray-950">{source.name}</div>
+                        <div className="truncate text-xs text-muted-foreground">
+                          {source.type === "linkedin" ? source.url : agentTr.contextSourceChars(source.text.length)}
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon-xs"
+                        className="h-7 w-7 shrink-0 text-muted-foreground hover:text-foreground"
+                        onClick={() => setContextSources((prev) => prev.filter((item) => item.id !== source.id))}
+                        title={agentTr.contextRemove}
+                      >
+                        <Trash2 className="size-3.5" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter className="editor-dialog-footer">
+            <Button
+              variant="outline"
+              className="editor-dialog-action cursor-pointer"
+              onClick={() => setContextOpen(false)}
+            >
+              {agentTr.contextDone}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Config Dialog */}
       <Dialog
