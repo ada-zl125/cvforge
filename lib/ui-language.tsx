@@ -1,10 +1,14 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useState } from "react";
 
 export type UILang = "en" | "zh";
 
 const STORAGE_KEY = "cvforge-ui-lang";
+
+function isUILang(value: string | null | undefined): value is UILang {
+  return value === "en" || value === "zh";
+}
 
 interface UILanguageContextValue {
   lang: UILang;
@@ -16,25 +20,24 @@ const UILanguageContext = createContext<UILanguageContextValue>({
   setLang: () => {},
 });
 
-export function UILanguageProvider({ children }: { children: React.ReactNode }) {
-  const [lang, setLangState] = useState<UILang>("en");
-
-  useEffect(() => {
-    let cancelled = false;
-
-    queueMicrotask(() => {
+export function UILanguageProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const [lang, setLangState] = useState<UILang>(() => {
+    if (typeof window !== "undefined") {
       const stored = localStorage.getItem(STORAGE_KEY);
-      if (!cancelled && (stored === "en" || stored === "zh")) setLangState(stored);
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+      if (isUILang(stored)) return stored;
+    }
+    return "en";
+  });
 
   function setLang(l: UILang) {
     setLangState(l);
-    if (typeof window !== "undefined") localStorage.setItem(STORAGE_KEY, l);
+    if (typeof window !== "undefined") {
+      localStorage.setItem(STORAGE_KEY, l);
+    }
   }
 
   return (

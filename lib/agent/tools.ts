@@ -6,8 +6,171 @@ import type { CoverLetterContent } from "@/lib/types/cover-letter";
 import { executeToolCall } from "./executor";
 
 export type DocType = "resume" | "academic-cv" | "cover-letter";
+export type DocumentLanguage = "en" | "zh";
 
 type AnyContent = ResumeContent | AcademicCVContent | CoverLetterContent;
+
+const ZH_INSTITUTION_NAMES: Record<string, string> = {
+  "imperial college london": "伦敦帝国理工学院",
+  "imperial college": "伦敦帝国理工学院",
+  "university of huddersfield": "哈德斯菲尔德大学",
+  "huddersfield university": "哈德斯菲尔德大学",
+  "university of oxford": "牛津大学",
+  "oxford university": "牛津大学",
+  "university of cambridge": "剑桥大学",
+  "cambridge university": "剑桥大学",
+  "university college london": "伦敦大学学院",
+  "ucl": "伦敦大学学院",
+  "king's college london": "伦敦国王学院",
+  "kings college london": "伦敦国王学院",
+  "london school of economics": "伦敦政治经济学院",
+  "london school of economics and political science": "伦敦政治经济学院",
+  "the university of manchester": "曼彻斯特大学",
+  "university of manchester": "曼彻斯特大学",
+  "university of edinburgh": "爱丁堡大学",
+  "university of bristol": "布里斯托大学",
+  "university of warwick": "华威大学",
+  "university of leeds": "利兹大学",
+  "university of sheffield": "谢菲尔德大学",
+  "university of birmingham": "伯明翰大学",
+  "university of southampton": "南安普顿大学",
+  "university of glasgow": "格拉斯哥大学",
+  "university of nottingham": "诺丁汉大学",
+  "durham university": "杜伦大学",
+  "university of york": "约克大学",
+};
+
+const ZH_COUNTRY_NAMES: Record<string, string> = {
+  uk: "英国",
+  "u.k.": "英国",
+  "united kingdom": "英国",
+  england: "英国",
+  usa: "美国",
+  us: "美国",
+  "u.s.": "美国",
+  "united states": "美国",
+  "united states of america": "美国",
+  china: "中国",
+  austria: "奥地利",
+  rwanda: "卢旺达",
+  france: "法国",
+  germany: "德国",
+  italy: "意大利",
+  spain: "西班牙",
+  canada: "加拿大",
+  australia: "澳大利亚",
+  singapore: "新加坡",
+};
+
+const ZH_CITY_NAMES: Record<string, string> = {
+  london: "伦敦",
+  oxford: "牛津",
+  huddersfield: "哈德斯菲尔德",
+  cambridge: "剑桥",
+  manchester: "曼彻斯特",
+  edinburgh: "爱丁堡",
+  bristol: "布里斯托",
+  warwick: "华威",
+  leeds: "利兹",
+  sheffield: "谢菲尔德",
+  birmingham: "伯明翰",
+  southampton: "南安普顿",
+  glasgow: "格拉斯哥",
+  nottingham: "诺丁汉",
+  durham: "杜伦",
+  york: "约克",
+  beijing: "北京",
+  shanghai: "上海",
+  shenzhen: "深圳",
+  "hong kong": "香港",
+  "new orleans": "新奥尔良",
+  vienna: "维也纳",
+  kigali: "基加利",
+};
+
+const INSTITUTION_KEYS = new Set(["institution", "organization"]);
+const LOCATION_KEYS = new Set(["location", "addressLine1", "addressLine2", "addressLine3"]);
+const CHINESE_DOCUMENT_PUNCTUATION: Record<string, string> = {
+  "，": ", ",
+  "；": "; ",
+  "：": ": ",
+  "？": "?",
+  "！": "!",
+  "、": ", ",
+  "（": "(",
+  "）": ")",
+  "【": "[",
+  "】": "]",
+  "“": "\"",
+  "”": "\"",
+  "‘": "'",
+  "’": "'",
+  "《": "<",
+  "》": ">",
+  "…": "...",
+};
+
+function normalizeKnownInstitutionForChinese(value: string): string {
+  const key = value.trim().toLowerCase();
+  return ZH_INSTITUTION_NAMES[key] ?? value;
+}
+
+function normalizeLocationForChinese(value: string): string {
+  const trimmed = value.trim();
+  const parts = trimmed.split(",").map((part) => part.trim()).filter(Boolean);
+  if (parts.length !== 2) return value;
+
+  const first = parts[0].toLowerCase();
+  const second = parts[1].toLowerCase();
+  const firstCountry = ZH_COUNTRY_NAMES[first];
+  const secondCountry = ZH_COUNTRY_NAMES[second];
+  const firstCity = ZH_CITY_NAMES[first];
+  const secondCity = ZH_CITY_NAMES[second];
+
+  if (firstCity && secondCountry) return `${secondCountry}, ${firstCity}`;
+  if (firstCountry && secondCity) return `${firstCountry}, ${secondCity}`;
+
+  return value;
+}
+
+function normalizePunctuationForChineseDocument(value: string): string {
+  const hasChinese = /\p{Script=Han}/u.test(value);
+  if (!hasChinese) return value.trim();
+
+  return value
+    .replace(/[，；：？！、（）【】“”‘’《》…]/g, (char) => CHINESE_DOCUMENT_PUNCTUATION[char] ?? char)
+    .replace(/(?<![\w./@-])\.(?=\s|$)/g, "。")
+    .replace(/(?<=[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}A-Za-z])\.(?=\s|$)/gu, "。")
+    .replace(/\s+([,.;:!?。])/g, "$1")
+    .replace(/([,;:])\s*/g, "$1 ")
+    .replace(/([,，])\s*([。.!?！？])/g, "$2")
+    .replace(/([\p{Script=Han}])([A-Za-z0-9][A-Za-z0-9+#./-]*)/gu, "$1 $2")
+    .replace(/([A-Za-z0-9][A-Za-z0-9+#./-]*)([\p{Script=Han}])/gu, "$1 $2")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+function normalizeStringForDocumentLanguage(key: string | undefined, value: string, documentLanguage: DocumentLanguage): string {
+  if (documentLanguage !== "zh") return value;
+  let normalized = value;
+  if (key && INSTITUTION_KEYS.has(key)) normalized = normalizeKnownInstitutionForChinese(normalized);
+  if (key && LOCATION_KEYS.has(key)) normalized = normalizeLocationForChinese(normalized);
+  if (key === "value") normalized = normalizeLocationForChinese(normalizeKnownInstitutionForChinese(normalized));
+  return normalizePunctuationForChineseDocument(normalized);
+}
+
+function normalizeToolArgsForDocumentLanguage(value: unknown, documentLanguage: DocumentLanguage, key?: string): unknown {
+  if (typeof value === "string") return normalizeStringForDocumentLanguage(key, value, documentLanguage);
+  if (Array.isArray(value)) return value.map((item) => normalizeToolArgsForDocumentLanguage(item, documentLanguage, key));
+  if (!value || typeof value !== "object") return value;
+
+  return Object.fromEntries(
+    Object.entries(value).map(([entryKey, entryValue]) => [
+      entryKey,
+      normalizeToolArgsForDocumentLanguage(entryValue, documentLanguage, entryKey),
+    ])
+  );
+}
 
 export interface ClarificationRequest {
   question: string;
@@ -19,6 +182,7 @@ export interface ClarificationRequest {
 
 export function createTools<TContent = AnyContent>(
   docType: DocType,
+  documentLanguage: DocumentLanguage,
   getContent: () => TContent,
   onUpdate: (updated: TContent, toolName: string) => void,
   onInference?: (note: string) => void,
@@ -32,7 +196,8 @@ export function createTools<TContent = AnyContent>(
       description: getToolDescription(docType, toolName),
       schema: argsSchema,
       func: async (args: unknown) => {
-        const updated = executeToolCall(docType, getContent(), toolName, args) as TContent;
+        const normalizedArgs = normalizeToolArgsForDocumentLanguage(args, documentLanguage);
+        const updated = executeToolCall(docType, getContent(), toolName, normalizedArgs) as TContent;
         onUpdate(updated, toolName);
         return `Updated ${toolName}`;
       },
@@ -91,6 +256,13 @@ export function createTools<TContent = AnyContent>(
     })
   );
 
+  const locationExample = documentLanguage === "zh" ? "英国, 伦敦 or 中国, 北京" : "London, UK or Beijing, China";
+  const educationDegreeExample = documentLanguage === "zh"
+    ? "计算机科学理学硕士 or 计算机科学理学学士"
+    : "MSc in Advanced Computing or BSc in Computer Science";
+  const academicDegreeExample = documentLanguage === "zh"
+    ? "计算机科学博士, 高级计算理学硕士, or 计算机科学理学学士"
+    : "PhD in Computer Science, MSc in Advanced Computing, or BSc in Computer Science";
   const optionalKnown = (description: string) =>
     z.string().optional().describe(`${description}. Omit or use an empty string when unknown; do not invent.`);
 
@@ -120,7 +292,7 @@ export function createTools<TContent = AnyContent>(
               id: z.string().optional(),
               company: z.string(),
               position: optionalKnown("Position/title"),
-              location: optionalKnown("Location in project style, e.g. London, UK or 中国, 北京"),
+              location: optionalKnown(`Location in document style, e.g. ${locationExample}`),
               startDate: optionalKnown("Start date, e.g. Sept 2023 or 2024/09"),
               endDate: optionalKnown("End date, e.g. Present, Aug 2024, or 至今"),
               descriptions: z.array(
@@ -140,9 +312,9 @@ export function createTools<TContent = AnyContent>(
             z.object({
               id: z.string().optional(),
               institution: z.string(),
-              degree: optionalKnown("Degree in CV field style, e.g. MSc in Advanced Computing or BSc in Computer Science"),
-              field: z.string().optional().describe("Optional legacy field of study. Omit when degree already includes the field, e.g. MSc in Computer Science."),
-              location: optionalKnown("Location in project style, e.g. Oxford, UK or 中国, 北京"),
+              degree: optionalKnown(`Degree in CV field style, e.g. ${educationDegreeExample}`),
+              field: z.string().optional().describe(`Optional legacy field of study. Omit when degree already includes the field, e.g. ${educationDegreeExample}.`),
+              location: optionalKnown(`Location in document style, e.g. ${locationExample}`),
               startDate: optionalKnown("Start date"),
               endDate: optionalKnown("End date"),
               extraFields: z
@@ -165,7 +337,7 @@ export function createTools<TContent = AnyContent>(
           items: z.array(
             z.object({
               id: z.string().optional(),
-              category: z.string().describe("e.g. Tech Stack, Languages"),
+              category: z.string().describe(documentLanguage === "zh" ? "e.g. 技术栈, 语言" : "e.g. Tech Stack, Languages"),
               items: z.string().describe("Comma-separated skills"),
             })
           ),
@@ -240,9 +412,9 @@ export function createTools<TContent = AnyContent>(
             z.object({
               id: z.string().optional(),
               institution: z.string(),
-              degree: optionalKnown("Degree in CV field style, e.g. PhD in Computer Science, MSc in Advanced Computing, or BSc in Computer Science"),
-              field: z.string().optional().describe("Optional legacy field of study. Omit when degree already includes the field, e.g. PhD in Computer Science."),
-              location: optionalKnown("Location in project style, e.g. Oxford, UK or 中国, 北京"),
+              degree: optionalKnown(`Degree in CV field style, e.g. ${academicDegreeExample}`),
+              field: z.string().optional().describe(`Optional legacy field of study. Omit when degree already includes the field, e.g. ${academicDegreeExample}.`),
+              location: optionalKnown(`Location in document style, e.g. ${locationExample}`),
               startDate: optionalKnown("Start date"),
               endDate: optionalKnown("End date"),
               extraFields: z
@@ -269,7 +441,7 @@ export function createTools<TContent = AnyContent>(
               role: optionalKnown("Role/title"),
               researchGroup: z.string().optional(),
               department: z.string().optional(),
-              location: optionalKnown("Location in project style, e.g. Oxford, UK or 中国, 北京"),
+              location: optionalKnown(`Location in document style, e.g. ${locationExample}`),
               startDate: optionalKnown("Start date"),
               endDate: optionalKnown("End date"),
               descriptions: z
@@ -292,7 +464,7 @@ export function createTools<TContent = AnyContent>(
               id: z.string().optional(),
               institution: z.string(),
               role: optionalKnown("Role/title"),
-              location: optionalKnown("Location in project style, e.g. Oxford, UK or 中国, 北京"),
+              location: optionalKnown(`Location in document style, e.g. ${locationExample}`),
               startDate: optionalKnown("Start date"),
               endDate: optionalKnown("End date"),
               course: z.string().optional(),
@@ -317,7 +489,7 @@ export function createTools<TContent = AnyContent>(
               organization: z.string(),
               role: optionalKnown("Role/title"),
               department: z.string().optional(),
-              location: optionalKnown("Location in project style, e.g. London, UK or 中国, 北京"),
+              location: optionalKnown(`Location in document style, e.g. ${locationExample}`),
               startDate: optionalKnown("Start date"),
               endDate: optionalKnown("End date"),
               descriptions: z
@@ -362,9 +534,9 @@ export function createTools<TContent = AnyContent>(
               id: z.string().optional(),
               event: z.string(),
               title: z.string(),
-              location: optionalKnown("Location in project style, e.g. London, UK or 美国, 新奥尔良"),
+              location: optionalKnown(documentLanguage === "zh" ? "Location in document style, e.g. 美国, 新奥尔良" : "Location in document style, e.g. New Orleans, USA"),
               date: optionalKnown("Presentation date"),
-              type: z.string().optional().describe("e.g. Oral, Poster, Invited"),
+              type: z.string().optional().describe(documentLanguage === "zh" ? "e.g. 口头报告, 海报, 特邀" : "e.g. Oral, Poster, Invited"),
             })
           ).describe("Presentation entries ordered reverse-chronologically: most recent presentation first."),
         })

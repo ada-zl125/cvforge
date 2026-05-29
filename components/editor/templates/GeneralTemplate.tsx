@@ -9,6 +9,8 @@ import {
   LINE_STYLE,
   getFontFamily, boldFontStyle,
 } from "@/lib/template-styles";
+import { useUILanguage } from "@/lib/ui-language";
+import { t } from "@/lib/translations";
 
 interface AcademicTemplateProps {
   content: ResumeContent;
@@ -332,6 +334,8 @@ const SECTION_RENDERERS: Record<SectionType, SectionRenderer> = {
 /* ---- Main template ---- */
 
 export function GeneralTemplate({ content, language = "en" }: AcademicTemplateProps) {
+  const { lang } = useUILanguage();
+  const uiTr = t[lang];
   const activeSections = content.sections ?? [];
   const hasContent = content.personal.fullName || activeSections.length > 0;
   const fontFamily = getFontFamily(language);
@@ -354,7 +358,7 @@ export function GeneralTemplate({ content, language = "en" }: AcademicTemplatePr
 
       {!hasContent && (
         <p className="mt-24 text-center text-sm text-gray-400">
-          Fill in the form on the left to see your resume here.
+          {uiTr.emptyResumePreview}
         </p>
       )}
 

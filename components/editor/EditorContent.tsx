@@ -1,14 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState, type SetStateAction } from "react";
 import type { ResumeContent, ResumeTemplate, ResumeLanguage } from "@/lib/types/resume";
-import { defaultResumeContent, RESUME_STORAGE_KEY } from "@/lib/defaults";
+import { defaultResumeContent, RESUME_AGENT_STORAGE_KEY, RESUME_STORAGE_KEY } from "@/lib/defaults";
 import { useEditorState } from "@/lib/editor-state";
 import { EditorFrame } from "@/components/shared/EditorFrame";
 import { Toolbar } from "./Toolbar";
 import { FormPanel } from "./FormPanel";
 import { PreviewPanel } from "./PreviewPanel";
-import { ChatPanel, createInitialAgentPanelState } from "@/components/shared/ChatPanel";
+import {
+  ChatPanel,
+  readAgentPanelSessionState,
+  writeAgentPanelSessionState,
+  type AgentPanelState,
+} from "@/components/shared/ChatPanel";
 import { isLLMConfigComplete } from "@/lib/agent/config";
 import { stripResumeLegacyContacts } from "@/lib/json-utils";
 import { contentSignature, type AgentChange } from "@/lib/agent/change-tracking";
@@ -30,8 +35,17 @@ const initialState: EditorState = {
 export function EditorContent() {
   const [isAgentMode, setIsAgentMode] = useState(false);
   const [isAgentRunning, setIsAgentRunning] = useState(false);
-  const [agentState, setAgentState] = useState(createInitialAgentPanelState);
+  const [agentState, setAgentState] = useState(() => readAgentPanelSessionState(RESUME_AGENT_STORAGE_KEY));
   const [reviewChange, setReviewChange] = useState<AgentChange | null>(null);
+  const setPersistedAgentState = useCallback((value: SetStateAction<AgentPanelState>) => {
+    setAgentState((prev) => {
+      const next = typeof value === "function"
+        ? (value as (state: AgentPanelState) => AgentPanelState)(prev)
+        : value;
+      writeAgentPanelSessionState(RESUME_AGENT_STORAGE_KEY, next);
+      return next;
+    });
+  }, []);
 
   const { state, setContent, setStoredState } = useEditorState<
     ResumeContent,
@@ -82,12 +96,13 @@ export function EditorContent() {
           ? (
             <ChatPanel
               docType="resume"
+              documentLanguage={state.language}
               content={content}
               onChange={setResumeContent}
               onReviewChange={setReviewChange}
               onAgentRunningChange={setIsAgentRunning}
               agentState={agentState}
-              onAgentStateChange={setAgentState}
+              onAgentStateChange={setPersistedAgentState}
             />
           )
           : <FormPanel content={content} onChange={setResumeContent} language={state.language} />

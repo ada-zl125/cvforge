@@ -1,14 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState, type SetStateAction } from "react";
 import type { AcademicCVContent, AcademicCVTemplate, ResumeLanguage } from "@/lib/types/academic-cv";
-import { defaultAcademicCVContent, ACADEMIC_CV_STORAGE_KEY } from "@/lib/defaults";
+import { defaultAcademicCVContent, ACADEMIC_CV_AGENT_STORAGE_KEY, ACADEMIC_CV_STORAGE_KEY } from "@/lib/defaults";
 import { useEditorState } from "@/lib/editor-state";
 import { EditorFrame } from "@/components/shared/EditorFrame";
 import { Toolbar } from "./Toolbar";
 import { FormPanel } from "./FormPanel";
 import { PreviewPanel } from "./PreviewPanel";
-import { ChatPanel, createInitialAgentPanelState } from "@/components/shared/ChatPanel";
+import {
+  ChatPanel,
+  readAgentPanelSessionState,
+  writeAgentPanelSessionState,
+  type AgentPanelState,
+} from "@/components/shared/ChatPanel";
 import { isLLMConfigComplete } from "@/lib/agent/config";
 import { contentSignature, type AgentChange } from "@/lib/agent/change-tracking";
 
@@ -29,8 +34,17 @@ const initialState: EditorState = {
 export function AcademicEditorContent() {
   const [isAgentMode, setIsAgentMode] = useState(false);
   const [isAgentRunning, setIsAgentRunning] = useState(false);
-  const [agentState, setAgentState] = useState(createInitialAgentPanelState);
+  const [agentState, setAgentState] = useState(() => readAgentPanelSessionState(ACADEMIC_CV_AGENT_STORAGE_KEY));
   const [reviewChange, setReviewChange] = useState<AgentChange | null>(null);
+  const setPersistedAgentState = useCallback((value: SetStateAction<AgentPanelState>) => {
+    setAgentState((prev) => {
+      const next = typeof value === "function"
+        ? (value as (state: AgentPanelState) => AgentPanelState)(prev)
+        : value;
+      writeAgentPanelSessionState(ACADEMIC_CV_AGENT_STORAGE_KEY, next);
+      return next;
+    });
+  }, []);
 
   const { state, setContent, setStoredState } = useEditorState<
     AcademicCVContent,
@@ -79,12 +93,13 @@ export function AcademicEditorContent() {
           ? (
             <ChatPanel
               docType="academic-cv"
+              documentLanguage={state.language}
               content={state.content}
               onChange={setAcademicContent}
               onReviewChange={setReviewChange}
               onAgentRunningChange={setIsAgentRunning}
               agentState={agentState}
-              onAgentStateChange={setAgentState}
+              onAgentStateChange={setPersistedAgentState}
             />
           )
           : <FormPanel content={state.content} onChange={setAcademicContent} language={state.language} />

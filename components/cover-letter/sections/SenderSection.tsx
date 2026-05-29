@@ -48,7 +48,7 @@ export function SenderSection({ data, onChange, collapsed, onToggleCollapse }: P
         <div className="grid gap-2 border-t border-border px-4 pb-4 pt-3">
           <div className="grid gap-1.5">
             <Label className="text-xs">{tr.senderName}</Label>
-            <Input value={data.name} onChange={(e) => onChange({ ...data, name: e.target.value })} placeholder="Your Name" />
+            <Input value={data.name} onChange={(e) => onChange({ ...data, name: e.target.value })} placeholder={tr.senderNamePlaceholder} />
           </div>
 
           {addressLines.map((line, i) => (
@@ -66,7 +66,7 @@ export function SenderSection({ data, onChange, collapsed, onToggleCollapse }: P
               <Input
                 value={line.value}
                 onChange={(e) => updateAddressLine(line.id, e.target.value)}
-                placeholder="Please enter your address here."
+                placeholder={tr.addressPlaceholder}
               />
             </div>
           ))}

@@ -167,9 +167,9 @@ export function Toolbar({ title, content, template, isAgentMode, onTitleChange, 
       <input ref={fileInputRef} type="file" accept=".json" className="hidden" onChange={handleImportFile} />
       <EditorTopBar
         title={title}
-        eyebrow="Cover Letter"
+        eyebrow={tr.createCoverLetter}
         backLabel={tr.backToHome}
-        settingsLabel="Cover letter settings"
+        settingsLabel={tr.coverLetter.editorSettings}
         onBack={() => router.push("/")}
         onSettings={openSettings}
         afterSettingsActions={

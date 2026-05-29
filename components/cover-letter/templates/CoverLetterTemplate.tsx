@@ -3,6 +3,8 @@
 import type { CoverLetterContent } from "@/lib/types/cover-letter";
 import { PageBreakAvoid } from "@/components/shared/PageBreakAvoid";
 import { FONT_EN, BODY_SIZE } from "@/lib/template-styles";
+import { useUILanguage } from "@/lib/ui-language";
+import { t } from "@/lib/translations";
 
 /* ------------------------------------------------------------------ */
 /*  A4 page: 794px × 1123px at 96 DPI, 1.27cm (48px) margins         */
@@ -22,6 +24,8 @@ interface Props {
 }
 
 export function CoverLetterTemplate({ content }: Props) {
+  const { lang } = useUILanguage();
+  const uiTr = t[lang];
   const { sender, date, recipient, paragraphs } = content;
   const senderAddressLines = sender.addressLines ?? [];
   const recipientAddressLines = recipient.addressLines ?? [];
@@ -87,7 +91,7 @@ export function CoverLetterTemplate({ content }: Props) {
       {/* Placeholder when empty */}
       {!sender.name && !recipient.name && paragraphs.length === 0 && (
         <p className="mt-24 text-center text-sm text-gray-400">
-          Fill in the form on the left to see your cover letter here.
+          {uiTr.emptyCoverLetterPreview}
         </p>
       )}
     </div>
