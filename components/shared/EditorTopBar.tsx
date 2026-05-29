@@ -75,7 +75,7 @@ export function EditorTopBar({
             <Button
               variant="outline"
               size="icon"
-              className="editor-topbar-action"
+              className={editorTopBarActionClass}
               onClick={onSettings}
               aria-label={settingsLabel}
               title={settingsLabel}

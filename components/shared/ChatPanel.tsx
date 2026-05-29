@@ -591,13 +591,13 @@ export function ChatPanel<TContent>({
     lang === "zh"
       ? [
           "帮我润色项目经历",
-          "让表达更有说服力",
-          "检查是否适合一页",
+          "让表达清晰简洁",
+          "检查是否有需要优化的地方",
         ]
       : [
           "Polish my project bullets",
-          "Make the tone stronger",
-          "Check if this fits one page",
+          "Make the tone clear and concise",
+          "Check if anything needs improvement",
         ];
 
   const setLastChange = (change: AgentChange | null) => {

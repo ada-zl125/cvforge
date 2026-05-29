@@ -188,9 +188,9 @@ export function Toolbar({ title, template, language, content, isAgentMode, onSet
       <input ref={fileInputRef} type="file" accept=".json" className="hidden" onChange={handleImportFile} />
       <EditorTopBar
         title={title}
-        eyebrow="Academic CV"
+        eyebrow={tr.createAcademicCv}
         backLabel={tr.backToHome}
-        settingsLabel="Academic CV settings"
+        settingsLabel={tr.academicCv.editorSettings}
         onBack={() => router.push("/")}
         onSettings={openSettings}
         afterSettingsActions={
