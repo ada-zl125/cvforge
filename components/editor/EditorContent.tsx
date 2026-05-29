@@ -82,6 +82,7 @@ export function EditorContent() {
           ? (
             <ChatPanel
               docType="resume"
+              documentLanguage={state.language}
               content={content}
               onChange={setResumeContent}
               onReviewChange={setReviewChange}

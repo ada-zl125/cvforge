@@ -11,7 +11,7 @@ import resumeExampleCn from "@/examples/resume-example-cn.json";
 import academicCvExampleEn from "@/examples/academic-cv-example-en.json";
 import academicCvExampleCn from "@/examples/academic-cv-example-cn.json";
 import coverLetterExampleEn from "@/examples/cover-letter-example-en.json";
-import { createTools, type ClarificationRequest, type DocType } from "./tools";
+import { createTools, type ClarificationRequest, type DocType, type DocumentLanguage } from "./tools";
 import type { LLMConfig } from "./config";
 import type { AgentChange } from "./change-tracking";
 import { buildReferenceContext, type AgentContextSource } from "./context-sources";
@@ -34,6 +34,7 @@ export interface AgentContextUsage {
 interface RunAgentStreamParams<TContent> {
   config: LLMConfig;
   docType: DocType;
+  documentLanguage: DocumentLanguage;
   getContent: () => TContent;
   onContentUpdate: (updated: TContent, toolName: string) => void;
   history: Message[];
@@ -66,7 +67,7 @@ const MODEL_CONTEXT_WINDOWS: Array<[RegExp, number]> = [
 
 const RESUME_CRAFT_RULES = `## Professional Resume/CV Craft Rules
 - **Section item order:** Within dated sections, order entries reverse chronologically by end date, then start date. Current or ongoing entries come first. For example, a 2025 to 2026 master's degree should appear before a 2021 to 2025 bachelor's degree.
-- **Education:** Keep institution names official, and separate degree from field of study when possible. In standalone education degree fields, prefer standard CV credential abbreviations when they are widely recognized and match the examples: "MSc in ...", "BSc in ...", "PhD in ...", "MEng in ...", "BEng in ...", "MA in ...", "BA in ...", "LLM", "LLB", "MBA". Use full degree names in prose paragraphs or when there is no clear standard abbreviation, and respect explicit user requests for full forms. Do not add coursework, GPA, honors, thesis, or awards unless the user provides them.
+- **Education:** Keep institution names in the document language, using conventional official names for that language when available, and separate degree from field of study when possible. In English documents, prefer standard CV credential abbreviations when they are widely recognized and match the examples: "MSc in ...", "BSc in ...", "PhD in ...", "MEng in ...", "BEng in ...", "MA in ...", "BA in ...", "LLM", "LLB", "MBA". In Chinese documents, prefer natural Chinese degree names that match the Chinese examples, such as "计算机科学理学硕士". Use full degree names in prose paragraphs or when there is no clear standard abbreviation, and respect explicit user requests for full forms. Do not add coursework, GPA, honors, thesis, or awards unless the user provides them.
 - **Experience and projects:** Prefer concise accomplishment bullets that start with strong verbs, name tools/methods when relevant, and include scope or measurable impact when the user provides enough evidence.
 - **Skills:** Group skills by practical categories, keep each group scannable, and avoid duplicates or vague filler.
 - **Professional polish:** Keep wording concise, consistent, and ATS-friendly. Preserve the document language and formatting style shown in the current document and examples.`;
@@ -110,6 +111,7 @@ const RESPONSE_FORMAT_RULES = `## Response Formatting
 const LANGUAGE_STYLE_RULES = `## Language Style
 - Keep all user-facing writing professional, clear, concise, and direct.
 - Do not use dash punctuation in prose. Use commas, periods, semicolons, or parentheses instead.
+- Use half-width English punctuation even in Chinese documents and Chinese replies, for example use "," and "." instead of "，" and "。".
 - Keep sentences compact and avoid unnecessary filler.`;
 
 type ClarificationScope =
@@ -388,10 +390,6 @@ Be conversational, encouraging, and help the user create a letter that stands ou
   }
 }
 
-function isLikelyChinese(text: string): boolean {
-  return /[\u3400-\u9fff]/.test(text);
-}
-
 function toolLabel(toolName: string, zh: boolean): string {
   const labels: Record<string, { en: string; zh: string }> = {
     update_personal: { en: "personal information", zh: "个人信息" },
@@ -430,18 +428,18 @@ function formatInferenceDisclosure(inferenceNotes: string[], zh: boolean): strin
   if (inferenceNotes.length === 0) return "";
 
   const uniqueNotes = Array.from(new Set(inferenceNotes));
-  if (zh) return `我做了这些高把握推断：${uniqueNotes.join("；")}。`;
+  if (zh) return `我做了这些高把握推断: ${uniqueNotes.join("; ")}.`;
   return `I made these high-confidence inferences: ${uniqueNotes.join("; ")}.`;
 }
 
-function buildFallbackCompletion(toolNames: string[], userMessage: string, inferenceNotes: string[] = []): string {
-  const zh = isLikelyChinese(userMessage);
+function buildFallbackCompletion(toolNames: string[], documentLanguage: DocumentLanguage, inferenceNotes: string[] = []): string {
+  const zh = documentLanguage === "zh";
   const uniqueToolNames = Array.from(new Set(toolNames.filter(isDocumentUpdateTool)));
-  const changed = uniqueToolNames.map((name) => toolLabel(name, zh)).join(zh ? "、" : ", ");
+  const changed = uniqueToolNames.map((name) => toolLabel(name, zh)).join(", ");
   const inferenceDisclosure = formatInferenceDisclosure(inferenceNotes, zh);
 
   if (zh) {
-    const completion = changed ? `已完成，已更新${changed}。` : "已完成。";
+    const completion = changed ? `已完成, 已更新${changed}.` : "已完成.";
     return sanitizeUserFacingText(inferenceDisclosure ? `${completion}${inferenceDisclosure}` : completion);
   }
 
@@ -454,17 +452,39 @@ function sanitizeUserFacingText(text: string): string {
     .replace(/^(\s*)-\s+/gm, "$1* ")
     .replace(/\s*->\s*/g, " to ")
     .replace(/\s*[—–]\s*/g, ", ")
+    .replace(/[，。；：？！、（）【】“”‘’《》…]/g, (char) => ({
+      "，": ", ",
+      "。": ".",
+      "；": "; ",
+      "：": ": ",
+      "？": "?",
+      "！": "!",
+      "、": ", ",
+      "（": "(",
+      "）": ")",
+      "【": "[",
+      "】": "]",
+      "“": "\"",
+      "”": "\"",
+      "‘": "'",
+      "’": "'",
+      "《": "<",
+      "》": ">",
+      "…": "...",
+    }[char] ?? char))
     .replace(/\s+([,.;:!?，。；：！？])/g, "$1")
+    .replace(/([,;:])\s*/g, "$1 ")
     .replace(/([,，])\s*([。.!?！？])/g, "$2")
+    .replace(/\s{2,}/g, " ")
     .trim();
 }
 
-function withInferenceDisclosure(content: string, inferenceNotes: string[], userMessage: string): string {
+function withInferenceDisclosure(content: string, inferenceNotes: string[], documentLanguage: DocumentLanguage): string {
   const sanitizedContent = sanitizeUserFacingText(content);
   if (inferenceNotes.length === 0) return sanitizedContent;
   if (/\binfer|\bnormaliz|\bnormalis|推断|推理|规范化/.test(sanitizedContent.toLowerCase())) return sanitizedContent;
 
-  const disclosure = formatInferenceDisclosure(inferenceNotes, isLikelyChinese(userMessage));
+  const disclosure = formatInferenceDisclosure(inferenceNotes, documentLanguage === "zh");
   return disclosure ? `${sanitizedContent}\n\n${sanitizeUserFacingText(disclosure)}` : sanitizedContent;
 }
 
@@ -546,15 +566,15 @@ function buildClarificationFromAssistantText(
   };
 }
 
-function buildNoResponseFallback(userMessage: string): string {
-  return isLikelyChinese(userMessage)
-    ? "我这次没有生成有效回复，请再试一次。"
+function buildNoResponseFallback(documentLanguage: DocumentLanguage): string {
+  return documentLanguage === "zh"
+    ? "我这次没有生成有效回复, 请再试一次."
     : "I could not generate a useful reply. Please try again.";
 }
 
-function buildToolFailureFallback(userMessage: string): string {
-  return isLikelyChinese(userMessage)
-    ? "我没能完成这次更新，请检查信息后再试一次。"
+function buildToolFailureFallback(documentLanguage: DocumentLanguage): string {
+  return documentLanguage === "zh"
+    ? "我没能完成这次更新, 请检查信息后再试一次."
     : "I could not complete that update. Please check the details and try again.";
 }
 
@@ -614,12 +634,7 @@ function buildDocumentContext(docType: DocType, content: unknown): string {
   return `Current ${docType} state, including edits the user may have made outside chat. Treat this as the source of truth when answering or calling tools:\n${safeSerialized}`;
 }
 
-function inferExampleLanguage(content: unknown, userMessage?: string): "en" | "zh" {
-  const text = `${JSON.stringify(compactDocumentValue(content))} ${userMessage ?? ""}`;
-  return isLikelyChinese(text) ? "zh" : "en";
-}
-
-function pickExample(docType: DocType, language: "en" | "zh"): unknown {
+function pickExample(docType: DocType, language: DocumentLanguage): unknown {
   if (docType === "resume") {
     return language === "zh" ? resumeExampleCn : resumeExampleEn;
   }
@@ -629,8 +644,8 @@ function pickExample(docType: DocType, language: "en" | "zh"): unknown {
   return coverLetterExampleEn;
 }
 
-function buildExampleStyleContext(docType: DocType, content: unknown, userMessage?: string): string {
-  const language = inferExampleLanguage(content, userMessage);
+function buildExampleStyleContext(docType: DocType, content: unknown, documentLanguage: DocumentLanguage): string {
+  const language = docType === "cover-letter" ? "en" : documentLanguage;
   const example = pickExample(docType, language);
   const compactExample = JSON.stringify(compactDocumentValue(example), null, 2);
   const safeExample =
@@ -643,6 +658,8 @@ function buildExampleStyleContext(docType: DocType, content: unknown, userMessag
       ? `Chinese document style:
 - Use Chinese section content and Chinese date style from examples, e.g. "2024/09" and "至今".
 - Use location order "国家, 城市" for location fields, e.g. "中国, 北京" or "美国, 新奥尔良".
+- Use conventional Chinese names for well-known universities, organizations, cities, and countries when they have a common Chinese form, e.g. "伦敦帝国理工学院" and "英国, 伦敦", not "Imperial College London" or "London, UK".
+- Use half-width English punctuation in all generated Chinese document content, matching the Chinese examples.
 - Use concise Chinese labels such as "成绩", "获奖", "研究方向" when creating extra fields.
 - Keep English technical terms when they are normally written in English, such as Python, FastAPI, RAG, GitHub.`
       : `English document style:
@@ -651,7 +668,14 @@ function buildExampleStyleContext(docType: DocType, content: unknown, userMessag
 - Use concise English labels such as "Grade", "Awards", "Research Field" when creating extra fields.
 - Keep bullet points action-oriented and concrete.`;
 
+  const documentLanguageInstruction =
+    language === "zh"
+      ? `Document writing language: Chinese. This is based on the document settings, not the UI language or the language of the user's latest message. Write generated resume/CV content in natural, concise Chinese, while keeping names, institution names, product names, technologies, and common technical terms in English when that is the normal form. Use Chinese for assistant replies and ask_user questions unless the user explicitly requests another language.`
+      : `Document writing language: English. This is based on the document settings, not the UI language or the language of the user's latest message. Write generated document content in clear, concise English. Use English for assistant replies and ask_user questions unless the user explicitly requests another language.`;
+
   return `Project example reference for formatting only. Follow its field shapes, date style, location order, labels, and writing density. Do not copy personal/example facts unless the user explicitly asks.
+
+${documentLanguageInstruction}
 
 ${languageRules}
 
@@ -660,7 +684,7 @@ Missing information policy:
 - If a tool field is unknown, omit it when optional or use an empty string.
 - For missing core structured fields that are required for the original task and cannot be inferred or safely omitted, call \`ask_user\` instead of asking only in assistant text.
 - Ask one focused question for the next most important missing detail. Do not ask for optional details just because a field exists.
-- You may infer common public facts only when highly confident and specific. For example, "Imperial College London" implies "London, UK"; avoid vague values like "UK" when the city is knowable.
+- You may infer common public facts only when highly confident and specific. Match the inferred value to the document language. For Chinese documents, "Imperial College London" implies "伦敦帝国理工学院" and "英国, 伦敦". For English documents, it implies "Imperial College London" and "London, UK". Avoid vague values like "UK" when the city is knowable.
 - If a missing or ambiguous detail is too important to leave blank and not safe to infer, call \`ask_user\` before updating that field.
 - Once the necessary details are available, stop asking and update the document.
 - If you write inferred or normalized information, use \`record_inference\` and mention the inference in your final reply.
@@ -687,12 +711,14 @@ function getModelContextWindow(model: string): number {
 export function estimateAgentContextUsage<TContent>({
   model,
   docType,
+  documentLanguage,
   content,
   history,
   referenceSources,
 }: {
   model: string;
   docType: DocType;
+  documentLanguage: DocumentLanguage;
   content: TContent;
   history: Message[];
   referenceSources?: AgentContextSource[];
@@ -710,7 +736,7 @@ export function estimateAgentContextUsage<TContent>({
   const contextText = [
     buildSystemPrompt(docType),
     buildDocumentContext(docType, content),
-    buildExampleStyleContext(docType, content),
+    buildExampleStyleContext(docType, content, documentLanguage),
     buildReferenceContext(referenceSources) ?? "",
     serializedHistory,
   ].join("\n\n");
@@ -747,16 +773,18 @@ function buildCompactTranscript(history: Message[]): string {
 export async function compactAgentHistory<TContent>({
   config,
   docType,
+  documentLanguage,
   content,
   history,
 }: {
   config: LLMConfig;
   docType: DocType;
+  documentLanguage: DocumentLanguage;
   content: TContent;
   history: Message[];
 }): Promise<string> {
   const transcript = buildCompactTranscript(history);
-  const zh = isLikelyChinese(transcript);
+  const zh = documentLanguage === "zh";
   const client = new OpenAI({
     apiKey: config.apiKey,
     baseURL: config.baseURL,
@@ -793,7 +821,7 @@ Do not include greetings, generic encouragement, tool chatter, or redundant deta
   if (summary) return summary;
 
   return zh
-    ? "已压缩此前对话：保留用户提供的重要信息、已完成修改、偏好和待处理事项。"
+    ? "已压缩此前对话: 保留用户提供的重要信息, 已完成修改, 偏好和待处理事项."
     : "Compacted prior conversation: preserved key user facts, completed changes, preferences, and pending items.";
 }
 
@@ -804,6 +832,7 @@ export async function runAgentStream<TContent>(
   const {
     config,
     docType,
+    documentLanguage,
     getContent,
     onContentUpdate,
     history,
@@ -824,6 +853,7 @@ export async function runAgentStream<TContent>(
   const inferenceNotes: string[] = [];
   const tools = createTools(
     docType,
+    documentLanguage,
     getContent,
     onContentUpdate,
     (note) => {
@@ -834,7 +864,7 @@ export async function runAgentStream<TContent>(
   const clarificationScope = resolveClarificationScope(docType, userMessage);
   const systemPrompt = buildSystemPrompt(docType);
   const documentContext = buildDocumentContext(docType, getContent());
-  const exampleStyleContext = buildExampleStyleContext(docType, getContent(), userMessage);
+  const exampleStyleContext = buildExampleStyleContext(docType, getContent(), documentLanguage);
   const referenceContext = buildReferenceContext(referenceSources);
   const clarificationScopeContext = clarificationScope.allowAskUser
     ? [
@@ -1030,7 +1060,7 @@ export async function runAgentStream<TContent>(
           break;
         }
 
-        const finalContent = withInferenceDisclosure(assistantContent, inferenceNotes, userMessage);
+        const finalContent = withInferenceDisclosure(assistantContent, inferenceNotes, documentLanguage);
         onTextChunk(finalContent);
         emittedFinalText = true;
 
@@ -1051,13 +1081,13 @@ export async function runAgentStream<TContent>(
       onStatusChange?.(null);
     } else if (!emittedFinalText && successfulToolNames.length > 0) {
       onStatusChange?.(null);
-      onTextChunk(buildFallbackCompletion(successfulToolNames, userMessage, inferenceNotes));
+      onTextChunk(buildFallbackCompletion(successfulToolNames, documentLanguage, inferenceNotes));
     } else if (!emittedFinalText && failedToolNames.length > 0) {
       onStatusChange?.(null);
-      onTextChunk(buildToolFailureFallback(userMessage));
+      onTextChunk(buildToolFailureFallback(documentLanguage));
     } else if (!emittedFinalText) {
       onStatusChange?.(null);
-      onTextChunk(buildNoResponseFallback(userMessage));
+      onTextChunk(buildNoResponseFallback(documentLanguage));
     }
   } catch (error) {
     onStatusChange?.(null);

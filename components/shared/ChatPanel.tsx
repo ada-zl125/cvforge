@@ -32,7 +32,7 @@ import {
   type LLMConfig,
   writeLLMConfig,
 } from "@/lib/agent/config";
-import type { ClarificationRequest, DocType } from "@/lib/agent/tools";
+import type { ClarificationRequest, DocType, DocumentLanguage } from "@/lib/agent/tools";
 import { buildAgentChange, contentSignature, type AgentChange } from "@/lib/agent/change-tracking";
 import {
   CONTEXT_MAX_FILE_BYTES,
@@ -65,6 +65,11 @@ interface PendingClarification {
 
 const MAX_CLARIFICATION_ROUNDS = 2;
 const INPUT_MAX_VISIBLE_ROWS = 6;
+type AgentTranslations = typeof t.en.agent | typeof t.zh.agent;
+type ClarificationPatch<TContent> = {
+  content: TContent;
+  toolName: string;
+};
 
 export function createInitialAgentPanelState(): AgentPanelState {
   return {
@@ -83,6 +88,7 @@ export function createInitialAgentPanelState(): AgentPanelState {
 
 interface ChatPanelProps<TContent> {
   docType: DocType;
+  documentLanguage: DocumentLanguage;
   content: TContent;
   onChange: (content: TContent) => void;
   onReviewChange?: (change: AgentChange | null) => void;
@@ -317,17 +323,128 @@ function ContextUsageIndicator({
   );
 }
 
-function formatClarificationMessage(request: ClarificationRequest, lang: "en" | "zh"): string {
-  const scope = request.field || request.section;
-  if (lang === "zh") {
-    const reason = request.reason ? `原因：${request.reason}` : "";
-    const target = scope ? `\n\n相关位置：${scope}` : "";
-    return `我需要先确认一个细节：${request.question}\n\n${reason}${target}`.trim();
+function localizeClarificationReason(reason: string | undefined, lang: "en" | "zh", agentTr: AgentTranslations): string {
+  if (!reason) return "";
+  if (lang !== "zh") return reason;
+
+  const normalized = reason.trim();
+  if (normalized === t.en.agent.clarificationReasonStructuredUpdate) {
+    return agentTr.clarificationReasonStructuredUpdate;
+  }
+  if (normalized === t.en.agent.clarificationReasonAmbiguous) {
+    return agentTr.clarificationReasonAmbiguous;
   }
 
-  const reason = request.reason ? `Reason: ${request.reason}` : "";
-  const target = scope ? `\n\nRelated field: ${scope}` : "";
-  return `I need to confirm one detail first: ${request.question}\n\n${reason}${target}`.trim();
+  return reason;
+}
+
+function formatClarificationMessage(request: ClarificationRequest, lang: "en" | "zh", agentTr: AgentTranslations): string {
+  const scope = request.field || request.section;
+  const localizedReason = localizeClarificationReason(request.reason, lang, agentTr);
+  if (lang === "zh") {
+    const reason = localizedReason ? `${agentTr.clarificationReasonLabel}: ${localizedReason}` : "";
+    const target = scope ? `\n\n${agentTr.clarificationRelatedFieldLabel}: ${scope}` : "";
+    return `${agentTr.clarificationMessageIntro}: ${request.question}\n\n${reason}${target}`.trim();
+  }
+
+  const reason = localizedReason ? `${agentTr.clarificationReasonLabel}: ${localizedReason}` : "";
+  const target = scope ? `\n\n${agentTr.clarificationRelatedFieldLabel}: ${scope}` : "";
+  return `${agentTr.clarificationMessageIntro}: ${request.question}\n\n${reason}${target}`.trim();
+}
+
+function normalizeClarificationLocation(answer: string, documentLanguage: DocumentLanguage): string {
+  const trimmed = answer.trim();
+  if (documentLanguage !== "zh") return trimmed;
+
+  const locationMap: Record<string, string> = {
+    "huddersfield, uk": "英国, 哈德斯菲尔德",
+    "huddersfield, united kingdom": "英国, 哈德斯菲尔德",
+    "london, uk": "英国, 伦敦",
+    "london, united kingdom": "英国, 伦敦",
+    "oxford, uk": "英国, 牛津",
+    "oxford, united kingdom": "英国, 牛津",
+  };
+
+  return locationMap[trimmed.toLowerCase()] ?? trimmed;
+}
+
+function findEducationIndexForClarification(education: Array<Record<string, unknown>>, pending: PendingClarification) {
+  const haystack = `${pending.request.question} ${pending.originalUserMessage}`.toLowerCase();
+  const normalizedHaystack = haystack.replace(/^university of\s+/, "");
+  const namedIndex = education.findIndex((item) => {
+    const institution = String(item.institution ?? "").toLowerCase();
+    if (!institution) return false;
+    const normalizedInstitution = institution.replace(/^university of\s+/, "");
+    return (
+      normalizedHaystack.includes(normalizedInstitution) ||
+      normalizedInstitution.includes("huddersfield") && normalizedHaystack.includes("huddersfield") ||
+      String(item.institution ?? "").includes("哈德斯菲尔德") && `${pending.request.question} ${pending.originalUserMessage}`.includes("哈德斯菲尔德")
+    );
+  });
+  if (namedIndex >= 0) return namedIndex;
+
+  const emptyLocationIndexes = education
+    .map((item, index) => ({ index, location: String(item.location ?? "").trim() }))
+    .filter((item) => !item.location)
+    .map((item) => item.index);
+  if (emptyLocationIndexes.length === 1) return emptyLocationIndexes[0];
+  if (education.length === 1) return 0;
+  return -1;
+}
+
+function applyEducationLocationClarification<TContent>(
+  content: TContent,
+  pending: PendingClarification,
+  answer: string,
+  documentLanguage: DocumentLanguage
+): ClarificationPatch<TContent> | null {
+  const scopeText = [
+    pending.request.field,
+    pending.request.section,
+    pending.request.question,
+    pending.request.reason,
+  ].filter(Boolean).join(" ").toLowerCase();
+  const isEducation = /education|school|university|college|学历|教育|学校|大学/.test(scopeText);
+  const isLocation = /location|address|city|country|where|地点|地址|城市|国家|位于|在哪/.test(scopeText);
+  if (!isEducation || !isLocation || !content || typeof content !== "object") return null;
+
+  const current = content as TContent & { education?: Array<Record<string, unknown>> };
+  if (!Array.isArray(current.education) || current.education.length === 0) return null;
+
+  const index = findEducationIndexForClarification(current.education, pending);
+  if (index < 0) return null;
+
+  const location = normalizeClarificationLocation(answer, documentLanguage);
+  const education = current.education.map((item, itemIndex) =>
+    itemIndex === index ? { ...item, location } : item
+  );
+
+  return {
+    content: {
+      ...current,
+      education,
+    },
+    toolName: "set_education",
+  } as ClarificationPatch<TContent>;
+}
+
+function isDocumentEditIntent(text: string): boolean {
+  return /\b(add|update|set|change|fill|insert|write|rewrite|polish|improve|optimi[sz]e|refine|edit|revise|replace)\b/i.test(text) ||
+    /添加|更新|修改|填写|填入|写入|润色|优化|改写|编辑|替换|补充/.test(text);
+}
+
+function shouldReplaceWithNoChangeNotice(params: {
+  before: unknown;
+  after: unknown;
+  toolNames: string[];
+  userMessage: string;
+  streamedText: string;
+  forceEditIntent?: boolean;
+}) {
+  if (params.toolNames.length > 0) return false;
+  if (!params.streamedText.trim()) return false;
+  if (contentSignature(params.before) !== contentSignature(params.after)) return false;
+  return params.forceEditIntent || isDocumentEditIntent(params.userMessage);
 }
 
 function AgentStatusIndicator({
@@ -409,6 +526,7 @@ function ChangeCard({
 
 export function ChatPanel<TContent>({
   docType,
+  documentLanguage,
   content,
   onChange,
   onReviewChange,
@@ -574,6 +692,7 @@ export function ChatPanel<TContent>({
     ? estimateAgentContextUsage({
         model: activeConfig.model,
         docType,
+        documentLanguage,
         content,
         history: messages,
         referenceSources: contextSources,
@@ -587,6 +706,9 @@ export function ChatPanel<TContent>({
       : docType === "academic-cv"
         ? agentTr.academicCv
         : agentTr.resume;
+  const pendingClarificationReason = pendingClarification
+    ? localizeClarificationReason(pendingClarification.request.reason, lang, agentTr)
+    : "";
   const promptSuggestions =
     lang === "zh"
       ? [
@@ -678,6 +800,7 @@ export function ChatPanel<TContent>({
       const summary = await compactAgentHistory({
         config: activeConfig,
         docType,
+        documentLanguage,
         content: contentRef.current,
         history: messages,
       });
@@ -752,6 +875,7 @@ export function ChatPanel<TContent>({
       await runAgentStream({
         config: activeConfig,
         docType,
+        documentLanguage,
         getContent: () => contentRef.current,
         onContentUpdate: (updated, toolName) => {
           contentRef.current = updated;
@@ -780,12 +904,21 @@ export function ChatPanel<TContent>({
           });
         },
         onDone: () => {
-          if (streamingTextRef.current) {
+          const finalText = shouldReplaceWithNoChangeNotice({
+            before: beforeContent,
+            after: latestContent,
+            toolNames: changedToolNames,
+            userMessage: userMsg,
+            streamedText: streamingTextRef.current,
+          })
+            ? agentTr.noDocumentChangeNotice
+            : streamingTextRef.current;
+          if (finalText) {
             setMessages((prev) => [
               ...prev,
               {
                 role: "assistant",
-                content: streamingTextRef.current,
+                content: finalText,
               },
             ]);
           }
@@ -877,13 +1010,13 @@ export function ChatPanel<TContent>({
     ].filter(Boolean).join("\n");
     const visibleAnswer =
       lang === "zh"
-        ? `补充确认：${answer}`
+        ? `补充确认: ${answer}`
         : `Clarification: ${answer}`;
     const historyWithQuestion: Message[] = [
       ...pending.history,
       {
         role: "assistant",
-        content: formatClarificationMessage(pending.request, lang),
+        content: formatClarificationMessage(pending.request, lang, agentTr),
       },
     ];
 
@@ -900,11 +1033,19 @@ export function ChatPanel<TContent>({
     const beforeContent = contentRef.current;
     let latestContent = beforeContent;
     const changedToolNames: string[] = [];
+    const localPatch = applyEducationLocationClarification(contentRef.current, pending, answer, documentLanguage);
+    if (localPatch) {
+      contentRef.current = localPatch.content;
+      latestContent = localPatch.content;
+      changedToolNames.push(localPatch.toolName);
+      onChange(localPatch.content);
+    }
 
     try {
       await runAgentStream({
         config: activeConfig,
         docType,
+        documentLanguage,
         getContent: () => contentRef.current,
         onContentUpdate: (updated, toolName) => {
           contentRef.current = updated;
@@ -936,12 +1077,22 @@ export function ChatPanel<TContent>({
           });
         },
         onDone: () => {
-          if (streamingTextRef.current) {
+          const finalText = shouldReplaceWithNoChangeNotice({
+            before: beforeContent,
+            after: latestContent,
+            toolNames: changedToolNames,
+            userMessage: continuationMessage,
+            streamedText: streamingTextRef.current,
+            forceEditIntent: true,
+          })
+            ? agentTr.noDocumentChangeNotice
+            : streamingTextRef.current;
+          if (finalText) {
             setMessages((prev) => [
               ...prev,
               {
                 role: "assistant",
-                content: streamingTextRef.current,
+                content: finalText,
               },
             ]);
           }
@@ -1367,9 +1518,9 @@ export function ChatPanel<TContent>({
                 <p className="mt-1 text-sm font-medium leading-6 text-gray-950">
                   {pendingClarification.request.question}
                 </p>
-                {pendingClarification.request.reason && (
+                {pendingClarificationReason && (
                   <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                    {pendingClarification.request.reason}
+                    {pendingClarificationReason}
                   </p>
                 )}
               </div>
