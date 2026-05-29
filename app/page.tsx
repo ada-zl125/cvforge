@@ -292,7 +292,7 @@ export default function EntryPage() {
             href={GITHUB_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="group flex items-center gap-1.5 rounded-md border border-gray-300 bg-white/55 px-2.5 py-1 text-xs text-gray-600 shadow-[0_10px_28px_rgba(0,0,0,0.035)] backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-gray-500 hover:bg-white/85 hover:text-gray-900 hover:shadow-[0_16px_36px_rgba(0,0,0,0.07)]"
+            className="group flex items-center gap-1.5 rounded-md border border-gray-300 bg-white/55 px-2.5 py-1 text-xs text-gray-600 shadow-[0_10px_28px_rgba(0,0,0,0.035)] backdrop-blur-sm transition-all duration-300 hover:border-gray-500 hover:bg-white/85 hover:text-gray-900 hover:shadow-[0_16px_36px_rgba(0,0,0,0.07)]"
           >
             <GithubIcon className="h-3.5 w-3.5" />
             <span className="flex items-center gap-1 tabular-nums">
@@ -328,7 +328,7 @@ export default function EntryPage() {
               href={GITHUB_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="group mt-5 inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white/55 px-4 py-1.5 text-sm text-gray-600 shadow-[0_12px_32px_rgba(0,0,0,0.04)] backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-gray-500 hover:bg-white/85 hover:text-gray-900 hover:shadow-[0_18px_42px_rgba(0,0,0,0.08)]"
+              className="group mt-5 inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white/55 px-4 py-1.5 text-sm text-gray-600 shadow-[0_12px_32px_rgba(0,0,0,0.04)] backdrop-blur-sm transition-all duration-300 hover:border-gray-500 hover:bg-white/85 hover:text-gray-900 hover:shadow-[0_18px_42px_rgba(0,0,0,0.08)]"
             >
               <GithubIcon className="h-4 w-4" />
               <span>GitHub</span>
@@ -342,16 +342,15 @@ export default function EntryPage() {
           </div>
 
           {/* Entry items */}
-          <div className="border-t border-gray-200/70 bg-white/30 backdrop-blur-[2px]">
-            <div className="ml-2 divide-y divide-gray-200/70">
+          <div className="backdrop-blur-[2px]">
+            <div className="space-y-0">
               {entryItems.map((item) => (
                 <button
                   key={item.num}
                   type="button"
                   onClick={item.onClick}
-                  className="group relative flex w-full cursor-pointer items-center gap-5 overflow-hidden border-l-2 border-l-transparent px-3 py-5 text-left transition-all duration-300 hover:-translate-y-px hover:border-l-[#0f0f0f] hover:bg-white/78 hover:shadow-[0_18px_42px_rgba(0,0,0,0.055)]"
+                  className="group relative -mt-px first:mt-0 flex w-full cursor-pointer items-center gap-5 overflow-hidden border-y border-gray-200/80 bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.58)_0%,rgba(255,255,255,0.34)_48%,rgba(255,255,255,0.08)_100%)] px-3 py-5 text-left backdrop-blur-[1px] transition-all duration-300 hover:-translate-y-px hover:border-y-[#0f0f0f] hover:bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.78)_0%,rgba(255,255,255,0.5)_48%,rgba(255,255,255,0.14)_100%)] hover:shadow-[0_18px_42px_rgba(0,0,0,0.055)]"
                 >
-                  <span className="absolute inset-y-3 left-0 w-px bg-black/0 transition-colors duration-300 group-hover:bg-black/20" />
                   <span className="w-7 shrink-0 text-sm tabular-nums text-gray-500 transition-colors duration-200 group-hover:text-gray-700">
                     {item.num}
                   </span>
