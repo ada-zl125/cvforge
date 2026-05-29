@@ -11,6 +11,7 @@ import { PreviewPanel } from "./PreviewPanel";
 import { ChatPanel, createInitialAgentPanelState } from "@/components/shared/ChatPanel";
 import { isLLMConfigComplete } from "@/lib/agent/config";
 import { stripResumeLegacyContacts } from "@/lib/json-utils";
+import { contentSignature, type AgentChange } from "@/lib/agent/change-tracking";
 
 interface EditorState {
   title: string;
@@ -28,7 +29,9 @@ const initialState: EditorState = {
 
 export function EditorContent() {
   const [isAgentMode, setIsAgentMode] = useState(false);
+  const [isAgentRunning, setIsAgentRunning] = useState(false);
   const [agentState, setAgentState] = useState(createInitialAgentPanelState);
+  const [reviewChange, setReviewChange] = useState<AgentChange | null>(null);
 
   const { state, setContent, setStoredState } = useEditorState<
     ResumeContent,
@@ -53,7 +56,11 @@ export function EditorContent() {
 
   const content = stripResumeLegacyContacts(state.content);
   const setResumeContent = (nextContent: ResumeContent) => {
-    setContent(stripResumeLegacyContacts(nextContent));
+    const normalized = stripResumeLegacyContacts(nextContent);
+    if (reviewChange && contentSignature(normalized) !== reviewChange.afterSignature) {
+      setReviewChange(null);
+    }
+    setContent(normalized);
   };
 
   return (
@@ -64,8 +71,10 @@ export function EditorContent() {
           template={state.template}
           language={state.language}
           content={content}
+          isAgentMode={isAgentMode}
           onSettingsChange={handleSettingsChange}
           onImport={setStoredState}
+          onModeToggle={() => setIsAgentMode((v) => !v)}
         />
       }
       form={
@@ -75,16 +84,17 @@ export function EditorContent() {
               docType="resume"
               content={content}
               onChange={setResumeContent}
+              onReviewChange={setReviewChange}
+              onAgentRunningChange={setIsAgentRunning}
               agentState={agentState}
               onAgentStateChange={setAgentState}
             />
           )
           : <FormPanel content={content} onChange={setResumeContent} language={state.language} />
       }
-      preview={<PreviewPanel content={content} language={state.language} />}
+      preview={<PreviewPanel content={content} language={state.language} reviewChange={reviewChange} isStreaming={isAgentRunning} />}
       isAgentMode={isAgentMode}
       isLLMConfigured={isLLMConfigComplete(agentState.activeConfig)}
-      onModeToggle={() => setIsAgentMode((v) => !v)}
     />
   );
 }

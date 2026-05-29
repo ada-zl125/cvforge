@@ -10,6 +10,7 @@ import { FormPanel } from "./FormPanel";
 import { PreviewPanel } from "./PreviewPanel";
 import { ChatPanel, createInitialAgentPanelState } from "@/components/shared/ChatPanel";
 import { isLLMConfigComplete } from "@/lib/agent/config";
+import { contentSignature, type AgentChange } from "@/lib/agent/change-tracking";
 
 interface EditorState {
   title: string;
@@ -27,7 +28,9 @@ const initialState: EditorState = {
 
 export function AcademicEditorContent() {
   const [isAgentMode, setIsAgentMode] = useState(false);
+  const [isAgentRunning, setIsAgentRunning] = useState(false);
   const [agentState, setAgentState] = useState(createInitialAgentPanelState);
+  const [reviewChange, setReviewChange] = useState<AgentChange | null>(null);
 
   const { state, setContent, setStoredState } = useEditorState<
     AcademicCVContent,
@@ -50,6 +53,13 @@ export function AcademicEditorContent() {
 
   if (!state.hydrated) return null;
 
+  const setAcademicContent = (nextContent: AcademicCVContent) => {
+    if (reviewChange && contentSignature(nextContent) !== reviewChange.afterSignature) {
+      setReviewChange(null);
+    }
+    setContent(nextContent);
+  };
+
   return (
     <EditorFrame
       toolbar={
@@ -58,8 +68,10 @@ export function AcademicEditorContent() {
           template={state.template}
           language={state.language}
           content={state.content}
+          isAgentMode={isAgentMode}
           onSettingsChange={handleSettingsChange}
           onImport={setStoredState}
+          onModeToggle={() => setIsAgentMode((v) => !v)}
         />
       }
       form={
@@ -68,17 +80,18 @@ export function AcademicEditorContent() {
             <ChatPanel
               docType="academic-cv"
               content={state.content}
-              onChange={setContent}
+              onChange={setAcademicContent}
+              onReviewChange={setReviewChange}
+              onAgentRunningChange={setIsAgentRunning}
               agentState={agentState}
               onAgentStateChange={setAgentState}
             />
           )
-          : <FormPanel content={state.content} onChange={setContent} language={state.language} />
+          : <FormPanel content={state.content} onChange={setAcademicContent} language={state.language} />
       }
-      preview={<PreviewPanel content={state.content} language={state.language} />}
+      preview={<PreviewPanel content={state.content} language={state.language} reviewChange={reviewChange} isStreaming={isAgentRunning} />}
       isAgentMode={isAgentMode}
       isLLMConfigured={isLLMConfigComplete(agentState.activeConfig)}
-      onModeToggle={() => setIsAgentMode((v) => !v)}
     />
   );
 }
