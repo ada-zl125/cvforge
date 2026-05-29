@@ -220,6 +220,15 @@
   color: var(--foreground) !important;
 }
 
+.dialog-react-bits-surface,
+.dialog-react-bits-content {
+  width: 100%;
+}
+
+[data-slot="dialog-close"] {
+  z-index: 20;
+}
+
 .entry-dialog-action {
   border-color: rgb(0 0 0 / 0.18) !important;
   background: rgb(255 255 255 / 0.9) !important;
@@ -261,6 +270,19 @@ button.entry-dialog-action:not(:disabled):hover {
 .editor-dialog-input:focus-visible {
   border-color: rgb(0 0 0 / 0.72) !important;
   box-shadow: 0 0 0 3px rgb(0 0 0 / 0.08) !important;
+}
+
+.editor-dialog-upload-button {
+  border-color: rgb(0 0 0 / 0.14) !important;
+  background: rgb(255 255 255 / 0.9) !important;
+  color: var(--foreground);
+  transition: border-color 180ms ease-out, background-color 180ms ease-out, color 180ms ease-out, transform 180ms ease-out, box-shadow 180ms ease-out;
+}
+
+.editor-dialog-upload-button:hover {
+  border-color: rgb(0 0 0 / 0.5) !important;
+  background: rgb(246 246 245) !important;
+  box-shadow: 0 8px 22px rgb(0 0 0 / 0.06);
 }
 
 .editor-shell button:not(:disabled),

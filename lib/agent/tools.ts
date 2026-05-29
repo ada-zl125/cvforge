@@ -43,12 +43,12 @@ export function createTools<TContent = AnyContent>(
     new DynamicStructuredTool({
       name: "ask_user",
       description:
-        "Ask the user for one focused clarification before continuing a structured document edit. Use this only when a required detail from the user's original task is missing, ambiguous, cannot be safely inferred, and cannot be safely omitted; do not use it for optional details or general follow-up.",
+        "Ask the user for one focused clarification before continuing a structured document edit. Use this only when a required detail from the user's original task is missing, ambiguous, cannot be safely inferred, and cannot be safely omitted. If the user asked to modify a specific section, the question must stay inside that same section and must not ask about any other section. Do not use this for optional details or general follow-up.",
       schema: z.object({
         question: z.string().describe("One concise question for the user"),
         reason: z.string().describe("Brief reason why this cannot be safely inferred"),
-        field: z.string().optional().describe("Suggested field affected, e.g. education.degree"),
-        section: z.string().optional().describe("Suggested section affected, e.g. education"),
+        field: z.string().optional().describe("Suggested field affected inside the requested section, e.g. education.degree"),
+        section: z.string().optional().describe("Requested section affected, e.g. education. Keep this within the user's requested section."),
         choices: z.array(z.string()).optional().describe("Optional short answer choices only when natural; omit when the user should type a custom answer"),
       }),
       func: async (args: unknown) => {
@@ -82,8 +82,8 @@ export function createTools<TContent = AnyContent>(
         const reason = arg.reason?.trim() || "high-confidence normalization";
         const field = arg.field?.trim();
         const note = field
-          ? `${field}: "${original}" -> "${inferred}" (${reason})`
-          : `"${original}" -> "${inferred}" (${reason})`;
+          ? `${field}: "${original}" to "${inferred}" (${reason})`
+          : `"${original}" to "${inferred}" (${reason})`;
 
         onInference?.(note);
         return `Recorded inference: ${note}. Mention this to the user after document updates.`;

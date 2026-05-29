@@ -31,16 +31,64 @@ function collectStrings(value: unknown, parts: string[]): void {
   }
 }
 
+function formatDateRange(value: unknown): string {
+  if (!value || typeof value !== "object") return "";
+
+  const record = value as Record<string, unknown>;
+  const startDate = typeof record.startDate === "string" ? record.startDate.trim() : "";
+  const endDate = typeof record.endDate === "string" ? record.endDate.trim() : "";
+  return [startDate, endDate].filter(Boolean).join(" – ");
+}
+
+function getItemId(value: unknown): string | undefined {
+  if (!value || typeof value !== "object") return undefined;
+
+  const id = (value as Record<string, unknown>).id;
+  return typeof id === "string" ? id : undefined;
+}
+
+function collectChangedDateRanges(before: unknown, after: unknown, snippets: string[]): void {
+  if (Array.isArray(after)) {
+    const beforeItems = Array.isArray(before) ? before : [];
+    const beforeById = new Map<string, unknown>();
+    beforeItems.forEach((item) => {
+      const id = getItemId(item);
+      if (id) beforeById.set(id, item);
+    });
+
+    after.forEach((item, index) => {
+      const id = getItemId(item);
+      collectChangedDateRanges(id ? beforeById.get(id) : beforeItems[index], item, snippets);
+    });
+    return;
+  }
+
+  if (!after || typeof after !== "object") return;
+
+  const afterRecord = after as Record<string, unknown>;
+  const beforeRecord = before && typeof before === "object" ? before as Record<string, unknown> : {};
+  const afterRange = formatDateRange(afterRecord);
+  const beforeRange = formatDateRange(beforeRecord);
+  if (afterRange && afterRange !== beforeRange) snippets.push(afterRange);
+
+  Object.entries(afterRecord).forEach(([key, value]) => {
+    if (key === "id" || key === "photo") return;
+    collectChangedDateRanges(beforeRecord[key], value, snippets);
+  });
+}
+
 function getAddedTextSnippets(change: AgentChange): string[] {
   const beforeParts: string[] = [];
   const afterParts: string[] = [];
+  const dateRangeParts: string[] = [];
   collectStrings(change.before, beforeParts);
   collectStrings(change.after, afterParts);
+  collectChangedDateRanges(change.before, change.after, dateRangeParts);
 
   const previous = new Map<string, number>();
   beforeParts.forEach((part) => previous.set(part, (previous.get(part) ?? 0) + 1));
 
-  return afterParts
+  const addedParts = afterParts
     .filter((part) => {
       const count = previous.get(part) ?? 0;
       if (count > 0) {
@@ -48,7 +96,9 @@ function getAddedTextSnippets(change: AgentChange): string[] {
         return false;
       }
       return part.length > 1;
-    })
+    });
+
+  return Array.from(new Set([...dateRangeParts, ...addedParts]))
     .sort((a, b) => b.length - a.length)
     .slice(0, 40);
 }

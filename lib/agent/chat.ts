@@ -14,6 +14,7 @@ import coverLetterExampleEn from "@/examples/cover-letter-example-en.json";
 import { createTools, type ClarificationRequest, type DocType } from "./tools";
 import type { LLMConfig } from "./config";
 import type { AgentChange } from "./change-tracking";
+import { buildReferenceContext, type AgentContextSource } from "./context-sources";
 
 export interface Message {
   role: "user" | "assistant";
@@ -37,6 +38,7 @@ interface RunAgentStreamParams<TContent> {
   onContentUpdate: (updated: TContent, toolName: string) => void;
   history: Message[];
   userMessage: string;
+  referenceSources?: AgentContextSource[];
   signal?: AbortSignal;
   onTextChunk: (chunk: string) => void;
   onStatusChange?: (status: AgentStatus | null) => void;
@@ -45,6 +47,7 @@ interface RunAgentStreamParams<TContent> {
 }
 
 const MAX_AGENT_LOOPS = 6;
+const MAX_CLARIFICATION_ROUNDS = 2;
 const DOCUMENT_CONTEXT_MAX_CHARS = 12000;
 const COMPACT_TRANSCRIPT_MAX_CHARS = 16000;
 
@@ -62,14 +65,22 @@ const MODEL_CONTEXT_WINDOWS: Array<[RegExp, number]> = [
 ];
 
 const RESUME_CRAFT_RULES = `## Professional Resume/CV Craft Rules
-- **Section item order:** Within dated sections, order entries reverse-chronologically by end date, then start date. Current/ongoing entries come first. For example, a 2025-2026 master's degree should appear before a 2021-2025 bachelor's degree.
+- **Section item order:** Within dated sections, order entries reverse chronologically by end date, then start date. Current or ongoing entries come first. For example, a 2025 to 2026 master's degree should appear before a 2021 to 2025 bachelor's degree.
 - **Education:** Keep institution names official, and separate degree from field of study when possible. In standalone education degree fields, prefer standard CV credential abbreviations when they are widely recognized and match the examples: "MSc in ...", "BSc in ...", "PhD in ...", "MEng in ...", "BEng in ...", "MA in ...", "BA in ...", "LLM", "LLB", "MBA". Use full degree names in prose paragraphs or when there is no clear standard abbreviation, and respect explicit user requests for full forms. Do not add coursework, GPA, honors, thesis, or awards unless the user provides them.
 - **Experience and projects:** Prefer concise accomplishment bullets that start with strong verbs, name tools/methods when relevant, and include scope or measurable impact when the user provides enough evidence.
 - **Skills:** Group skills by practical categories, keep each group scannable, and avoid duplicates or vague filler.
 - **Professional polish:** Keep wording concise, consistent, and ATS-friendly. Preserve the document language and formatting style shown in the current document and examples.`;
 
+const WHOLE_CV_POLISH_RULES = `## Whole CV Polish Workflow
+- When the user asks to polish, improve, rewrite, refine, optimize, or enhance the whole resume/CV, treat it as a general-purpose polish request unless they explicitly provide a target role, target program, institution, company, or application direction.
+- Do not call \`ask_user\` just to ask for a target role, target program, preferred direction, or application goal. Proceed with the current document and available reference context.
+- For whole-document polish, cross-section edits are allowed. The section-scoped clarification rule applies only when the user explicitly scopes the task to one section.
+- Preserve facts, dates, ordering, section visibility, document language, and formatting style. Improve clarity, grammar, concision, consistency, action verbs, ATS/readability, and formatting density.
+- Do not invent achievements, metrics, awards, skills, publications, projects, companies, education details, or personal facts.
+- Only ask a blocking question if the requested whole-document edit cannot be safely completed without a missing factual detail, not because a target is absent.`;
+
 const INFERENCE_RULES = `## Inference and Disclosure Rules
-- You may make **high-confidence, low-risk inferences** to normalize incomplete user wording into professional resume/CV values. Examples: "Huddersfield" in an education context -> "University of Huddersfield"; "Imperial" with London/master context -> "Imperial College London"; a well-known institution/company -> its precise city/country location.
+- You may make **high-confidence, low-risk inferences** to normalize incomplete user wording into professional resume/CV values. Examples: "Huddersfield" in an education context means "University of Huddersfield"; "Imperial" with London and master's context means "Imperial College London"; a well-known institution or company can imply its precise city and country location.
 - Only infer stable public facts or obvious formatting normalizations. Do not infer high-risk personal facts such as GPA, grades, honors, awards, thesis title, exact job title, employment dates, project impact, publication details, salary, visa status, or skills the user did not provide.
 - When confidence is low or the missing/ambiguous detail would materially affect the document, call \`ask_user\` with one focused question instead of updating that field. Do not call document update tools in the same turn for the uncertain field.
 - If you write an inferred or normalized value into the document, call \`record_inference\` with the original wording, inferred value, field, and reason before or alongside the update tool.
@@ -78,18 +89,155 @@ const INFERENCE_RULES = `## Inference and Disclosure Rules
 const CLARIFICATION_RULES = `## Blocking Clarification Workflow
 - Only use \`ask_user\` during the clarification phase of the user's original task, when they gave partial structured information and a required detail is missing, ambiguous, and cannot be safely inferred.
 - Do not use \`ask_user\` for every improvement, optional detail, minor blank field, style preference, or nice-to-have polish. If the document can be accurately updated by omitting the detail, update it and mention the omission in the final reply.
+- Treat the user's requested section as the strict working scope. If the user asks to modify one section, every \`ask_user\` question must be only about that section and must not ask for missing information from any other section.
+- Do not use \`ask_user\` to broaden the task. For example, if the user asks to improve Projects, do not ask about Education, Experience, Skills, Personal Info, or unrelated profile details.
+- When calling \`ask_user\`, set \`section\` and \`field\` to the requested section or a field inside it whenever the user's request is section-specific.
+- If useful information is missing outside the requested section, ignore it for this turn unless the user explicitly asked to update that other section.
+- If the user asks for a whole document or multi section edit, do not use \`ask_user\`. Continue with safe edits or ask in normal chat.
 - Ask one small question at a time. You may ask multiple sequential questions only when each answer resolves a necessary missing detail for the same original task.
 - Once the necessary details for a professional entry are available, stop calling \`ask_user\`, call the document update tools, and give a normal completion reply.
 - Use 2-3 choices only when they are natural short answers. Otherwise omit choices so the user can type a custom answer.
-- Education examples: institutions are provided but degree/program or graduation year/date is missing -> call \`ask_user\` for the next missing core detail before \`set_education\`. Infer stable institution locations when high-confidence; ask location only when it is required and not inferable.
-- Experience examples: organization is provided but role/title or dates are missing -> call \`ask_user\` for the next missing core detail before \`set_experience\` unless the user explicitly asks for a placeholder.
-- Project examples: project name is provided but the user's role, dates, or impact is essential to the requested update -> call \`ask_user\` for the next missing core detail before \`set_projects\`.
-- Academic examples: publication or presentation title is provided but venue, year, authorship, or status is essential -> call \`ask_user\` for the next missing core detail before the relevant update tool.
-- Cover letter examples: target role, company, sender identity, or required recipient details are missing and cannot be safely omitted -> call \`ask_user\` for the next missing core detail before updating the letter.`;
+- Education examples: institutions are provided but degree/program or graduation year/date is missing, call \`ask_user\` for the next missing core detail before \`set_education\`. Infer stable institution locations when high-confidence; ask location only when it is required and not inferable.
+- Experience examples: organization is provided but role/title or dates are missing, call \`ask_user\` for the next missing core detail before \`set_experience\` unless the user explicitly asks for a placeholder.
+- Project examples: project name is provided but the user's role, dates, or impact is essential to the requested update, call \`ask_user\` for the next missing core detail before \`set_projects\`.
+- Academic examples: publication or presentation title is provided but venue, year, authorship, or status is essential, call \`ask_user\` for the next missing core detail before the relevant update tool.
+- Cover letter examples: target role, company, sender identity, or required recipient details are missing and cannot be safely omitted, call \`ask_user\` for the next missing core detail before updating the letter.`;
 
 const RESPONSE_FORMAT_RULES = `## Response Formatting
 - Use normal Markdown for readable replies.
 - If you use a Markdown table, each row must be on its own line, including the header separator row. Never inline multiple table rows in one paragraph.`;
+
+const LANGUAGE_STYLE_RULES = `## Language Style
+- Keep all user-facing writing professional, clear, concise, and direct.
+- Do not use dash punctuation in prose. Use commas, periods, semicolons, or parentheses instead.
+- Keep sentences compact and avoid unnecessary filler.`;
+
+type ClarificationScope =
+  | { allowAskUser: true; section?: string }
+  | { allowAskUser: false; reason: string };
+
+const SECTION_PATTERNS: Array<{ section: string; pattern: RegExp }> = [
+  {
+    section: "personal",
+    pattern: /\b(personal|contact|profile|name|email|phone|address|website|linkedin)\b|个人|联系方式|姓名|邮箱|电话|地址|网站/i,
+  },
+  {
+    section: "summary",
+    pattern: /\b(summary|profile|objective|about me|professional statement)\b|简介|总结|概述|职业目标/i,
+  },
+  {
+    section: "education",
+    pattern: /\b(education|university|college|school|degree|bsc|msc|phd|meng|beng|graduat|huddersfield|imperial)\b|教育|学历|学位|毕业|大学|学校|本科|硕士|博士/i,
+  },
+  {
+    section: "experience",
+    pattern: /\b(experience|employment|work|worked|company|role|title|position|job|internship)\b|工作|经历|实习|公司|职位|岗位/i,
+  },
+  {
+    section: "projects",
+    pattern: /\b(project|projects|portfolio|github|demo)\b|项目|作品|项目经历/i,
+  },
+  {
+    section: "skills",
+    pattern: /\b(skill|skills|technical stack|tech stack|programming language|tooling)\b|技能|技术栈|工具/i,
+  },
+  {
+    section: "awards",
+    pattern: /\b(award|awards|honou?r|scholarship|prize)\b|奖项|荣誉|奖学金/i,
+  },
+  {
+    section: "research",
+    pattern: /\b(research interests|research experience|research)\b|研究兴趣|研究经历|研究方向/i,
+  },
+  {
+    section: "teaching",
+    pattern: /\b(teaching|course instructor|teaching assistant|ta)\b|教学|助教/i,
+  },
+  {
+    section: "publications",
+    pattern: /\b(publication|publications|paper|journal|manuscript|citation)\b|论文|发表|期刊|审稿/i,
+  },
+  {
+    section: "presentations",
+    pattern: /\b(presentation|conference|talk|poster)\b|会议展示|报告|海报/i,
+  },
+  {
+    section: "service",
+    pattern: /\b(service|reviewer|committee|professional service)\b|学术服务|审稿|委员会/i,
+  },
+  {
+    section: "references",
+    pattern: /\b(reference|references|referee)\b|推荐人|推荐信/i,
+  },
+  {
+    section: "cover-letter",
+    pattern: /\b(cover letter|sender|recipient|hiring manager|target role)\b|求职信|发件人|收件人|招聘/i,
+  },
+];
+
+function uniqueValues(values: string[]): string[] {
+  return Array.from(new Set(values));
+}
+
+function extractClarificationSectionScope(userMessage: string): string | undefined {
+  return userMessage.match(/^Clarification section scope:\s*(.+)$/im)?.[1]?.trim();
+}
+
+function extractClarificationRound(userMessage: string): number | undefined {
+  const rawRound = userMessage.match(/^Clarification round:\s*(\d+)$/im)?.[1];
+  if (!rawRound) return undefined;
+
+  const round = Number.parseInt(rawRound, 10);
+  return Number.isFinite(round) ? round : undefined;
+}
+
+function isWholeDocumentRequest(userMessage: string): boolean {
+  return /\b(whole|entire|full|overall|all sections|across sections)\s+(cv|resume|academic cv|document)\b/i.test(userMessage) ||
+    /\b(cv|resume|academic cv|document)\s+(as a whole|overall|entirely)\b/i.test(userMessage) ||
+    /\b(polish|improve|rewrite|refine|optimi[sz]e|enhance|proofread)\b[\s\S]*\b(whole|entire|full|overall|all sections|cv|resume|academic cv|document)\b/i.test(userMessage) ||
+    /整(个|份)(简历|履历|cv|文档)|全文|所有(模块|部分|section|sections)|润色(整个|整份|全文)|(整个|整份)(简历|履历|cv|文档).*润色/i.test(userMessage);
+}
+
+function detectRequestedSections(userMessage: string): string[] {
+  return uniqueValues(
+    SECTION_PATTERNS
+      .filter(({ pattern }) => pattern.test(userMessage))
+      .map(({ section }) => section)
+  );
+}
+
+function resolveClarificationScope(docType: DocType, userMessage: string): ClarificationScope {
+  const clarificationRound = extractClarificationRound(userMessage);
+  if (clarificationRound !== undefined && clarificationRound >= MAX_CLARIFICATION_ROUNDS) {
+    return {
+      allowAskUser: false,
+      reason: "The clarification round limit has been reached.",
+    };
+  }
+
+  const continuationScope = extractClarificationSectionScope(userMessage);
+  if (continuationScope) return { allowAskUser: true, section: continuationScope };
+
+  if (docType !== "cover-letter" && isWholeDocumentRequest(userMessage)) {
+    return {
+      allowAskUser: false,
+      reason: "The user requested a whole document or multi section task.",
+    };
+  }
+
+  const requestedSections = detectRequestedSections(userMessage);
+  if (requestedSections.length > 1) {
+    return {
+      allowAskUser: false,
+      reason: "The user requested more than one section.",
+    };
+  }
+
+  return {
+    allowAskUser: true,
+    section: requestedSections[0],
+  };
+}
 
 function buildSystemPrompt(docType: DocType): string {
   if (docType === "resume") {
@@ -117,17 +265,21 @@ Example flow:
 - **Do not guess missing fields just to satisfy a tool schema.** If a core field is unknown, call \`ask_user\` before updating that structured item.
 - **Location precision:** if a location can be inferred with high confidence from a well-known institution/company/place name, use the full project style (English: "City, Country/Region", e.g. "London, UK"; Chinese: "国家, 城市", e.g. "中国, 北京"). If confidence is not high, leave the location empty and ask.
 - **Use action-verb language** for descriptions (e.g. "Led", "Developed", "Designed", "Improved") when writing bullet points
-- **Dates:** Accept any reasonable format (e.g. "3 years ago", "2023–2024", "Sept 2023 - Present") and normalize to brief format
+- **Dates:** Accept any reasonable format, such as "3 years ago", "2023 to 2024", or "Sept 2023 to Present", and normalize to brief format
 - **Descriptions:** Help expand vague statements into concrete accomplishments with measurable impact when possible
 - **Call \`ask_user\`** only when information is ambiguous or critical details are missing and cannot be safely inferred or omitted
 
 ${RESUME_CRAFT_RULES}
+
+${WHOLE_CV_POLISH_RULES}
 
 ${INFERENCE_RULES}
 
 ${CLARIFICATION_RULES}
 
 ${RESPONSE_FORMAT_RULES}
+
+${LANGUAGE_STYLE_RULES}
 
 ## Available Sections
 Personal Info (name, email, phone, location, website), Summary, Experience, Education, Skills, Projects, Awards.
@@ -137,7 +289,7 @@ Only add sections with content. Never create empty sections.
 - For array fields (experience, education, skills, etc.): provide complete, well-formed data structures
 - Always include required fields; optional fields can be omitted
 - If the user hasn't provided enough core detail for a structured tool call, call \`ask_user\` for the next missing required detail first
-- When adding an entry with partial information, keep minor unknown optional details blank instead of inventing them. If a core detail is missing, call \`ask_user\` one small question at a time before updating. Example: school known but degree/date unknown -> ask degree/program first, then date only if still needed, then update education after the user answers.
+- When adding an entry with partial information, keep minor unknown optional details blank instead of inventing them. If a core detail is missing, call \`ask_user\` one small question at a time before updating. Example: school known but degree/date unknown means ask degree/program first, then date only if still needed, then update education after the user answers.
 - When you need tools, call them first without narrating the tool execution. After all tools finish, respond with a concise result for the user.
 - Always reply to the user after each request. Keep final replies short, clear, and useful: usually 1-2 sentences unless the user asks for detail.
 
@@ -164,17 +316,21 @@ Example: User mentions a publication title without venue or year. You call \`ask
 - **Location precision:** if a location can be inferred with high confidence from a well-known institution/conference/place name, use the full project style (English: "City, Country/Region", e.g. "Oxford, UK"; Chinese: "国家, 城市", e.g. "中国, 北京"). If confidence is not high, leave the location empty and ask.
 - **Personal address fields:** academic CV personal information uses addressLine1/addressLine2/addressLine3, not a single location field. Put a city/country personal address into addressLine1 unless the user provides multiple address lines.
 - **Citations:** Accept any citation format the user provides; clarify abbreviations if unclear
-- **Dates:** Accept flexible formats and normalize (e.g. "2023–2024", "Summer 2023")
+- **Dates:** Accept flexible formats and normalize, such as "2023 to 2024" or "Summer 2023"
 - **Research descriptions:** Help articulate research contributions and methodologies
 - **Call \`ask_user\`** only when information is incomplete or ambiguous and should block the next edit because it cannot be safely inferred or omitted
 
 ${RESUME_CRAFT_RULES}
+
+${WHOLE_CV_POLISH_RULES}
 
 ${INFERENCE_RULES}
 
 ${CLARIFICATION_RULES}
 
 ${RESPONSE_FORMAT_RULES}
+
+${LANGUAGE_STYLE_RULES}
 
 ## Available Sections
 Personal Info (name, email, phone, address lines, website), Research Interests, Education, Research Experience, Teaching Experience, Industry Experience, Publications, Manuscripts Under Review, Conference Presentations, Grants & Awards, Professional Service, Technical Skills, References.
@@ -183,7 +339,7 @@ Personal Info (name, email, phone, address lines, website), Research Interests, 
 - For array fields: provide complete, well-formed structures
 - Include required fields; optional fields can be omitted
 - If you lack core detail, call \`ask_user\` for the next missing required detail before making a structured update tool call
-- When adding an entry with partial information, keep minor unknown optional details blank instead of inventing them. If a core detail is missing, call \`ask_user\` one small question at a time before updating. Example: institution known but dates/degree unknown -> ask degree/program first, then date only if still needed, then update education after the user answers.
+- When adding an entry with partial information, keep minor unknown optional details blank instead of inventing them. If a core detail is missing, call \`ask_user\` one small question at a time before updating. Example: institution known but dates/degree unknown means ask degree/program first, then date only if still needed, then update education after the user answers.
 - When you need tools, call them first without narrating the tool execution. After all tools finish, respond with a concise result for the user.
 - Always reply to the user after each request. Keep final replies short, clear, and useful: usually 1-2 sentences unless the user asks for detail.
 
@@ -208,13 +364,15 @@ Example: User asks for a cover letter but gives only a company name and no targe
 - **Do not guess missing sender, recipient, address, or role details.** If a core detail is unknown and needed, call \`ask_user\` before updating.
 - **Low-confidence details:** when a missing or ambiguous detail is important enough that the letter would be wrong without it, call \`ask_user\` instead of guessing or updating that field.
 - **Tone:** Professional, warm, and conversational (not stuffy)
-- **Length:** Concise and impactful — 3–4 short paragraphs covering: why you're interested, relevant qualifications, why you're a fit, call to action
+- **Length:** Concise and impactful. Use 3 to 4 short paragraphs covering why you're interested, relevant qualifications, why you're a fit, and the call to action.
 - **Personalization:** Encourage the user to reference specific company details, role requirements, and concrete examples
 - **Call \`ask_user\`** only when information is vague or key details are missing and should block the next edit because they cannot be safely inferred or omitted
 
 ${CLARIFICATION_RULES}
 
 ${RESPONSE_FORMAT_RULES}
+
+${LANGUAGE_STYLE_RULES}
 
 ## Available Sections
 Sender info (name, address), Recipient info (name, salutation, address), Body paragraphs, Date.
@@ -284,19 +442,30 @@ function buildFallbackCompletion(toolNames: string[], userMessage: string, infer
 
   if (zh) {
     const completion = changed ? `已完成，已更新${changed}。` : "已完成。";
-    return inferenceDisclosure ? `${completion}${inferenceDisclosure}` : completion;
+    return sanitizeUserFacingText(inferenceDisclosure ? `${completion}${inferenceDisclosure}` : completion);
   }
 
   const completion = changed ? `Done. I updated your ${changed}.` : "Done.";
-  return inferenceDisclosure ? `${completion} ${inferenceDisclosure}` : completion;
+  return sanitizeUserFacingText(inferenceDisclosure ? `${completion} ${inferenceDisclosure}` : completion);
+}
+
+function sanitizeUserFacingText(text: string): string {
+  return text
+    .replace(/^(\s*)-\s+/gm, "$1* ")
+    .replace(/\s*->\s*/g, " to ")
+    .replace(/\s*[—–]\s*/g, ", ")
+    .replace(/\s+([,.;:!?，。；：！？])/g, "$1")
+    .replace(/([,，])\s*([。.!?！？])/g, "$2")
+    .trim();
 }
 
 function withInferenceDisclosure(content: string, inferenceNotes: string[], userMessage: string): string {
-  if (inferenceNotes.length === 0) return content;
-  if (/\binfer|\bnormaliz|\bnormalis|推断|推理|规范化/.test(content.toLowerCase())) return content;
+  const sanitizedContent = sanitizeUserFacingText(content);
+  if (inferenceNotes.length === 0) return sanitizedContent;
+  if (/\binfer|\bnormaliz|\bnormalis|推断|推理|规范化/.test(sanitizedContent.toLowerCase())) return sanitizedContent;
 
   const disclosure = formatInferenceDisclosure(inferenceNotes, isLikelyChinese(userMessage));
-  return disclosure ? `${content.trim()}\n\n${disclosure}` : content;
+  return disclosure ? `${sanitizedContent}\n\n${sanitizeUserFacingText(disclosure)}` : sanitizedContent;
 }
 
 function normalizeClarificationRequest(args: unknown): ClarificationRequest {
@@ -306,11 +475,11 @@ function normalizeClarificationRequest(args: unknown): ClarificationRequest {
     : undefined;
 
   return {
-    question: String(arg?.question ?? "").trim() || "Could you clarify this detail?",
-    reason: String(arg?.reason ?? "").trim() || "This detail is ambiguous and should not be guessed.",
+    question: sanitizeUserFacingText(String(arg?.question ?? "").trim()) || "Could you clarify this detail?",
+    reason: sanitizeUserFacingText(String(arg?.reason ?? "").trim()) || "This detail is ambiguous and should not be guessed.",
     field: arg?.field ? String(arg.field).trim() : undefined,
     section: arg?.section ? String(arg.section).trim() : undefined,
-    choices,
+    choices: choices?.map(sanitizeUserFacingText),
   };
 }
 
@@ -491,7 +660,7 @@ Missing information policy:
 - If a tool field is unknown, omit it when optional or use an empty string.
 - For missing core structured fields that are required for the original task and cannot be inferred or safely omitted, call \`ask_user\` instead of asking only in assistant text.
 - Ask one focused question for the next most important missing detail. Do not ask for optional details just because a field exists.
-- You may infer common public facts only when highly confident and specific. For example, "Imperial College London" -> "London, UK"; avoid vague values like "UK" when the city is knowable.
+- You may infer common public facts only when highly confident and specific. For example, "Imperial College London" implies "London, UK"; avoid vague values like "UK" when the city is knowable.
 - If a missing or ambiguous detail is too important to leave blank and not safe to infer, call \`ask_user\` before updating that field.
 - Once the necessary details are available, stop asking and update the document.
 - If you write inferred or normalized information, use \`record_inference\` and mention the inference in your final reply.
@@ -520,11 +689,13 @@ export function estimateAgentContextUsage<TContent>({
   docType,
   content,
   history,
+  referenceSources,
 }: {
   model: string;
   docType: DocType;
   content: TContent;
   history: Message[];
+  referenceSources?: AgentContextSource[];
 }): AgentContextUsage {
   const serializedHistory = history
     .filter((message) => message.kind !== "change-card")
@@ -540,6 +711,7 @@ export function estimateAgentContextUsage<TContent>({
     buildSystemPrompt(docType),
     buildDocumentContext(docType, content),
     buildExampleStyleContext(docType, content),
+    buildReferenceContext(referenceSources) ?? "",
     serializedHistory,
   ].join("\n\n");
   const usedTokens = estimateTokens(contextText) + history.length * 6 + 256;
@@ -636,6 +808,7 @@ export async function runAgentStream<TContent>(
     onContentUpdate,
     history,
     userMessage,
+    referenceSources,
     signal,
     onTextChunk,
     onStatusChange,
@@ -658,12 +831,29 @@ export async function runAgentStream<TContent>(
     },
     onClarification
   );
+  const clarificationScope = resolveClarificationScope(docType, userMessage);
   const systemPrompt = buildSystemPrompt(docType);
   const documentContext = buildDocumentContext(docType, getContent());
   const exampleStyleContext = buildExampleStyleContext(docType, getContent(), userMessage);
+  const referenceContext = buildReferenceContext(referenceSources);
+  const clarificationScopeContext = clarificationScope.allowAskUser
+    ? [
+        "Current request clarification scope:",
+        clarificationScope.section
+          ? `The user request is scoped to the ${clarificationScope.section} section. If ask_user is needed, ask only about that section.`
+          : "No explicit section was detected. Use ask_user only for a required missing detail from the user's original structured edit.",
+      ].join("\n")
+    : [
+        "Current request clarification scope:",
+        `Do not call ask_user for this turn. Reason: ${clarificationScope.reason}`,
+        "If details are missing, proceed with safe edits, omit uncertain facts, or ask in normal chat without opening the clarification dialog.",
+      ].join("\n");
 
   // Build tool definitions for OpenAI API
-  const toolDefs = tools.map((tool) => ({
+  const availableTools = clarificationScope.allowAskUser
+    ? tools
+    : tools.filter((tool) => tool.name !== "ask_user");
+  const toolDefs = availableTools.map((tool) => ({
     type: "function" as const,
     function: {
       name: tool.name,
@@ -677,6 +867,8 @@ export async function runAgentStream<TContent>(
     { role: "system", content: systemPrompt },
     { role: "system", content: documentContext },
     { role: "system", content: exampleStyleContext },
+    { role: "system", content: clarificationScopeContext },
+    ...(referenceContext ? [{ role: "system" as const, content: referenceContext }] : []),
     ...history.filter((msg) => msg.kind !== "change-card").map((msg): ChatCompletionMessageParam => {
       if (msg.kind === "context-summary") {
         return {
@@ -828,7 +1020,7 @@ export async function runAgentStream<TContent>(
         }
       } else if (assistantContent) {
         onStatusChange?.(null);
-        const textClarification = onClarification
+        const textClarification = onClarification && clarificationScope.allowAskUser
           ? buildClarificationFromAssistantText(assistantContent, userMessage)
           : null;
 
@@ -850,7 +1042,7 @@ export async function runAgentStream<TContent>(
         // No more tool calls, agent is done
         break;
       } else {
-        // No text and no tool calls — this shouldn't happen, but break anyway
+        // No text and no tool calls. Break defensively.
         break;
       }
     }
