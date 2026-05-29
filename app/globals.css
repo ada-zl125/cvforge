@@ -559,8 +559,12 @@ button.editor-dialog-action:not(:disabled):hover {
 .agent-mode-toggle-button-active {
   border-color: rgb(0 0 0 / 0.1) !important;
   background: transparent !important;
-  color: var(--muted-foreground) !important;
+  color: var(--foreground) !important;
   box-shadow: none;
+}
+
+.agent-mode-toggle-button-active svg {
+  color: var(--foreground) !important;
 }
 
 .agent-mode-toggle-button-active:not(:disabled):hover,
