@@ -79,6 +79,7 @@ export function AcademicEditorContent() {
           ? (
             <ChatPanel
               docType="academic-cv"
+              documentLanguage={state.language}
               content={state.content}
               onChange={setAcademicContent}
               onReviewChange={setReviewChange}

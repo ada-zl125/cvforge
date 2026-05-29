@@ -74,6 +74,7 @@ export function CoverLetterEditorContent() {
           ? (
             <ChatPanel
               docType="cover-letter"
+              documentLanguage="en"
               content={state.content}
               onChange={setCoverLetterContent}
               onReviewChange={setReviewChange}
