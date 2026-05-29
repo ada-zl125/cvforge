@@ -356,6 +356,8 @@ function ChangeCard({
   onUndo,
   onReview,
   reviewLabel,
+  undoLabel,
+  undoUnavailableTitle,
 }: {
   change: AgentChange;
   latestChangeId?: string;
@@ -363,6 +365,8 @@ function ChangeCard({
   onUndo: (change: AgentChange) => void;
   onReview: (change: AgentChange) => void;
   reviewLabel: string;
+  undoLabel: string;
+  undoUnavailableTitle: string;
 }) {
   const isLatest = change.id === latestChangeId;
   return (
@@ -383,10 +387,10 @@ function ChangeCard({
           className="h-7 gap-1 px-2 text-xs"
           onClick={() => onUndo(change)}
           disabled={!isLatest || !canUndo}
-          title={!isLatest || !canUndo ? "Undo is only available for the latest unchanged agent edit" : "Undo"}
+          title={!isLatest || !canUndo ? undoUnavailableTitle : undoLabel}
         >
           <RotateCcw className="size-3.5" />
-          Undo
+          {undoLabel}
         </Button>
         <Button
           variant="ghost"
@@ -1290,6 +1294,8 @@ export function ChatPanel<TContent>({
                     onUndo={handleUndoChange}
                     onReview={handleReviewChange}
                     reviewLabel={agentTr.reviewChange}
+                    undoLabel={agentTr.undoChange}
+                    undoUnavailableTitle={agentTr.undoChangeUnavailable}
                   />
                 );
               }
@@ -1497,7 +1503,7 @@ export function ChatPanel<TContent>({
                     : "cursor-pointer"
                 }`}
               >
-                Click here to upload files
+                {tr.uploadFilesCta}
                 <input
                   type="file"
                   multiple

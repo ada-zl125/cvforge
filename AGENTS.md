@@ -48,7 +48,7 @@ Descriptions should be:
 
 Examples:
 
-- Add initial support for agent mode.
+- `git commit -m "Add #xxx: initial support for agent mode."`
 - Refactor edit page layout and simplify component structure.
 - Fix CI failure caused by missing environment variables.
 

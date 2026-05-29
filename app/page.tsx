@@ -43,9 +43,9 @@ function GithubIcon({ className }: { className?: string }) {
   );
 }
 
-const LANGUAGE_OPTIONS: { value: ResumeLanguage; label: string }[] = [
-  { value: "en", label: "English" },
-  { value: "zh", label: "中文" },
+const LANGUAGE_OPTIONS: { value: ResumeLanguage }[] = [
+  { value: "en" },
+  { value: "zh" },
 ];
 
 const GITHUB_REPO = "ada-zl125/cvforge";
@@ -164,12 +164,12 @@ function CreateDialog({
                       docLang === opt.value ? "entry-dialog-language-active" : "text-muted-foreground"
                     }`}
                   >
-                    {opt.label}
+                    {opt.value === "en" ? tr.langEnglish : tr.langChinese}
                   </button>
                 ))
               ) : (
                 <span className="entry-dialog-language-active cursor-default rounded-lg px-3 py-2 text-sm font-medium">
-                  English
+                  {tr.langEnglish}
                 </span>
               )}
             </div>
@@ -276,7 +276,7 @@ export default function EntryPage() {
 
       {/* Header */}
       <header className="relative z-10 flex items-center justify-between px-8 py-5 lg:px-12">
-        <Link href="/" className="inline-flex items-center bg-transparent transition duration-300 hover:scale-[1.015] hover:opacity-80" aria-label="CVForge home">
+        <Link href="/" className="inline-flex items-center bg-transparent transition duration-300 hover:scale-[1.015] hover:opacity-80" aria-label={lang === "zh" ? "CVForge 首页" : "CVForge home"}>
           <Image
             src={LOGO_SRC}
             alt="CVForge"

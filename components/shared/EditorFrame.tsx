@@ -5,6 +5,8 @@ import { ChevronLeft, ChevronRight, RotateCcw, Maximize2, Minimize2 } from "luci
 import AnimatedContent from "@/components/AnimatedContent";
 import FadeContent from "@/components/FadeContent";
 import { Button } from "@/components/ui/button";
+import { useUILanguage } from "@/lib/ui-language";
+import { t } from "@/lib/translations";
 
 interface EditorFrameProps {
   toolbar: React.ReactNode;
@@ -28,6 +30,8 @@ export function EditorFrame({
   form,
   preview,
 }: EditorFrameProps) {
+  const { lang } = useUILanguage();
+  const tr = t[lang];
   const contentRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef({ pointerOffset: 0, dividerMarginStart: 0 });
   const [prefs, setPrefs] = useState<LayoutPrefs>(() => ({
@@ -175,7 +179,7 @@ export function EditorFrame({
                 size="icon-xs"
                 onClick={toggleLeftCollapse}
                 className="h-6 w-6 text-muted-foreground hover:text-foreground"
-                title="Collapse left panel"
+                title={tr.collapseLeftPanel}
               >
                 <ChevronLeft className="size-4" />
               </Button>
@@ -186,7 +190,7 @@ export function EditorFrame({
                   size="icon-xs"
                   onClick={toggleMaximizeLeft}
                   className="h-6 w-6 text-muted-foreground hover:text-foreground"
-                  title={rightCollapsed ? "Restore split layout" : "Maximize left panel"}
+                  title={rightCollapsed ? tr.restoreSplitLayout : tr.maximizeLeftPanel}
                 >
                   {rightCollapsed ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
                 </Button>
@@ -195,7 +199,7 @@ export function EditorFrame({
                   size="icon-xs"
                   onClick={resetLayout}
                   className="h-6 w-6 text-muted-foreground hover:text-foreground"
-                  title="Reset layout"
+                  title={tr.resetLayout}
                 >
                   <RotateCcw className="size-4" />
                 </Button>
@@ -215,7 +219,7 @@ export function EditorFrame({
               size="icon-xs"
               onClick={toggleLeftCollapse}
               className="h-6 w-6 text-muted-foreground hover:text-foreground"
-              title="Expand left panel"
+              title={tr.expandLeftPanel}
             >
               <ChevronRight className="size-4" />
             </Button>
@@ -255,7 +259,7 @@ export function EditorFrame({
               size="icon-xs"
               onClick={toggleRightCollapse}
               className="h-6 w-6 text-muted-foreground hover:text-foreground"
-              title="Expand right panel"
+              title={tr.expandRightPanel}
             >
               <ChevronLeft className="size-4" />
             </Button>
