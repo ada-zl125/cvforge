@@ -38,7 +38,7 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.488 0.183 256.8);
+  --primary: oklch(0.145 0 0);
   --primary-foreground: oklch(1 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
@@ -220,6 +220,15 @@
   color: var(--foreground) !important;
 }
 
+.dialog-react-bits-surface,
+.dialog-react-bits-content {
+  width: 100%;
+}
+
+[data-slot="dialog-close"] {
+  z-index: 20;
+}
+
 .entry-dialog-action {
   border-color: rgb(0 0 0 / 0.18) !important;
   background: rgb(255 255 255 / 0.9) !important;
@@ -261,6 +270,34 @@ button.entry-dialog-action:not(:disabled):hover {
 .editor-dialog-input:focus-visible {
   border-color: rgb(0 0 0 / 0.72) !important;
   box-shadow: 0 0 0 3px rgb(0 0 0 / 0.08) !important;
+}
+
+.editor-dialog-upload-button {
+  border-color: rgb(0 0 0 / 0.14) !important;
+  background: rgb(255 255 255 / 0.9) !important;
+  color: var(--foreground);
+  transition: border-color 180ms ease-out, background-color 180ms ease-out, color 180ms ease-out, transform 180ms ease-out, box-shadow 180ms ease-out;
+}
+
+.editor-dialog-upload-button:hover {
+  border-color: rgb(0 0 0 / 0.5) !important;
+  background: rgb(246 246 245) !important;
+  box-shadow: 0 8px 22px rgb(0 0 0 / 0.06);
+}
+
+.editor-shell button:not(:disabled),
+.editor-shell a[href],
+.editor-shell label[for],
+.editor-shell input[type="button"]:not(:disabled),
+.editor-shell input[type="submit"]:not(:disabled),
+.editor-shell input[type="reset"]:not(:disabled),
+.editor-shell input[type="checkbox"]:not(:disabled),
+.editor-shell input[type="radio"]:not(:disabled),
+.editor-shell [role="button"]:not([aria-disabled="true"]),
+.editor-shell [data-slot="dropdown-menu-trigger"]:not([data-disabled]),
+.editor-shell [data-clickable="true"],
+[data-slot="dropdown-menu-item"]:not([data-disabled]) {
+  cursor: pointer !important;
 }
 
 .editor-dialog-language {
@@ -313,14 +350,15 @@ button.editor-dialog-action:not(:disabled):hover {
   color: var(--foreground) !important;
 }
 
-/* Editor form panel — section card hover: border → black, subtle lift */
+/* Editor form panel — flat, dense cards with restrained motion */
 .section-card {
-  transition: border-color 200ms ease-out, box-shadow 200ms ease-out;
+  box-shadow: none;
+  transition: border-color 160ms ease-out, background-color 160ms ease-out;
 }
 
 .section-card:hover {
-  border-color: var(--foreground) !important;
-  box-shadow: 0 2px 8px color-mix(in srgb, var(--foreground) 8%, transparent);
+  border-color: rgb(0 0 0 / 0.32) !important;
+  background: rgb(250 250 249) !important;
 }
 
 /* Entry card hover: border → black */
@@ -357,11 +395,12 @@ button.editor-dialog-action:not(:disabled):hover {
 
 /* Add-entry / add-field button hover: lift + bg */
 .add-btn {
-  transition: background-color 150ms ease-out, color 150ms ease-out, transform 150ms ease-out;
+  transition: background-color 150ms ease-out, color 150ms ease-out, transform 150ms ease-out, box-shadow 150ms ease-out;
 }
 
 .add-btn:hover {
   transform: translateY(-1px);
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--foreground) 7%, transparent);
 }
 
 /* Add Section dashed button: bold hover */
@@ -374,31 +413,222 @@ button.editor-dialog-action:not(:disabled):hover {
   box-shadow: 0 2px 8px color-mix(in srgb, var(--foreground) 8%, transparent);
 }
 
-/* Editor toolbar hover: border → black */
 .editor-toolbar {
   z-index: 20;
-  transition: border-color 200ms ease-out, box-shadow 200ms ease-out;
+  background: rgb(255 255 255 / 0.92) !important;
+  backdrop-filter: blur(16px);
+  transition: border-color 160ms ease-out, background-color 160ms ease-out;
 }
 
 .editor-toolbar:hover {
-  z-index: 40;
-  border-color: var(--foreground) !important;
-  box-shadow: 0 2px 8px color-mix(in srgb, var(--foreground) 6%, transparent);
+  border-color: rgb(0 0 0 / 0.18) !important;
+  background: rgb(255 255 255 / 0.92) !important;
 }
 
-/* Left editor form pane hover: top and right borders → black */
+.language-switcher-trigger,
+.editor-topbar-icon,
+.editor-topbar-action,
+.editor-topbar-primary-action {
+  border-color: rgb(0 0 0 / 0.1) !important;
+  background: rgb(255 255 255) !important;
+  box-shadow: none;
+  transition: border-color 160ms ease-out, background-color 160ms ease-out, color 160ms ease-out;
+}
+
+.language-switcher-trigger:hover,
+.editor-topbar-icon:hover,
+.editor-topbar-action:not(:disabled):hover,
+.editor-topbar-primary-action:not(:disabled):hover {
+  border-color: rgb(0 0 0 / 0.34) !important;
+  background: rgb(246 246 245) !important;
+}
+
+.editor-topbar-primary-action {
+  border-color: rgb(0 0 0 / 0.1) !important;
+  background: rgb(255 255 255) !important;
+  color: var(--foreground) !important;
+}
+
+.editor-topbar-primary-action:not(:disabled):hover {
+  background: rgb(246 246 245) !important;
+  color: var(--foreground) !important;
+}
+
+.language-switcher-trigger,
+.editor-topbar-action,
+.editor-topbar-primary-action {
+  border-radius: 9999px !important;
+  cursor: pointer !important;
+}
+
+.editor-topbar-back {
+  border-color: transparent !important;
+  background: transparent !important;
+  transition: background-color 160ms ease-out, color 160ms ease-out;
+}
+
+.editor-topbar-back:hover {
+  background: rgb(0 0 0 / 0.055) !important;
+}
+
+.editor-topbar-language,
+.editor-topbar-actions {
+  transition: border-color 160ms ease-out, background-color 160ms ease-out;
+}
+
+.editor-topbar-language:hover,
+.editor-topbar-actions:hover {
+  background: transparent;
+}
+
 .editor-form-pane {
   z-index: 10;
-  transition: border-color 200ms ease-out, box-shadow 200ms ease-out;
+  transition: border-color 160ms ease-out, background-color 160ms ease-out;
 }
 
 .editor-form-pane:hover {
   z-index: 30;
-  border-top-color: var(--foreground) !important;
-  border-right-color: var(--foreground) !important;
-  box-shadow: 2px 0 8px color-mix(in srgb, var(--foreground) 5%, transparent);
+  border-right-color: rgb(0 0 0 / 0.18) !important;
 }
 
+.agent-mode-toggle-button {
+  position: relative;
+  isolation: isolate;
+  min-height: 2rem !important;
+  min-width: 2rem !important;
+  cursor: pointer !important;
+  overflow: hidden;
+  border: 1px solid rgb(0 0 0 / 0.14) !important;
+  border-radius: 9999px !important;
+  background: rgb(255 255 255) !important;
+  color: var(--foreground) !important;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.7), 0 1px 2px rgb(0 0 0 / 0.04);
+  transition: border-color 180ms ease-out, background-color 180ms ease-out, color 180ms ease-out, transform 180ms ease-out, box-shadow 180ms ease-out;
+}
+
+.agent-mode-toggle-button::before {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  z-index: -1;
+  border-radius: inherit;
+  background: radial-gradient(circle, rgb(0 0 0 / 0.11), transparent 70%);
+  opacity: 0;
+  transform: scale(0.7);
+  transition: opacity 180ms ease-out, transform 180ms ease-out;
+}
+
+.agent-mode-toggle-button::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.64);
+  opacity: 1;
+}
+
+.agent-mode-toggle-button:not(:disabled):hover,
+.editor-topbar-action.agent-mode-toggle-button:not(:disabled):hover {
+  border-color: rgb(0 0 0 / 0.44) !important;
+  background: rgb(17 17 17) !important;
+  color: white !important;
+  box-shadow: 0 8px 22px rgb(0 0 0 / 0.1);
+  transform: translateY(-1px);
+}
+
+.agent-mode-toggle-button:not(:disabled):hover::before,
+.editor-topbar-action.agent-mode-toggle-button:not(:disabled):hover::before {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.agent-mode-toggle-button svg {
+  transition: transform 180ms ease-out;
+}
+
+.agent-mode-toggle-button:not(:disabled):hover svg,
+.editor-topbar-action.agent-mode-toggle-button:not(:disabled):hover svg {
+  transform: rotate(-12deg) scale(1.08);
+}
+
+.agent-mode-toggle-button-active::before {
+  opacity: 0;
+}
+
+.agent-mode-toggle-button-active {
+  border-color: rgb(0 0 0 / 0.1) !important;
+  background: transparent !important;
+  color: var(--muted-foreground) !important;
+  box-shadow: none;
+}
+
+.agent-mode-toggle-button-active:not(:disabled):hover,
+.editor-topbar-action.agent-mode-toggle-button-active:not(:disabled):hover {
+  background: rgb(0 0 0 / 0.055) !important;
+  color: var(--foreground) !important;
+  box-shadow: none;
+}
+
+.shiny-text {
+  display: inline-block;
+  color: var(--shiny-text-color, rgb(17 17 17 / 0.38));
+  background: linear-gradient(
+    var(--shiny-text-spread, 120deg),
+    var(--shiny-text-color, rgb(17 17 17 / 0.38)) 38%,
+    var(--shiny-text-shine-color, rgb(17 17 17 / 0.92)) 50%,
+    var(--shiny-text-color, rgb(17 17 17 / 0.38)) 62%
+  );
+  background-size: 260% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shiny-text var(--shiny-text-speed, 2s) linear infinite;
+  animation-delay: var(--shiny-text-delay, 0s);
+  will-change: background-position;
+}
+
+.shiny-text-disabled {
+  animation: none;
+}
+
+.shiny-text-right {
+  animation-name: shiny-text-right;
+}
+
+.shiny-text-yoyo {
+  animation-direction: alternate;
+}
+
+.shiny-text-pause-on-hover:hover {
+  animation-play-state: paused;
+}
+
+@keyframes shiny-text {
+  0% {
+    background-position: 180% 0;
+  }
+  100% {
+    background-position: -180% 0;
+  }
+}
+
+@keyframes shiny-text-right {
+  0% {
+    background-position: -180% 0;
+  }
+  100% {
+    background-position: 180% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shiny-text {
+    animation: none;
+    color: var(--shiny-text-shine-color, rgb(17 17 17 / 0.68));
+    -webkit-text-fill-color: currentColor;
+  }
+}
 /* Preview A4 area hover: border → black */
 .preview-a4 {
   transition: border-color 200ms ease-out, box-shadow 200ms ease-out;
@@ -406,5 +636,41 @@ button.editor-dialog-action:not(:disabled):hover {
 
 .preview-a4:hover {
   border-color: var(--foreground) !important;
-  box-shadow: 0 4px 16px color-mix(in srgb, var(--foreground) 8%, transparent);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--foreground) 10%, transparent);
+}
+
+.cv-streaming-print {
+  display: inline;
+  border-radius: 2px;
+  background: linear-gradient(180deg, transparent 18%, rgb(0 0 0 / 0.07) 18%, rgb(0 0 0 / 0.07) 88%, transparent 88%);
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.cv-streaming-print-char {
+  display: inline;
+  opacity: 0;
+  animation: cv-streaming-print-char 260ms ease-out forwards;
+}
+
+@keyframes cv-streaming-print-char {
+  0% {
+    opacity: 0;
+    filter: blur(2px);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cv-streaming-print {
+    background: rgb(0 0 0 / 0.07);
+  }
+
+  .cv-streaming-print-char {
+    opacity: 1;
+    animation: none;
+  }
 }

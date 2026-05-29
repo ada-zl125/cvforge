@@ -5,6 +5,8 @@ import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import FadeContent from "@/components/FadeContent"
+import SpotlightCard from "@/components/SpotlightCard"
 import { XIcon } from "lucide-react"
 
 function Dialog({ ...props }: DialogPrimitive.Root.Props) {
@@ -58,7 +60,19 @@ function DialogContent({
         )}
         {...props}
       >
-        {children}
+        <SpotlightCard
+          className="dialog-react-bits-surface rounded-[inherit]"
+          spotlightColor="rgba(0, 0, 0, 0.045)"
+        >
+          <FadeContent
+            className="dialog-react-bits-content"
+            duration={180}
+            threshold={0}
+            initialOpacity={0}
+          >
+            {children}
+          </FadeContent>
+        </SpotlightCard>
         {showCloseButton && (
           <DialogPrimitive.Close
             data-slot="dialog-close"

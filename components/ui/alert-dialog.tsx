@@ -5,6 +5,8 @@ import { AlertDialog as AlertDialogPrimitive } from "@base-ui/react/alert-dialog
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import FadeContent from "@/components/FadeContent"
+import SpotlightCard from "@/components/SpotlightCard"
 
 function AlertDialog({ ...props }: AlertDialogPrimitive.Root.Props) {
   return <AlertDialogPrimitive.Root data-slot="alert-dialog" {...props} />
@@ -40,6 +42,7 @@ function AlertDialogOverlay({
 
 function AlertDialogContent({
   className,
+  children,
   size = "default",
   ...props
 }: AlertDialogPrimitive.Popup.Props & {
@@ -56,7 +59,21 @@ function AlertDialogContent({
           className
         )}
         {...props}
-      />
+      >
+        <SpotlightCard
+          className="dialog-react-bits-surface rounded-[inherit]"
+          spotlightColor="rgba(0, 0, 0, 0.045)"
+        >
+          <FadeContent
+            className="dialog-react-bits-content"
+            duration={180}
+            threshold={0}
+            initialOpacity={0}
+          >
+            {children}
+          </FadeContent>
+        </SpotlightCard>
+      </AlertDialogPrimitive.Popup>
     </AlertDialogPortal>
   )
 }
