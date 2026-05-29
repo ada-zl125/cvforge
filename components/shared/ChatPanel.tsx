@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Send, SlidersHorizontal, Loader2, AlertCircle, Settings, Eraser, Shrink, RotateCcw, Eye, FilePenLine, WandSparkles, Square, Paperclip, LinkIcon, Trash2, Upload } from "lucide-react";
@@ -64,6 +64,7 @@ interface PendingClarification {
 }
 
 const MAX_CLARIFICATION_ROUNDS = 2;
+const INPUT_MAX_VISIBLE_ROWS = 6;
 
 export function createInitialAgentPanelState(): AgentPanelState {
   return {
@@ -434,6 +435,7 @@ export function ChatPanel<TContent>({
   const [configError, setConfigError] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputTextareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesRef = useRef(messages);
   const contentRef = useRef(content);
   const streamingTextRef = useRef("");
@@ -457,6 +459,23 @@ export function ChatPanel<TContent>({
   useEffect(() => {
     onAgentRunningChange?.(isLoading);
   }, [isLoading, onAgentRunningChange]);
+
+  useLayoutEffect(() => {
+    const textarea = inputTextareaRef.current;
+    if (!textarea) return;
+
+    const styles = window.getComputedStyle(textarea);
+    const lineHeight = Number.parseFloat(styles.lineHeight) || 20;
+    const paddingTop = Number.parseFloat(styles.paddingTop) || 0;
+    const paddingBottom = Number.parseFloat(styles.paddingBottom) || 0;
+    const borderTop = Number.parseFloat(styles.borderTopWidth) || 0;
+    const borderBottom = Number.parseFloat(styles.borderBottomWidth) || 0;
+    const maxHeight = lineHeight * INPUT_MAX_VISIBLE_ROWS + paddingTop + paddingBottom + borderTop + borderBottom;
+
+    textarea.style.height = "auto";
+    textarea.style.height = `${Math.min(textarea.scrollHeight, maxHeight)}px`;
+    textarea.style.overflowY = textarea.scrollHeight > maxHeight ? "auto" : "hidden";
+  }, [inputValue]);
 
   // Reset config when re-entering page (docType change)
   useEffect(() => {
@@ -1405,6 +1424,7 @@ export function ChatPanel<TContent>({
         ) : (
           <div className="flex gap-2">
             <textarea
+              ref={inputTextareaRef}
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={(e) => {
@@ -1415,7 +1435,7 @@ export function ChatPanel<TContent>({
               }}
               placeholder={isConfigured ? agentTr.inputPlaceholder : agentTr.disabledPlaceholder}
               disabled={isChatDisabled}
-              className="flex-1 min-h-10 max-h-24 resize-none rounded-md border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 disabled:opacity-50 focus:border-gray-600 focus:outline-none"
+              className="flex-1 min-h-10 resize-none rounded-md border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 disabled:opacity-50 focus:border-gray-600 focus:outline-none"
             />
             <Button
               size="icon-sm"
