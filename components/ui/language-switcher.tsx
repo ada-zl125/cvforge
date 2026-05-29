@@ -2,6 +2,7 @@
 
 import { Check, Languages } from "lucide-react";
 import { useUILanguage } from "@/lib/ui-language";
+import { t } from "@/lib/translations";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -16,10 +17,11 @@ interface LanguageSwitcherProps {
 
 export function LanguageSwitcher({ className = "" }: LanguageSwitcherProps) {
   const { lang, setLang } = useUILanguage();
-  const title = lang === "zh" ? "切换界面语言" : "Switch interface language";
+  const tr = t[lang];
+  const title = tr.switchInterfaceLanguage;
   const options = [
-    { value: "en" as const, label: "English" },
-    { value: "zh" as const, label: "中文" },
+    { value: "en" as const, label: tr.langEnglish },
+    { value: "zh" as const, label: tr.langChinese },
   ];
 
   return (
