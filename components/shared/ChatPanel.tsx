@@ -70,6 +70,10 @@ type ClarificationPatch<TContent> = {
   content: TContent;
   toolName: string;
 };
+type StoredAgentPanelState = Pick<
+  AgentPanelState,
+  "messages" | "pendingClarification" | "lastChange" | "contextSources"
+>;
 
 export function createInitialAgentPanelState(): AgentPanelState {
   return {
@@ -84,6 +88,46 @@ export function createInitialAgentPanelState(): AgentPanelState {
     lastChange: null,
     contextSources: [],
   };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+export function readAgentPanelSessionState(storageKey: string): AgentPanelState {
+  const initialState = createInitialAgentPanelState();
+  if (typeof window === "undefined") return initialState;
+
+  try {
+    const raw = sessionStorage.getItem(storageKey);
+    if (!raw) return initialState;
+    const parsed = JSON.parse(raw);
+    if (!isRecord(parsed)) return initialState;
+
+    return {
+      ...initialState,
+      messages: Array.isArray(parsed.messages) ? parsed.messages as Message[] : initialState.messages,
+      pendingClarification: isRecord(parsed.pendingClarification) ? parsed.pendingClarification as unknown as PendingClarification : null,
+      lastChange: isRecord(parsed.lastChange) ? parsed.lastChange as unknown as AgentChange : null,
+      contextSources: Array.isArray(parsed.contextSources) ? parsed.contextSources as AgentContextSource[] : initialState.contextSources,
+    };
+  } catch {
+    return initialState;
+  }
+}
+
+export function writeAgentPanelSessionState(storageKey: string, state: AgentPanelState): void {
+  try {
+    const storedState: StoredAgentPanelState = {
+      messages: state.messages,
+      pendingClarification: state.pendingClarification,
+      lastChange: state.lastChange,
+      contextSources: state.contextSources,
+    };
+    sessionStorage.setItem(storageKey, JSON.stringify(storedState));
+  } catch {
+    // Ignore storage quota errors.
+  }
 }
 
 interface ChatPanelProps<TContent> {

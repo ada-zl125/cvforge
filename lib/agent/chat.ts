@@ -111,7 +111,8 @@ const RESPONSE_FORMAT_RULES = `## Response Formatting
 const LANGUAGE_STYLE_RULES = `## Language Style
 - Keep all user-facing writing professional, clear, concise, and direct.
 - Do not use dash punctuation in prose. Use commas, periods, semicolons, or parentheses instead.
-- Use half-width English punctuation even in Chinese documents and Chinese replies, for example use "," and "." instead of "，" and "。".
+- In Chinese documents and Chinese replies, use the Chinese full stop "。" for sentence endings, but keep other punctuation half-width, for example use "," and ";" instead of "，" and "；".
+- In Chinese text, add one space between Chinese characters and adjacent English terms, product names, technologies, or numbers.
 - Keep sentences compact and avoid unnecessary filler.`;
 
 type ClarificationScope =
@@ -428,7 +429,7 @@ function formatInferenceDisclosure(inferenceNotes: string[], zh: boolean): strin
   if (inferenceNotes.length === 0) return "";
 
   const uniqueNotes = Array.from(new Set(inferenceNotes));
-  if (zh) return `我做了这些高把握推断: ${uniqueNotes.join("; ")}.`;
+  if (zh) return `我做了这些高把握推断: ${uniqueNotes.join("; ")}。`;
   return `I made these high-confidence inferences: ${uniqueNotes.join("; ")}.`;
 }
 
@@ -439,15 +440,15 @@ function buildFallbackCompletion(toolNames: string[], documentLanguage: Document
   const inferenceDisclosure = formatInferenceDisclosure(inferenceNotes, zh);
 
   if (zh) {
-    const completion = changed ? `已完成, 已更新${changed}.` : "已完成.";
-    return sanitizeUserFacingText(inferenceDisclosure ? `${completion}${inferenceDisclosure}` : completion);
+    const completion = changed ? `已完成, 已更新${changed}。` : "已完成。";
+    return sanitizeUserFacingText(inferenceDisclosure ? `${completion}${inferenceDisclosure}` : completion, documentLanguage);
   }
 
   const completion = changed ? `Done. I updated your ${changed}.` : "Done.";
-  return sanitizeUserFacingText(inferenceDisclosure ? `${completion} ${inferenceDisclosure}` : completion);
+  return sanitizeUserFacingText(inferenceDisclosure ? `${completion} ${inferenceDisclosure}` : completion, documentLanguage);
 }
 
-function sanitizeUserFacingText(text: string): string {
+function normalizeEnglishPunctuation(text: string): string {
   return text
     .replace(/^(\s*)-\s+/gm, "$1* ")
     .replace(/\s*->\s*/g, " to ")
@@ -479,27 +480,69 @@ function sanitizeUserFacingText(text: string): string {
     .trim();
 }
 
+function normalizeChineseDocumentPunctuation(text: string): string {
+  const hasChinese = /\p{Script=Han}/u.test(text);
+  return text
+    .replace(/^(\s*)-\s+/gm, "$1* ")
+    .replace(/\s*->\s*/g, " 到 ")
+    .replace(/\s*[—–]\s*/g, ", ")
+    .replace(/[，；：？！、（）【】“”‘’《》…]/g, (char) => ({
+      "，": ", ",
+      "；": "; ",
+      "：": ": ",
+      "？": "?",
+      "！": "!",
+      "、": ", ",
+      "（": "(",
+      "）": ")",
+      "【": "[",
+      "】": "]",
+      "“": "\"",
+      "”": "\"",
+      "‘": "'",
+      "’": "'",
+      "《": "<",
+      "》": ">",
+      "…": "...",
+    }[char] ?? char))
+    .replace(hasChinese ? /(?<![\w./@-])\.(?=\s|$)/g : /\.(?!)/g, "。")
+    .replace(hasChinese ? /(?<=[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}A-Za-z])\.(?=\s|$)/gu : /\.(?!)/g, "。")
+    .replace(/\s+([,.;:!?。])/g, "$1")
+    .replace(/([,;:])\s*/g, "$1 ")
+    .replace(/([,，])\s*([。.!?！？])/g, "$2")
+    .replace(/([\p{Script=Han}])([A-Za-z0-9][A-Za-z0-9+#./-]*)/gu, "$1 $2")
+    .replace(/([A-Za-z0-9][A-Za-z0-9+#./-]*)([\p{Script=Han}])/gu, "$1 $2")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+function sanitizeUserFacingText(text: string, documentLanguage: DocumentLanguage = "en"): string {
+  return documentLanguage === "zh"
+    ? normalizeChineseDocumentPunctuation(text)
+    : normalizeEnglishPunctuation(text);
+}
+
 function withInferenceDisclosure(content: string, inferenceNotes: string[], documentLanguage: DocumentLanguage): string {
-  const sanitizedContent = sanitizeUserFacingText(content);
+  const sanitizedContent = sanitizeUserFacingText(content, documentLanguage);
   if (inferenceNotes.length === 0) return sanitizedContent;
   if (/\binfer|\bnormaliz|\bnormalis|推断|推理|规范化/.test(sanitizedContent.toLowerCase())) return sanitizedContent;
 
   const disclosure = formatInferenceDisclosure(inferenceNotes, documentLanguage === "zh");
-  return disclosure ? `${sanitizedContent}\n\n${sanitizeUserFacingText(disclosure)}` : sanitizedContent;
+  return disclosure ? `${sanitizedContent}\n\n${sanitizeUserFacingText(disclosure, documentLanguage)}` : sanitizedContent;
 }
 
-function normalizeClarificationRequest(args: unknown): ClarificationRequest {
+function normalizeClarificationRequest(args: unknown, documentLanguage: DocumentLanguage): ClarificationRequest {
   const arg = args as Partial<ClarificationRequest> | null;
   const choices = Array.isArray(arg?.choices)
     ? arg.choices.map((choice) => String(choice).trim()).filter(Boolean)
     : undefined;
 
   return {
-    question: sanitizeUserFacingText(String(arg?.question ?? "").trim()) || "Could you clarify this detail?",
-    reason: sanitizeUserFacingText(String(arg?.reason ?? "").trim()) || "This detail is ambiguous and should not be guessed.",
+    question: sanitizeUserFacingText(String(arg?.question ?? "").trim(), documentLanguage) || "Could you clarify this detail?",
+    reason: sanitizeUserFacingText(String(arg?.reason ?? "").trim(), documentLanguage) || "This detail is ambiguous and should not be guessed.",
     field: arg?.field ? String(arg.field).trim() : undefined,
     section: arg?.section ? String(arg.section).trim() : undefined,
-    choices: choices?.map(sanitizeUserFacingText),
+    choices: choices?.map((choice) => sanitizeUserFacingText(choice, documentLanguage)),
   };
 }
 
@@ -659,7 +702,7 @@ function buildExampleStyleContext(docType: DocType, content: unknown, documentLa
 - Use Chinese section content and Chinese date style from examples, e.g. "2024/09" and "至今".
 - Use location order "国家, 城市" for location fields, e.g. "中国, 北京" or "美国, 新奥尔良".
 - Use conventional Chinese names for well-known universities, organizations, cities, and countries when they have a common Chinese form, e.g. "伦敦帝国理工学院" and "英国, 伦敦", not "Imperial College London" or "London, UK".
-- Use half-width English punctuation in all generated Chinese document content, matching the Chinese examples.
+- In generated Chinese document content, use "。" for sentence endings and half-width punctuation for other punctuation marks.
 - Use concise Chinese labels such as "成绩", "获奖", "研究方向" when creating extra fields.
 - Keep English technical terms when they are normally written in English, such as Python, FastAPI, RAG, GitHub.`
       : `English document style:
@@ -1001,7 +1044,7 @@ export async function runAgentStream<TContent>(
           } catch {
             toolArgs = {};
           }
-          const request = normalizeClarificationRequest(toolArgs);
+          const request = normalizeClarificationRequest(toolArgs, documentLanguage);
           clarificationRequested = true;
           onStatusChange?.(null);
 
