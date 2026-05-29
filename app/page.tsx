@@ -28,6 +28,9 @@ import {
   RESUME_STORAGE_KEY,
   ACADEMIC_CV_STORAGE_KEY,
   COVER_LETTER_STORAGE_KEY,
+  RESUME_AGENT_STORAGE_KEY,
+  ACADEMIC_CV_AGENT_STORAGE_KEY,
+  COVER_LETTER_AGENT_STORAGE_KEY,
   TITLE_MAX,
 } from "@/lib/defaults";
 import type { ResumeTemplate, ResumeLanguage } from "@/lib/types/resume";
@@ -230,21 +233,24 @@ export default function EntryPage() {
 
   function handleCreateResume(title: string, resumeLang: ResumeLanguage) {
     try {
-      localStorage.setItem(RESUME_STORAGE_KEY, JSON.stringify({ title, template: DEFAULT_TEMPLATE, language: resumeLang, content: defaultResumeContent }));
+      sessionStorage.setItem(RESUME_STORAGE_KEY, JSON.stringify({ title, template: DEFAULT_TEMPLATE, language: resumeLang, content: defaultResumeContent }));
+      sessionStorage.removeItem(RESUME_AGENT_STORAGE_KEY);
     } catch { /* ignore quota errors */ }
     router.push("/editor");
   }
 
   function handleCreateAcademicCv(title: string, cvLang: ResumeLanguage) {
     try {
-      localStorage.setItem(ACADEMIC_CV_STORAGE_KEY, JSON.stringify({ title, template: DEFAULT_TEMPLATE, language: cvLang, content: defaultAcademicCVContent }));
+      sessionStorage.setItem(ACADEMIC_CV_STORAGE_KEY, JSON.stringify({ title, template: DEFAULT_TEMPLATE, language: cvLang, content: defaultAcademicCVContent }));
+      sessionStorage.removeItem(ACADEMIC_CV_AGENT_STORAGE_KEY);
     } catch { /* ignore quota errors */ }
     router.push("/academic-cv");
   }
 
   function handleCreateCoverLetter(title: string) {
     try {
-      localStorage.setItem(COVER_LETTER_STORAGE_KEY, JSON.stringify({ title, template: "classic", content: defaultCoverLetterContent }));
+      sessionStorage.setItem(COVER_LETTER_STORAGE_KEY, JSON.stringify({ title, template: "classic", content: defaultCoverLetterContent }));
+      sessionStorage.removeItem(COVER_LETTER_AGENT_STORAGE_KEY);
     } catch { /* ignore quota errors */ }
     router.push("/cover-letter");
   }

@@ -90,9 +90,8 @@ const ZH_CITY_NAMES: Record<string, string> = {
 
 const INSTITUTION_KEYS = new Set(["institution", "organization"]);
 const LOCATION_KEYS = new Set(["location", "addressLine1", "addressLine2", "addressLine3"]);
-const HALF_WIDTH_PUNCTUATION: Record<string, string> = {
+const CHINESE_DOCUMENT_PUNCTUATION: Record<string, string> = {
   "，": ", ",
-  "。": ".",
   "；": "; ",
   "：": ": ",
   "？": "?",
@@ -135,10 +134,18 @@ function normalizeLocationForChinese(value: string): string {
 }
 
 function normalizePunctuationForChineseDocument(value: string): string {
+  const hasChinese = /\p{Script=Han}/u.test(value);
+  if (!hasChinese) return value.trim();
+
   return value
-    .replace(/[，。；：？！、（）【】“”‘’《》…]/g, (char) => HALF_WIDTH_PUNCTUATION[char] ?? char)
+    .replace(/[，；：？！、（）【】“”‘’《》…]/g, (char) => CHINESE_DOCUMENT_PUNCTUATION[char] ?? char)
+    .replace(/(?<![\w./@-])\.(?=\s|$)/g, "。")
+    .replace(/(?<=[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}A-Za-z])\.(?=\s|$)/gu, "。")
+    .replace(/\s+([,.;:!?。])/g, "$1")
     .replace(/([,;:])\s*/g, "$1 ")
-    .replace(/\s+([.!?])/g, "$1")
+    .replace(/([,，])\s*([。.!?！？])/g, "$2")
+    .replace(/([\p{Script=Han}])([A-Za-z0-9][A-Za-z0-9+#./-]*)/gu, "$1 $2")
+    .replace(/([A-Za-z0-9][A-Za-z0-9+#./-]*)([\p{Script=Han}])/gu, "$1 $2")
     .replace(/\s{2,}/g, " ")
     .trim();
 }
