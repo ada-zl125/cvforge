@@ -1,6 +1,5 @@
 "use client";
 
-import { useCallback, useState, type SetStateAction } from "react";
 import type { AcademicCVContent, AcademicCVTemplate, ResumeLanguage } from "@/lib/types/academic-cv";
 import { defaultAcademicCVContent, ACADEMIC_CV_AGENT_STORAGE_KEY, ACADEMIC_CV_STORAGE_KEY } from "@/lib/defaults";
 import { useEditorState } from "@/lib/editor-state";
@@ -8,14 +7,9 @@ import { EditorFrame } from "@/components/shared/EditorFrame";
 import { Toolbar } from "./Toolbar";
 import { FormPanel } from "./FormPanel";
 import { PreviewPanel } from "./PreviewPanel";
-import {
-  ChatPanel,
-  readAgentPanelSessionState,
-  writeAgentPanelSessionState,
-  type AgentPanelState,
-} from "@/components/shared/ChatPanel";
-import { isLLMConfigComplete } from "@/lib/agent/config";
-import { contentSignature, type AgentChange } from "@/lib/agent/change-tracking";
+import { ChatPanel } from "@/components/shared/ChatPanel";
+import { useAgentEditorState } from "@/components/shared/useAgentEditorState";
+import { useReviewableContent } from "@/components/shared/useReviewableContent";
 
 interface EditorState {
   title: string;
@@ -32,20 +26,6 @@ const initialState: EditorState = {
 };
 
 export function AcademicEditorContent() {
-  const [isAgentMode, setIsAgentMode] = useState(false);
-  const [isAgentRunning, setIsAgentRunning] = useState(false);
-  const [agentState, setAgentState] = useState(() => readAgentPanelSessionState(ACADEMIC_CV_AGENT_STORAGE_KEY));
-  const [reviewChange, setReviewChange] = useState<AgentChange | null>(null);
-  const setPersistedAgentState = useCallback((value: SetStateAction<AgentPanelState>) => {
-    setAgentState((prev) => {
-      const next = typeof value === "function"
-        ? (value as (state: AgentPanelState) => AgentPanelState)(prev)
-        : value;
-      writeAgentPanelSessionState(ACADEMIC_CV_AGENT_STORAGE_KEY, next);
-      return next;
-    });
-  }, []);
-
   const { state, setContent, setStoredState } = useEditorState<
     AcademicCVContent,
     AcademicCVTemplate,
@@ -55,6 +35,21 @@ export function AcademicEditorContent() {
     initialState,
     defaultContent: defaultAcademicCVContent,
   });
+  const {
+    isAgentMode,
+    isAgentRunning,
+    agentState,
+    isLLMConfigured,
+    setIsAgentRunning,
+    setAgentState,
+    toggleAgentMode,
+  } = useAgentEditorState(ACADEMIC_CV_AGENT_STORAGE_KEY);
+  const {
+    content,
+    reviewChange,
+    setContent: setAcademicContent,
+    setReviewChange,
+  } = useReviewableContent(state.content, setContent);
 
   function handleSettingsChange(newTitle: string, newLanguage: ResumeLanguage, newTemplate: AcademicCVTemplate) {
     setStoredState({
@@ -67,13 +62,6 @@ export function AcademicEditorContent() {
 
   if (!state.hydrated) return null;
 
-  const setAcademicContent = (nextContent: AcademicCVContent) => {
-    if (reviewChange && contentSignature(nextContent) !== reviewChange.afterSignature) {
-      setReviewChange(null);
-    }
-    setContent(nextContent);
-  };
-
   return (
     <EditorFrame
       toolbar={
@@ -81,11 +69,11 @@ export function AcademicEditorContent() {
           title={state.title}
           template={state.template}
           language={state.language}
-          content={state.content}
+          content={content}
           isAgentMode={isAgentMode}
           onSettingsChange={handleSettingsChange}
           onImport={setStoredState}
-          onModeToggle={() => setIsAgentMode((v) => !v)}
+          onModeToggle={toggleAgentMode}
         />
       }
       form={
@@ -94,19 +82,19 @@ export function AcademicEditorContent() {
             <ChatPanel
               docType="academic-cv"
               documentLanguage={state.language}
-              content={state.content}
+              content={content}
               onChange={setAcademicContent}
               onReviewChange={setReviewChange}
               onAgentRunningChange={setIsAgentRunning}
               agentState={agentState}
-              onAgentStateChange={setPersistedAgentState}
+              onAgentStateChange={setAgentState}
             />
           )
-          : <FormPanel content={state.content} onChange={setAcademicContent} language={state.language} />
+          : <FormPanel content={content} onChange={setAcademicContent} language={state.language} />
       }
-      preview={<PreviewPanel content={state.content} language={state.language} reviewChange={reviewChange} isStreaming={isAgentRunning} />}
+      preview={<PreviewPanel content={content} language={state.language} reviewChange={reviewChange} isStreaming={isAgentRunning} />}
       isAgentMode={isAgentMode}
-      isLLMConfigured={isLLMConfigComplete(agentState.activeConfig)}
+      isLLMConfigured={isLLMConfigured}
     />
   );
 }
