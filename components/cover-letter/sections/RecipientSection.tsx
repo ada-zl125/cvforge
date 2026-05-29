@@ -73,13 +73,13 @@ export function RecipientSection({ data, date, onDateChange, onChange, collapsed
           {/* Date */}
           <div className="grid gap-1.5">
             <Label className="text-xs">{tr.date}</Label>
-            <Input value={date} onChange={(e) => onDateChange(e.target.value)} placeholder="August 25, 2024" />
+            <Input value={date} onChange={(e) => onDateChange(e.target.value)} placeholder={tr.datePlaceholder} />
           </div>
 
           {/* Recipient Name (required) */}
           <div className="grid gap-1.5">
             <Label className="text-xs">{tr.recipientName}</Label>
-            <Input value={data.name} onChange={(e) => onChange({ ...data, name: e.target.value })} placeholder="Search Committee / Prof. Jane Smith" />
+            <Input value={data.name} onChange={(e) => onChange({ ...data, name: e.target.value })} placeholder={tr.recipientNamePlaceholder} />
           </div>
 
           {/* Optional: Salutation */}
@@ -94,7 +94,7 @@ export function RecipientSection({ data, date, onDateChange, onChange, collapsed
               <Input
                 value={data.salutation ?? ""}
                 onChange={(e) => onChange({ ...data, salutation: e.target.value })}
-                placeholder="Professor Jane Smith"
+                placeholder={tr.salutationPlaceholder}
               />
             </div>
           )}
@@ -111,7 +111,7 @@ export function RecipientSection({ data, date, onDateChange, onChange, collapsed
               <Input
                 value={line.value}
                 onChange={(e) => updateAddressLine(line.id, e.target.value)}
-                placeholder="Please enter your address here."
+                placeholder={tr.addressPlaceholder}
               />
             </div>
           ))}

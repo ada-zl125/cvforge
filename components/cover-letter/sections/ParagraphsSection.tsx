@@ -45,7 +45,7 @@ export function ParagraphsSection({ items, onChange, collapsed, onToggleCollapse
         className="section-header flex w-full cursor-pointer items-center justify-between px-4 py-3 text-sm font-semibold tracking-tight transition-colors hover:text-foreground"
         onClick={onToggleCollapse}
       >
-        {"Body Paragraphs"}
+        {tr.sectionParagraphs}
         <ChevronDown className={`size-4 text-muted-foreground transition-transform duration-200 ${collapsed ? "-rotate-90" : ""}`} />
       </button>
 

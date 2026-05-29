@@ -132,7 +132,7 @@ export function ReferencesSection({ items, onChange, language }: Props) {
                       <Label className="text-xs">{zh ? OPTIONAL_FIELD_META.address.labelZh : OPTIONAL_FIELD_META.address.label}</Label>
                       <Button variant="ghost" size="icon-xs" className="cursor-pointer text-muted-foreground hover:text-destructive" onClick={() => removeOptionalField(i, "address")}><Trash2 className="size-3" /></Button>
                     </div>
-                    <Input value={item.address} onChange={e => update(i, "address", e.target.value)} placeholder={zh ? "计算机系，北京大学，北京 100871" : "Department of Computer Science, Imperial College London, UK"} />
+                    <Input value={item.address} onChange={e => update(i, "address", e.target.value)} placeholder={zh ? "计算机系, 北京大学, 北京 100871" : "Department of Computer Science, Imperial College London, UK"} />
                   </div>
                 )}
 

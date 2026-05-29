@@ -226,6 +226,7 @@ function CollapsibleSection({
 }) {
   const meta = SECTION_META[type];
   const { lang } = useUILanguage();
+  const tr = t[lang];
   const sectionLabel = lang === "zh" ? meta.labelZh : meta.label;
 
   return (
@@ -263,7 +264,7 @@ function CollapsibleSection({
             size="icon-xs"
             className="cursor-pointer text-muted-foreground hover:text-destructive"
             onClick={onRemove}
-            aria-label={`Remove ${meta.label}`}
+            aria-label={tr.removeSection(sectionLabel)}
           >
             <Trash2 className="size-3.5" />
           </Button>

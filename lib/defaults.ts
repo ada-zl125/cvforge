@@ -5,6 +5,9 @@ import type { CoverLetterContent } from "./types/cover-letter";
 export const RESUME_STORAGE_KEY = "cvforge_resume";
 export const ACADEMIC_CV_STORAGE_KEY = "cvforge_academic";
 export const COVER_LETTER_STORAGE_KEY = "cvforge_cover_letter";
+export const RESUME_AGENT_STORAGE_KEY = "cvforge_agent_resume";
+export const ACADEMIC_CV_AGENT_STORAGE_KEY = "cvforge_agent_academic";
+export const COVER_LETTER_AGENT_STORAGE_KEY = "cvforge_agent_cover_letter";
 export const TITLE_MAX = 50;
 
 export const defaultResumeContent: ResumeContent = {
