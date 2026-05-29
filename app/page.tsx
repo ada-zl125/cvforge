@@ -310,6 +310,7 @@ export default function EntryPage() {
           {/* Hero */}
           <div className="mb-14 text-center">
             <SplitText
+              key={lang}
               tag="h1"
               text={tr.heroTitle}
               splitType="words"
@@ -346,7 +347,7 @@ export default function EntryPage() {
             <div className="space-y-0">
               {entryItems.map((item) => (
                 <button
-                  key={item.num}
+                  key={`${lang}-${item.num}`}
                   type="button"
                   onClick={item.onClick}
                   className="group relative -mt-px first:mt-0 flex w-full cursor-pointer items-center gap-5 overflow-hidden border-y border-gray-200/80 bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.58)_0%,rgba(255,255,255,0.34)_48%,rgba(255,255,255,0.08)_100%)] px-3 py-5 text-left backdrop-blur-[1px] transition-all duration-300 hover:-translate-y-px hover:border-y-[#0f0f0f] hover:bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.78)_0%,rgba(255,255,255,0.5)_48%,rgba(255,255,255,0.14)_100%)] hover:shadow-[0_18px_42px_rgba(0,0,0,0.055)]"
