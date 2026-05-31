@@ -100,6 +100,10 @@ const HALF_WIDTH_PUNCTUATION: Record<string, string> = {
   "…": "...",
 };
 
+function repairMarkdownStrongLabels(text: string): string {
+  return text.replace(/\*\*([^*\n]+?):\s+\*\*/g, "**$1:**");
+}
+
 function normalizeKnownInstitutionForChinese(value: string): string {
   const key = value.trim().toLowerCase();
   return ZH_INSTITUTION_NAMES[key] ?? value;
@@ -124,9 +128,8 @@ function normalizeLocationForChinese(value: string): string {
 }
 
 function normalizeEnglishPunctuation(text: string): string {
-  return text
+  return repairMarkdownStrongLabels(text
     .replace(/^(\s*)-\s+/gm, "$1* ")
-    .replace(/\*\*([^*\n]+?):\s+\*\*/g, "**$1:**")
     .replace(/\s*->\s*/g, " to ")
     .replace(/\s*[—–]\s*/g, ", ")
     .replace(/[，。；：？！、（）【】“”‘’《》…]/g, (char) => ({
@@ -139,14 +142,13 @@ function normalizeEnglishPunctuation(text: string): string {
     .replace(/([.!?])\s+(\d+\.\s+)/g, "$1\n$2")
     .replace(/([.!?])\s+(\*\s+)/g, "$1\n$2")
     .replace(/[ \t]{2,}/g, " ")
-    .trim();
+    .trim());
 }
 
 function normalizeChineseDocumentPunctuation(text: string): string {
   const hasChinese = /\p{Script=Han}/u.test(text);
-  return text
+  return repairMarkdownStrongLabels(text
     .replace(/^(\s*)-\s+/gm, "$1* ")
-    .replace(/\*\*([^*\n]+?):\s+\*\*/g, "**$1:**")
     .replace(/\s*->\s*/g, " 到 ")
     .replace(/\s*[—–]\s*/g, ", ")
     .replace(/[，；：？！、（）【】“”‘’《》…]/g, (char) => HALF_WIDTH_PUNCTUATION[char] ?? char)
@@ -160,7 +162,7 @@ function normalizeChineseDocumentPunctuation(text: string): string {
     .replace(/([。.!?])\s+(\d+\.\s+)/g, "$1\n$2")
     .replace(/([。.!?])\s+(\*\s+)/g, "$1\n$2")
     .replace(/[ \t]{2,}/g, " ")
-    .trim();
+    .trim());
 }
 
 export function normalizeAssistantText(text: string, documentLanguage: AgentDocumentLanguage = "en"): string {
