@@ -107,6 +107,8 @@ const CLARIFICATION_RULES = `## Blocking Clarification Workflow
 
 const RESPONSE_FORMAT_RULES = `## Response Formatting
 - Use normal Markdown for readable replies.
+- When listing two or more findings, corrections, steps, or options, use a Markdown bullet list or numbered list with each item on its own line.
+- Do not write multiple numbered items in one paragraph.
 - If you use a Markdown table, each row must be on its own line, including the header separator row. Never inline multiple table rows in one paragraph.`;
 
 const LANGUAGE_STYLE_RULES = `## Language Style
