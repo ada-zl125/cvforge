@@ -77,13 +77,48 @@ function collectChangedDateRanges(before: unknown, after: unknown, snippets: str
   });
 }
 
+function collectChangedStringLeaves(before: unknown, after: unknown, snippets: string[]): void {
+  if (typeof after === "string") {
+    const text = after.trim();
+    const previous = typeof before === "string" ? before.trim() : "";
+    if (text.length > 1 && text !== previous) snippets.push(text);
+    return;
+  }
+
+  if (Array.isArray(after)) {
+    const beforeItems = Array.isArray(before) ? before : [];
+    const beforeById = new Map<string, unknown>();
+    beforeItems.forEach((item) => {
+      const id = getItemId(item);
+      if (id) beforeById.set(id, item);
+    });
+
+    after.forEach((item, index) => {
+      const id = getItemId(item);
+      collectChangedStringLeaves(id ? beforeById.get(id) : beforeItems[index], item, snippets);
+    });
+    return;
+  }
+
+  if (!after || typeof after !== "object") return;
+
+  const afterRecord = after as Record<string, unknown>;
+  const beforeRecord = before && typeof before === "object" ? before as Record<string, unknown> : {};
+  Object.entries(afterRecord).forEach(([key, value]) => {
+    if (key === "id" || key === "photo") return;
+    collectChangedStringLeaves(beforeRecord[key], value, snippets);
+  });
+}
+
 function getAddedTextSnippets(change: AgentChange): string[] {
   const beforeParts: string[] = [];
   const afterParts: string[] = [];
   const dateRangeParts: string[] = [];
+  const changedLeafParts: string[] = [];
   collectStrings(change.before, beforeParts);
   collectStrings(change.after, afterParts);
   collectChangedDateRanges(change.before, change.after, dateRangeParts);
+  collectChangedStringLeaves(change.before, change.after, changedLeafParts);
 
   const previous = new Map<string, number>();
   beforeParts.forEach((part) => previous.set(part, (previous.get(part) ?? 0) + 1));
@@ -98,7 +133,7 @@ function getAddedTextSnippets(change: AgentChange): string[] {
       return part.length > 1;
     });
 
-  return Array.from(new Set([...dateRangeParts, ...addedParts]))
+  return Array.from(new Set([...dateRangeParts, ...changedLeafParts, ...addedParts]))
     .sort((a, b) => b.length - a.length)
     .slice(0, 40);
 }
