@@ -20,11 +20,12 @@ export interface AgentPanelState {
   pendingClarification: PendingClarification | null;
   lastChange: AgentChange | null;
   contextSources: AgentContextSource[];
+  contextInstruction: string;
 }
 
 type StoredAgentPanelState = Pick<
   AgentPanelState,
-  "messages" | "pendingClarification" | "lastChange" | "contextSources"
+  "messages" | "pendingClarification" | "lastChange" | "contextSources" | "contextInstruction"
 >;
 
 export function createInitialAgentPanelState(): AgentPanelState {
@@ -39,11 +40,24 @@ export function createInitialAgentPanelState(): AgentPanelState {
     pendingClarification: null,
     lastChange: null,
     contextSources: [],
+    contextInstruction: "",
   };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
+}
+
+function readContextSources(value: unknown): AgentContextSource[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((source): source is AgentContextSource =>
+    isRecord(source) &&
+    source.type === "file" &&
+    typeof source.id === "string" &&
+    typeof source.name === "string" &&
+    typeof source.text === "string" &&
+    typeof source.createdAt === "number"
+  );
 }
 
 export function readAgentPanelSessionState(storageKey: string): AgentPanelState {
@@ -61,7 +75,8 @@ export function readAgentPanelSessionState(storageKey: string): AgentPanelState 
       messages: Array.isArray(parsed.messages) ? parsed.messages as Message[] : initialState.messages,
       pendingClarification: isRecord(parsed.pendingClarification) ? parsed.pendingClarification as unknown as PendingClarification : null,
       lastChange: isRecord(parsed.lastChange) ? parsed.lastChange as unknown as AgentChange : null,
-      contextSources: Array.isArray(parsed.contextSources) ? parsed.contextSources as AgentContextSource[] : initialState.contextSources,
+      contextSources: readContextSources(parsed.contextSources),
+      contextInstruction: typeof parsed.contextInstruction === "string" ? parsed.contextInstruction : "",
     };
   } catch {
     return initialState;
@@ -75,6 +90,7 @@ export function writeAgentPanelSessionState(storageKey: string, state: AgentPane
       pendingClarification: state.pendingClarification,
       lastChange: state.lastChange,
       contextSources: state.contextSources,
+      contextInstruction: state.contextInstruction,
     };
     sessionStorage.setItem(storageKey, JSON.stringify(storedState));
   } catch {
