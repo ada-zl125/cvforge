@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
-import { Send, SlidersHorizontal, Loader2, AlertCircle, Settings, Eraser, Shrink, FilePenLine, Square, Paperclip, LinkIcon, Trash2, Upload } from "lucide-react";
+import { Send, SlidersHorizontal, Loader2, AlertCircle, Settings, Eraser, Shrink, FilePenLine, Square, Paperclip, Trash2, Upload, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import FadeContent from "@/components/FadeContent";
 import SpotlightCard from "@/components/SpotlightCard";
@@ -30,11 +30,11 @@ import {
 import type { ClarificationRequest, DocType, DocumentLanguage } from "@/lib/agent/tools";
 import { buildAgentChange, contentSignature, type AgentChange } from "@/lib/agent/change-tracking";
 import {
+  CONTEXT_DOCUMENT_ACCEPT,
   CONTEXT_MAX_FILE_BYTES,
   CONTEXT_MAX_FILE_SOURCES,
-  isLinkedInProfileUrl,
-  isSupportedTextFile,
-  truncateContextText,
+  extractContextSourceText,
+  isSupportedDocumentFile,
   type AgentContextSource,
 } from "@/lib/agent/context-sources";
 import type { AgentPanelState, PendingClarification } from "@/lib/agent/session-state";
@@ -59,6 +59,45 @@ type ClarificationPatch<TContent> = {
   content: TContent;
   toolName: string;
 };
+
+function getContextReadErrorMessage(
+  fileName: string,
+  error: unknown,
+  agentTr: AgentTranslations
+): string {
+  const errorName = error instanceof Error ? error.name : "";
+  const errorMessage = error instanceof Error ? error.message : "";
+  const details = `${errorName} ${errorMessage}`.toLowerCase();
+
+  if (/password/.test(details)) return agentTr.contextPasswordProtected(fileName);
+  if (/invalidpdf|invalid pdf|corrupt|damaged/.test(details)) return agentTr.contextInvalidPdf(fileName);
+  if (/worker|module/.test(details) && fileName.toLowerCase().endsWith(".pdf")) {
+    return agentTr.contextPdfWorkerFailed(fileName);
+  }
+
+  return agentTr.contextReadFailed(fileName);
+}
+
+function getContextReadErrorDetails(error: unknown): Record<string, unknown> {
+  if (error instanceof Error) {
+    return {
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+    };
+  }
+
+  return { value: error };
+}
+
+function formatContextReadErrorDetails(error: unknown): string {
+  const details = getContextReadErrorDetails(error);
+  try {
+    return JSON.stringify(details);
+  } catch {
+    return String(error);
+  }
+}
 
 interface ChatPanelProps<TContent> {
   docType: DocType;
@@ -233,7 +272,15 @@ export function ChatPanel<TContent>({
   const tr = t[lang];
   const agentTr = tr.agent;
 
-  const { messages, activeConfig, draftConfig, pendingClarification, lastChange, contextSources = [] } = agentState;
+  const {
+    messages,
+    activeConfig,
+    draftConfig,
+    pendingClarification,
+    lastChange,
+    contextSources = [],
+    contextInstruction = "",
+  } = agentState;
   const [streamingText, setStreamingText] = useState("");
   const [agentStatus, setAgentStatus] = useState<AgentStatus | null>(null);
   const [inputValue, setInputValue] = useState("");
@@ -245,9 +292,9 @@ export function ChatPanel<TContent>({
   const [contextOpen, setContextOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isHoveringChat, setIsHoveringChat] = useState(false);
-  const [linkedinUrl, setLinkedinUrl] = useState("");
   const [contextError, setContextError] = useState<string | null>(null);
-  const [isAddingLink, setIsAddingLink] = useState(false);
+  const [isProcessingContext, setIsProcessingContext] = useState(false);
+  const [previewContextSource, setPreviewContextSource] = useState<AgentContextSource | null>(null);
 
   const [configError, setConfigError] = useState<string | null>(null);
 
@@ -378,6 +425,13 @@ export function ChatPanel<TContent>({
     });
   };
 
+  const setContextInstruction = (instruction: string) => {
+    onAgentStateChange((prev) => ({
+      ...prev,
+      contextInstruction: instruction,
+    }));
+  };
+
   const isConfigured = !!activeConfig;
   const isBusy = isLoading || isCompacting;
   const hasPendingClarification = !!pendingClarification;
@@ -391,6 +445,7 @@ export function ChatPanel<TContent>({
         content,
         history: messages,
         referenceSources: contextSources,
+        contextInstruction,
       })
     : null;
   const canUndoLastChange =
@@ -581,6 +636,7 @@ export function ChatPanel<TContent>({
         history,
         userMessage: userMsg,
         referenceSources: contextSources,
+        contextInstruction,
         signal: abortController.signal,
         onTextChunk: (chunk) => {
           setAgentStatus(null);
@@ -751,6 +807,7 @@ export function ChatPanel<TContent>({
         history: historyWithQuestion,
         userMessage: continuationMessage,
         referenceSources: contextSources,
+        contextInstruction,
         signal: abortController.signal,
         onTextChunk: (chunk) => {
           setAgentStatus(null);
@@ -870,99 +927,77 @@ export function ChatPanel<TContent>({
     event.target.value = "";
     if (files.length === 0) return;
 
+    setIsProcessingContext(true);
     setContextError(null);
 
     const nextSources: AgentContextSource[] = [];
-    const existingFileCount = contextSources.filter((source) => source.type === "file").length;
-    const availableFileSlots = Math.max(0, CONTEXT_MAX_FILE_SOURCES - existingFileCount);
-    if (availableFileSlots <= 0) {
-      setContextError(agentTr.contextTooManyFiles(CONTEXT_MAX_FILE_SOURCES));
-      return;
-    }
+    const existingFileKeys = new Set(
+      contextSources.map((source) => `${source.name}:${source.size ?? 0}`)
+    );
+    const nextFileKeys = new Set<string>();
 
-    const selectedFiles = files.slice(0, availableFileSlots);
-    if (files.length > availableFileSlots) {
-      setContextError(agentTr.contextTooManyFiles(CONTEXT_MAX_FILE_SOURCES));
-    }
-
-    for (const file of selectedFiles) {
-      if (!isSupportedTextFile(file)) {
-        setContextError(agentTr.contextUnsupportedFile(file.name));
-        continue;
+    try {
+      const existingFileCount = contextSources.filter((source) => source.type === "file").length;
+      const availableFileSlots = Math.max(0, CONTEXT_MAX_FILE_SOURCES - existingFileCount);
+      if (availableFileSlots <= 0) {
+        setContextError(agentTr.contextTooManyFiles(CONTEXT_MAX_FILE_SOURCES));
+        return;
       }
 
-      if (file.size > CONTEXT_MAX_FILE_BYTES) {
-        setContextError(agentTr.contextFileTooLarge(file.name));
-        continue;
+      const selectedFiles = files.slice(0, availableFileSlots);
+      if (files.length > availableFileSlots) {
+        setContextError(agentTr.contextTooManyFiles(CONTEXT_MAX_FILE_SOURCES));
       }
 
-      try {
-        const text = truncateContextText(await file.text());
-        if (!text) {
-          setContextError(agentTr.contextEmptyFile(file.name));
+      for (const file of selectedFiles) {
+        const fileKey = `${file.name}:${file.size}`;
+        if (existingFileKeys.has(fileKey) || nextFileKeys.has(fileKey)) {
+          setContextError(agentTr.contextDuplicateFile(file.name));
           continue;
         }
 
-        nextSources.push({
-          id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-          type: "file",
-          name: file.name,
-          text,
-          size: file.size,
-          createdAt: Date.now(),
-        });
-      } catch {
-        setContextError(agentTr.contextReadFailed(file.name));
-      }
-    }
+        if (!isSupportedDocumentFile(file)) {
+          setContextError(agentTr.contextUnsupportedFile(file.name));
+          continue;
+        }
 
-    if (nextSources.length > 0) {
-      setContextSources((prev) => [...prev, ...nextSources].slice(-8));
-    }
-  };
+        if (file.size > CONTEXT_MAX_FILE_BYTES) {
+          setContextError(agentTr.contextFileTooLarge(file.name));
+          continue;
+        }
 
-  const handleAddLinkedInContext = async () => {
-    const url = linkedinUrl.trim();
-    if (!url || isAddingLink) return;
+        try {
+          const text = await extractContextSourceText(file);
+          if (!text) {
+            const lowerName = file.name.toLowerCase();
+            setContextError(lowerName.endsWith(".pdf")
+              ? agentTr.contextNoExtractedText(file.name)
+              : agentTr.contextEmptyFile(file.name));
+            continue;
+          }
 
-    if (!isLinkedInProfileUrl(url)) {
-      setContextError(agentTr.contextInvalidLinkedIn);
-      return;
-    }
-
-    setIsAddingLink(true);
-    setContextError(null);
-
-    try {
-      const response = await fetch("/api/context/linkedin", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url }),
-      });
-      const data = await response.json().catch(() => ({}));
-
-      if (!response.ok || typeof data.text !== "string") {
-        throw new Error(typeof data.error === "string" ? data.error : agentTr.contextLinkedInFailed);
+          nextFileKeys.add(fileKey);
+          nextSources.push({
+            id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+            type: "file",
+            name: file.name,
+            text,
+            size: file.size,
+            createdAt: Date.now(),
+          });
+        } catch (err) {
+          console.warn(
+            `Failed to read context source "${file.name}": ${formatContextReadErrorDetails(err)}`
+          );
+          setContextError(getContextReadErrorMessage(file.name, err, agentTr));
+        }
       }
 
-      const profileName = new URL(url).pathname.split("/").filter(Boolean).at(1) ?? "LinkedIn profile";
-      const source: AgentContextSource = {
-        id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-        type: "linkedin",
-        name: `LinkedIn: ${profileName}`,
-        url,
-        text: truncateContextText(data.text),
-        createdAt: Date.now(),
-      };
-      setContextSources((prev) => [
-        ...prev,
-        source,
-      ].slice(-8));
-      setLinkedinUrl("");
-    } catch (err) {
-      setContextError(err instanceof Error ? err.message : agentTr.contextLinkedInFailed);
+      if (nextSources.length > 0) {
+        setContextSources((prev) => [...prev, ...nextSources].slice(-8));
+      }
     } finally {
-      setIsAddingLink(false);
+      setIsProcessingContext(false);
     }
   };
 
@@ -1302,9 +1337,14 @@ export function ChatPanel<TContent>({
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-black/40 bg-black/[0.035]">
                 <Paperclip className="h-4 w-4 text-foreground" />
               </div>
-              <DialogTitle className="text-[15px] font-semibold">
-                {agentTr.contextTitle}
-              </DialogTitle>
+              <div className="flex min-w-0 items-center gap-2">
+                <DialogTitle className="text-[15px] font-semibold">
+                  {agentTr.contextTitle}
+                </DialogTitle>
+                <span className="rounded border border-amber-500/35 bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-amber-700">
+                  {agentTr.contextBetaBadge}
+                </span>
+              </div>
             </div>
           </DialogHeader>
 
@@ -1317,6 +1357,21 @@ export function ChatPanel<TContent>({
             )}
 
             <div className="rounded-md border border-black/10 bg-white p-3">
+              <div className="mb-2 text-sm font-medium text-gray-950">
+                {agentTr.contextInstructionTitle}
+              </div>
+              <p className="mb-3 text-xs leading-5 text-muted-foreground">
+                {agentTr.contextInstructionHint}
+              </p>
+              <textarea
+                value={contextInstruction}
+                onChange={(event) => setContextInstruction(event.target.value)}
+                placeholder={agentTr.contextInstructionPlaceholder}
+                className="editor-dialog-input min-h-24 w-full resize-y rounded-md border px-3 py-2 text-sm leading-5"
+              />
+            </div>
+
+            <div className="rounded-md border border-black/10 bg-white p-3">
               <div className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-950">
                 <Upload className="size-4" />
                 {agentTr.contextUploadTitle}
@@ -1324,55 +1379,31 @@ export function ChatPanel<TContent>({
               <p className="mb-3 text-xs leading-5 text-muted-foreground">
                 {agentTr.contextUploadHint}
               </p>
+              <p className="mb-3 rounded-md border border-amber-500/20 bg-amber-50 px-2.5 py-2 text-xs leading-5 text-amber-800">
+                {agentTr.contextBetaNotice}
+              </p>
               <label
                 className={`editor-dialog-upload-button flex h-10 items-center justify-center rounded-md border px-3 text-sm font-medium ${
-                  contextSources.filter((source) => source.type === "file").length >= CONTEXT_MAX_FILE_SOURCES
+                  contextSources.filter((source) => source.type === "file").length >= CONTEXT_MAX_FILE_SOURCES || isProcessingContext
                     ? "pointer-events-none opacity-50"
                     : "cursor-pointer"
                 }`}
               >
-                {tr.uploadFilesCta}
+                {isProcessingContext ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="size-3.5 animate-spin" />
+                    {agentTr.contextProcessing}
+                  </span>
+                ) : tr.uploadFilesCta}
                 <input
                   type="file"
                   multiple
-                  accept=".txt,.md,.markdown,.json,.csv,.tsv,.xml,.html,.htm,.log,.yaml,.yml,text/*,application/json,application/xml"
+                  accept={CONTEXT_DOCUMENT_ACCEPT}
                   onChange={handleFileContextUpload}
                   className="sr-only"
-                  disabled={contextSources.filter((source) => source.type === "file").length >= CONTEXT_MAX_FILE_SOURCES}
+                  disabled={contextSources.filter((source) => source.type === "file").length >= CONTEXT_MAX_FILE_SOURCES || isProcessingContext}
                 />
               </label>
-            </div>
-
-            <div className="rounded-md border border-black/10 bg-white p-3">
-              <div className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-950">
-                <LinkIcon className="size-4" />
-                {agentTr.contextLinkedInTitle}
-              </div>
-              <p className="mb-3 text-xs leading-5 text-muted-foreground">
-                {agentTr.contextLinkedInHint}
-              </p>
-              <div className="flex gap-2">
-                <Input
-                  value={linkedinUrl}
-                  onChange={(event) => setLinkedinUrl(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      event.preventDefault();
-                      handleAddLinkedInContext();
-                    }
-                  }}
-                  placeholder="https://www.linkedin.com/in/username"
-                  className="editor-dialog-input h-10 flex-1"
-                />
-                <Button
-                  variant="outline"
-                  className="editor-dialog-action h-10 cursor-pointer"
-                  onClick={handleAddLinkedInContext}
-                  disabled={!linkedinUrl.trim() || isAddingLink}
-                >
-                  {isAddingLink ? <Loader2 className="size-3.5 animate-spin" /> : agentTr.contextAdd}
-                </Button>
-              </div>
             </div>
 
             <div className="grid gap-2">
@@ -1390,13 +1421,22 @@ export function ChatPanel<TContent>({
                       key={source.id}
                       className="flex items-center gap-2 rounded-md border border-black/10 bg-[#fbfbfa] px-3 py-2"
                     >
-                      {source.type === "linkedin" ? <LinkIcon className="size-4 shrink-0 text-gray-600" /> : <FilePenLine className="size-4 shrink-0 text-gray-600" />}
+                      <FilePenLine className="size-4 shrink-0 text-gray-600" />
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-sm font-medium text-gray-950">{source.name}</div>
                         <div className="truncate text-xs text-muted-foreground">
-                          {source.type === "linkedin" ? source.url : agentTr.contextSourceChars(source.text.length)}
+                          {agentTr.contextSourceChars(source.text.length)}
                         </div>
                       </div>
+                      <Button
+                        variant="ghost"
+                        size="icon-xs"
+                        className="h-7 w-7 shrink-0 text-muted-foreground hover:text-foreground"
+                        onClick={() => setPreviewContextSource(source)}
+                        title={agentTr.contextPreview}
+                      >
+                        <Eye className="size-3.5" />
+                      </Button>
                       <Button
                         variant="ghost"
                         size="icon-xs"
@@ -1418,6 +1458,52 @@ export function ChatPanel<TContent>({
               variant="outline"
               className="editor-dialog-action cursor-pointer"
               onClick={() => setContextOpen(false)}
+            >
+              {agentTr.contextDone}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!previewContextSource}
+        onOpenChange={(open) => {
+          if (!open) setPreviewContextSource(null);
+        }}
+      >
+        <DialogContent className="editor-dialog overflow-hidden p-0 sm:max-w-[640px]">
+          <DialogHeader className="editor-dialog-header place-items-start px-5 pb-4 pt-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-black/40 bg-black/[0.035]">
+                <FilePenLine className="h-4 w-4 text-foreground" />
+              </div>
+              <div className="min-w-0">
+                <DialogTitle className="truncate text-[15px] font-semibold">
+                  {agentTr.contextPreviewTitle}
+                </DialogTitle>
+                {previewContextSource && (
+                  <div className="mt-0.5 truncate text-xs text-muted-foreground">
+                    {previewContextSource.name}
+                  </div>
+                )}
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="px-5 pb-5 pt-3">
+            <pre className="max-h-[420px] overflow-auto whitespace-pre-wrap rounded-md border border-black/10 bg-[#fbfbfa] p-3 text-xs leading-5 text-gray-800">
+              {previewContextSource?.text}
+            </pre>
+            <p className="mt-2 text-xs leading-5 text-muted-foreground">
+              {agentTr.contextDeleteHistoryNote}
+            </p>
+          </div>
+
+          <DialogFooter className="editor-dialog-footer">
+            <Button
+              variant="outline"
+              className="editor-dialog-action cursor-pointer"
+              onClick={() => setPreviewContextSource(null)}
             >
               {agentTr.contextDone}
             </Button>

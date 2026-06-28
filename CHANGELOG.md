@@ -4,7 +4,7 @@
 
 1. Add Agent Mode for resumes, academic CVs, and cover letters.
 2. Add chat based document editing, change review, undo, and live preview highlighting for agent updates.
-3. Add external context support through uploaded files and public LinkedIn profiles.
+3. Add external context support through project instructions and uploaded PDF, MD, or TXT files.
 4. Improve Chinese document handling with language aware examples, institution names, locations, punctuation, and mixed Chinese and English spacing.
 5. Improve UI language switching and Chinese UI coverage across landing and editor pages.
 6. Refine landing page actions, editor layout behavior, and agent input resizing.

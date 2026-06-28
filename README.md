@@ -31,7 +31,7 @@ Create resumes, academic CVs, and cover letters. Resumes and academic CVs suppor
 
 **Editing workflow**
 
-Fill in structured fields manually, or use Agent Mode to add content, polish wording, review changes, and improve a document through chat. Agent Mode can also use uploaded files or a public LinkedIn profile as background context.
+Fill in structured fields manually, or use Agent Mode to add content, polish wording, review changes, and improve a document through chat. Agent Mode can also use project instructions and uploaded PDF, MD, or TXT files as background context.
 
 **Export and import**
 
