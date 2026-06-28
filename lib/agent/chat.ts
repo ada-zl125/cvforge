@@ -3,8 +3,8 @@
 import OpenAI from "openai";
 import type {
   ChatCompletionAssistantMessageParam,
+  ChatCompletionMessageFunctionToolCall,
   ChatCompletionMessageParam,
-  ChatCompletionMessageToolCall,
 } from "openai/resources/chat/completions";
 import resumeExampleEn from "@/examples/resume-example-en.json";
 import resumeExampleCn from "@/examples/resume-example-cn.json";
@@ -982,7 +982,7 @@ export async function runAgentStream<TContent>(
       }, { signal });
 
       let assistantContent = "";
-      const toolCalls: ChatCompletionMessageToolCall[] = [];
+      const toolCalls: ChatCompletionMessageFunctionToolCall[] = [];
 
       // Process stream
       for await (const chunk of stream) {
