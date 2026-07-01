@@ -1,6 +1,10 @@
 name: CI
 
 on:
+  push:
+    branches:
+      - dev
+      - main
   pull_request:
     branches:
       - dev
@@ -8,7 +12,7 @@ on:
 
 jobs:
   ci:
-    name: Lint, Type Check & Build
+    name: CI
     runs-on: ubuntu-latest
 
     steps:
@@ -29,6 +33,9 @@ jobs:
 
       - name: Type check
         run: npx tsc --noEmit
+
+      - name: Unit tests
+        run: npm run test
 
       - name: Build
         run: npm run build
