@@ -285,6 +285,18 @@ button.entry-dialog-action:not(:disabled):hover {
   box-shadow: 0 8px 22px rgb(0 0 0 / 0.06);
 }
 
+.editor-dialog-upload-button:active {
+  transform: translateY(1px);
+  border-color: rgb(0 0 0 / 0.72) !important;
+  background: rgb(238 238 236) !important;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.05);
+}
+
+.editor-dialog-upload-button:focus-within {
+  border-color: rgb(0 0 0 / 0.72) !important;
+  box-shadow: 0 0 0 3px rgb(0 0 0 / 0.08) !important;
+}
+
 .editor-shell button:not(:disabled),
 .editor-shell a[href],
 .editor-shell label[for],

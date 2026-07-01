@@ -20,8 +20,10 @@
     "html-to-image": "^1.11.13",
     "jspdf": "^4.2.1",
     "lucide-react": "^1.0.0",
-    "next": "16.2.4",
-    "openai": "^4.78.0",
+    "minisearch": "^7.2.0",
+    "next": "16.2.9",
+    "openai": "^6.45.0",
+    "pdfjs-dist": "^6.0.227",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-image-crop": "^11.0.10",
@@ -37,9 +39,12 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.2.4",
+    "eslint-config-next": "16.2.9",
     "shadcn": "^4.8.0",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "overrides": {
+    "postcss": "8.5.10"
   }
 }

@@ -3,8 +3,8 @@
 import OpenAI from "openai";
 import type {
   ChatCompletionAssistantMessageParam,
+  ChatCompletionMessageFunctionToolCall,
   ChatCompletionMessageParam,
-  ChatCompletionMessageToolCall,
 } from "openai/resources/chat/completions";
 import resumeExampleEn from "@/examples/resume-example-en.json";
 import resumeExampleCn from "@/examples/resume-example-cn.json";
@@ -14,7 +14,7 @@ import coverLetterExampleEn from "@/examples/cover-letter-example-en.json";
 import { createTools, type ClarificationRequest, type DocType, type DocumentLanguage } from "./tools";
 import type { LLMConfig } from "./config";
 import type { AgentChange } from "./change-tracking";
-import { buildReferenceContext, type AgentContextSource } from "./context-sources";
+import { buildContextInstructionContext, buildReferenceContext, type AgentContextSource } from "./context-sources";
 import { normalizeAssistantText } from "./text-normalization";
 
 export interface Message {
@@ -41,6 +41,7 @@ interface RunAgentStreamParams<TContent> {
   history: Message[];
   userMessage: string;
   referenceSources?: AgentContextSource[];
+  contextInstruction?: string;
   signal?: AbortSignal;
   onTextChunk: (chunk: string) => void;
   onStatusChange?: (status: AgentStatus | null) => void;
@@ -125,7 +126,7 @@ type ClarificationScope =
 const SECTION_PATTERNS: Array<{ section: string; pattern: RegExp }> = [
   {
     section: "personal",
-    pattern: /\b(personal|contact|profile|name|email|phone|address|website|linkedin)\b|个人|联系方式|姓名|邮箱|电话|地址|网站/i,
+    pattern: /\b(personal|contact|profile|name|email|phone|address|website)\b|个人|联系方式|姓名|邮箱|电话|地址|网站/i,
   },
   {
     section: "summary",
@@ -428,12 +429,72 @@ function isDocumentUpdateTool(toolName: string): boolean {
   return toolName !== "record_inference" && toolName !== "ask_user";
 }
 
+function hasChineseText(text: string): boolean {
+  return /\p{Script=Han}/u.test(text);
+}
+
+function localizeInferenceField(field: string): string {
+  const labels: Record<string, string> = {
+    "education.institution": "教育背景.学校",
+    "education.location": "教育背景.地点",
+    "experience.company": "工作经历.单位",
+    "experience.location": "工作经历.地点",
+    "projects.name": "项目经验.名称",
+    "personal.location": "个人信息.地点",
+  };
+
+  return labels[field] ?? field;
+}
+
+function localizeInferenceNote(note: string, zh: boolean): string {
+  if (!zh) return note;
+  if (hasChineseText(note)) return note;
+
+  const fieldMatch = note.match(/^([^:]+):\s*"([^"]*)"\s+to\s+"([^"]*)"(?:\s+\((.*)\))?$/i);
+  if (fieldMatch) {
+    const [, field, original, inferred] = fieldMatch;
+    return `${localizeInferenceField(field.trim())}: 将 "${original}" 规范为 "${inferred}" (高把握的公开信息或格式规范化)`;
+  }
+
+  const valueMatch = note.match(/^"([^"]*)"\s+to\s+"([^"]*)"(?:\s+\((.*)\))?$/i);
+  if (valueMatch) {
+    const [, original, inferred] = valueMatch;
+    return `将 "${original}" 规范为 "${inferred}" (高把握的公开信息或格式规范化)`;
+  }
+
+  return `已记录一项高把握推断: ${note}`;
+}
+
 function formatInferenceDisclosure(inferenceNotes: string[], zh: boolean): string {
   if (inferenceNotes.length === 0) return "";
 
-  const uniqueNotes = Array.from(new Set(inferenceNotes));
+  const uniqueNotes = Array.from(new Set(inferenceNotes)).map((note) => localizeInferenceNote(note, zh));
   if (zh) return `我做了这些高把握推断: ${uniqueNotes.join("; ")}。`;
   return `I made these high-confidence inferences: ${uniqueNotes.join("; ")}.`;
+}
+
+function formatAssistantReplyLayout(content: string, zh: boolean): string {
+  if (!zh) return content;
+
+  const sectionLabels = [
+    "个人信息",
+    "教育背景",
+    "项目经验",
+    "工作经历",
+    "竞赛奖项",
+    "奖项",
+    "技能",
+    "注意",
+    "后续建议",
+    "需要调整",
+  ];
+  const labelPattern = sectionLabels.join("|");
+
+  return content
+    .replace(new RegExp(`([^\\n])\\s+(${labelPattern}:)`, "g"), "$1\n\n$2")
+    .replace(new RegExp(`^(${labelPattern}:)\\s*\\*\\s+`, "gm"), "$1\n* ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
 function buildFallbackCompletion(toolNames: string[], documentLanguage: DocumentLanguage, inferenceNotes: string[] = []): string {
@@ -452,12 +513,19 @@ function buildFallbackCompletion(toolNames: string[], documentLanguage: Document
 }
 
 function withInferenceDisclosure(content: string, inferenceNotes: string[], documentLanguage: DocumentLanguage): string {
-  const sanitizedContent = normalizeAssistantText(content, documentLanguage);
+  const zh = documentLanguage === "zh" || hasChineseText(content);
+  const normalizedContent = normalizeAssistantText(content, zh ? "zh" : "en");
+  const sanitizedContent = formatAssistantReplyLayout(
+    zh
+      ? normalizedContent.replace(/\n*\s*I made these high-confidence inferences:[\s\S]*$/i, "").trim()
+      : normalizedContent,
+    zh
+  );
   if (inferenceNotes.length === 0) return sanitizedContent;
   if (/\binfer|\bnormaliz|\bnormalis|推断|推理|规范化/.test(sanitizedContent.toLowerCase())) return sanitizedContent;
 
-  const disclosure = formatInferenceDisclosure(inferenceNotes, documentLanguage === "zh");
-  return disclosure ? `${sanitizedContent}\n\n${normalizeAssistantText(disclosure, documentLanguage)}` : sanitizedContent;
+  const disclosure = formatInferenceDisclosure(inferenceNotes, zh);
+  return disclosure ? `${sanitizedContent}\n\n${normalizeAssistantText(disclosure, zh ? "zh" : "en")}` : sanitizedContent;
 }
 
 function normalizeClarificationRequest(args: unknown, documentLanguage: DocumentLanguage): ClarificationRequest {
@@ -687,6 +755,7 @@ export function estimateAgentContextUsage<TContent>({
   content,
   history,
   referenceSources,
+  contextInstruction,
 }: {
   model: string;
   docType: DocType;
@@ -694,6 +763,7 @@ export function estimateAgentContextUsage<TContent>({
   content: TContent;
   history: Message[];
   referenceSources?: AgentContextSource[];
+  contextInstruction?: string;
 }): AgentContextUsage {
   const serializedHistory = history
     .filter((message) => message.kind !== "change-card")
@@ -709,7 +779,8 @@ export function estimateAgentContextUsage<TContent>({
     buildSystemPrompt(docType),
     buildDocumentContext(docType, content),
     buildExampleStyleContext(docType, content, documentLanguage),
-    buildReferenceContext(referenceSources) ?? "",
+    buildContextInstructionContext(contextInstruction) ?? "",
+    buildReferenceContext(referenceSources, { maxChunks: 8, maxChars: 18000 }) ?? "",
     serializedHistory,
   ].join("\n\n");
   const usedTokens = estimateTokens(contextText) + history.length * 6 + 256;
@@ -810,6 +881,7 @@ export async function runAgentStream<TContent>(
     history,
     userMessage,
     referenceSources,
+    contextInstruction,
     signal,
     onTextChunk,
     onStatusChange,
@@ -837,7 +909,8 @@ export async function runAgentStream<TContent>(
   const systemPrompt = buildSystemPrompt(docType);
   const documentContext = buildDocumentContext(docType, getContent());
   const exampleStyleContext = buildExampleStyleContext(docType, getContent(), documentLanguage);
-  const referenceContext = buildReferenceContext(referenceSources);
+  const instructionContext = buildContextInstructionContext(contextInstruction);
+  const referenceContext = buildReferenceContext(referenceSources, { query: userMessage });
   const clarificationScopeContext = clarificationScope.allowAskUser
     ? [
         "Current request clarification scope:",
@@ -870,6 +943,7 @@ export async function runAgentStream<TContent>(
     { role: "system", content: documentContext },
     { role: "system", content: exampleStyleContext },
     { role: "system", content: clarificationScopeContext },
+    ...(instructionContext ? [{ role: "system" as const, content: instructionContext }] : []),
     ...(referenceContext ? [{ role: "system" as const, content: referenceContext }] : []),
     ...history.filter((msg) => msg.kind !== "change-card").map((msg): ChatCompletionMessageParam => {
       if (msg.kind === "context-summary") {
@@ -908,7 +982,7 @@ export async function runAgentStream<TContent>(
       }, { signal });
 
       let assistantContent = "";
-      const toolCalls: ChatCompletionMessageToolCall[] = [];
+      const toolCalls: ChatCompletionMessageFunctionToolCall[] = [];
 
       // Process stream
       for await (const chunk of stream) {
