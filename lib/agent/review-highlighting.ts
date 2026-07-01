@@ -47,13 +47,15 @@ function stringsFrom(value: unknown): string[] {
 }
 
 function uniqueStrings(values: string[]): string[] {
-  return Array.from(new Set(values.map((value) => value.trim()).filter((value) => value.length > 1)));
+  return Array.from(new Set(
+    values
+      .map((value) => value.trim())
+      .filter((value) => value.length > 1 && value.length <= 140)
+  ));
 }
 
 function mergeAnchors(...groups: string[][]): string[] {
-  return uniqueStrings(groups.flat())
-    .sort((a, b) => b.length - a.length)
-    .slice(0, 8);
+  return uniqueStrings(groups.flat()).slice(0, 12);
 }
 
 function pushSnippet(snippets: ReviewSnippet[], text: string, anchors: string[]): void {
@@ -84,7 +86,12 @@ function collectChangedDateRanges(
   if (Array.isArray(after)) {
     const beforeItems = Array.isArray(before) ? before : [];
     after.forEach((item, index) => {
-      collectChangedDateRanges(getBeforeArrayItem(beforeItems, item, index), item, snippets, anchors);
+      collectChangedDateRanges(
+        getBeforeArrayItem(beforeItems, item, index),
+        item,
+        snippets,
+        mergeAnchors(stringsFrom(item), anchors),
+      );
     });
     return;
   }
@@ -104,7 +111,7 @@ function collectChangedDateRanges(
     const siblingAnchors = stringsFrom(
       Object.fromEntries(Object.entries(afterRecord).filter(([siblingKey]) => siblingKey !== key))
     );
-    collectChangedDateRanges(beforeRecord[key], value, snippets, mergeAnchors(anchors, siblingAnchors));
+    collectChangedDateRanges(beforeRecord[key], value, snippets, mergeAnchors(siblingAnchors, anchors));
   });
 }
 
@@ -124,7 +131,12 @@ function collectChangedStringLeaves(
   if (Array.isArray(after)) {
     const beforeItems = Array.isArray(before) ? before : [];
     after.forEach((item, index) => {
-      collectChangedStringLeaves(getBeforeArrayItem(beforeItems, item, index), item, snippets, anchors);
+      collectChangedStringLeaves(
+        getBeforeArrayItem(beforeItems, item, index),
+        item,
+        snippets,
+        mergeAnchors(stringsFrom(item), anchors),
+      );
     });
     return;
   }
@@ -138,7 +150,7 @@ function collectChangedStringLeaves(
     const siblingAnchors = stringsFrom(
       Object.fromEntries(Object.entries(afterRecord).filter(([siblingKey]) => siblingKey !== key))
     );
-    collectChangedStringLeaves(beforeRecord[key], value, snippets, mergeAnchors(anchors, siblingAnchors));
+    collectChangedStringLeaves(beforeRecord[key], value, snippets, mergeAnchors(siblingAnchors, anchors));
   });
 }
 
@@ -158,4 +170,3 @@ export function getReviewSnippets(change: AgentChange): ReviewSnippet[] {
     })
     .slice(0, 40);
 }
-
