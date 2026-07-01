@@ -780,7 +780,7 @@ export function estimateAgentContextUsage<TContent>({
     buildDocumentContext(docType, content),
     buildExampleStyleContext(docType, content, documentLanguage),
     buildContextInstructionContext(contextInstruction) ?? "",
-    buildReferenceContext(referenceSources) ?? "",
+    buildReferenceContext(referenceSources, { maxChunks: 8, maxChars: 18000 }) ?? "",
     serializedHistory,
   ].join("\n\n");
   const usedTokens = estimateTokens(contextText) + history.length * 6 + 256;
@@ -910,7 +910,7 @@ export async function runAgentStream<TContent>(
   const documentContext = buildDocumentContext(docType, getContent());
   const exampleStyleContext = buildExampleStyleContext(docType, getContent(), documentLanguage);
   const instructionContext = buildContextInstructionContext(contextInstruction);
-  const referenceContext = buildReferenceContext(referenceSources);
+  const referenceContext = buildReferenceContext(referenceSources, { query: userMessage });
   const clarificationScopeContext = clarificationScope.allowAskUser
     ? [
         "Current request clarification scope:",
