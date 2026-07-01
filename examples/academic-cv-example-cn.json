@@ -219,33 +219,33 @@
     "publications": [
       {
         "id": "ac-pub-0001-4000-8000-000000000001",
-        "citation": "Liu, Y., example, Collaborator Name, A., & Supervisor Name. (2024). On Adaptive Data Curation for Efficient Pretraining of Large Language Models. Nature Machine Intelligence, 6(5), 512–528. https://doi.org/10.0000/example"
+        "citation": "Liu, Y., Collaborator Name, A., & Supervisor Name. (2024). On Adaptive Data Curation for Efficient Pretraining of Large Language Models. Nature Machine Intelligence, 6(5), 512–528. https://doi.org/10.0000/example"
       },
       {
         "id": "ac-pub-0002-4000-8000-000000000001",
-        "citation": "Collaborator Name, B., Liu, Y..example, & Collaborator Name, C. (2024, July). Scaling Laws for Trillion-Token Foundation Model Pretraining [Paper presentation]. ICML 2024, Vienna, Austria."
+        "citation": "Collaborator Name, B., Liu, Y., & Collaborator Name, C. (2024, July). Scaling Laws for Trillion-Token Foundation Model Pretraining [Paper presentation]. ICML 2024, Vienna, Austria."
       },
       {
         "id": "ac-pub-0003-4000-8000-000000000001",
-        "citation": "Liu, Y.,example, & Supervisor Name. (2023). Structured Data Curricula for Continual Pretraining of Large Language Models. Journal of Machine Learning Research, 24(1), 1–35. https://doi.org/10.0000/example"
+        "citation": "Liu, Y., & Supervisor Name. (2023). Structured Data Curricula for Continual Pretraining of Large Language Models. Journal of Machine Learning Research, 24(1), 1–35. https://doi.org/10.0000/example"
       },
       {
         "id": "ac-pub-0004-4000-8000-000000000001",
-        "citation": "Collaborator Name, D., Liu, Y.,example, & Collaborator Name, E. (2023, December). Towards Data-Efficient Pretraining via Domain-Adaptive Token Sampling [Paper presentation]. NeurIPS 2023, New Orleans, USA."
+        "citation": "Collaborator Name, D., Liu, Y., & Collaborator Name, E. (2023, December). Towards Data-Efficient Pretraining via Domain-Adaptive Token Sampling [Paper presentation]. NeurIPS 2023, New Orleans, USA."
       }
     ],
     "manuscriptsUnderReview": [
       {
         "id": "ac-ms-0001-4000-8000-000000000001",
-        "citation": "Liu, Y.,example, Collaborator Name, F., Collaborator Name, G., & Supervisor Name. (under review). Cross-Lingual Transfer in Multilingual Foundation Model Pretraining. Manuscript submitted to JMLR."
+        "citation": "Liu, Y., Collaborator Name, F., Collaborator Name, G., & Supervisor Name. (under review). Cross-Lingual Transfer in Multilingual Foundation Model Pretraining. Manuscript submitted to JMLR."
       },
       {
         "id": "ac-ms-0002-4000-8000-000000000001",
-        "citation": "Liu, Y.,example, & Collaborator Name, H. (under review). Sparse Mixture-of-Experts Pretraining with Dynamic Routing for Scalable Language Model Training. Manuscript submitted to ICLR 2025."
+        "citation": "Liu, Y., & Collaborator Name, H. (under review). Sparse Mixture-of-Experts Pretraining with Dynamic Routing for Scalable Language Model Training. Manuscript submitted to ICLR 2025."
       },
       {
         "id": "ac-ms-0003-4000-8000-000000000001",
-        "citation": "Collaborator Name, I., Liu, Y.,example, & Collaborator Name, J. (under review). Revisiting Tokenization Efficiency in Large-Scale Multilingual Pretraining. Manuscript submitted to ACL 2025."
+        "citation": "Collaborator Name, I., Liu, Y., & Collaborator Name, J. (under review). Revisiting Tokenization Efficiency in Large-Scale Multilingual Pretraining. Manuscript submitted to ACL 2025."
       }
     ],
     "conferencePresentations": [
