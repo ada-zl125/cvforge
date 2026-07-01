@@ -2,6 +2,7 @@
 
 import { Plus, Trash2, ChevronUp, ChevronDown } from "lucide-react";
 import type { PublicationItem, ResumeLanguage } from "@/lib/types/academic-cv";
+import { moveItem, removeItemAt, updateItemAt } from "@/lib/list-utils";
 import { Button } from "@/components/ui/button";
 import { useUILanguage } from "@/lib/ui-language";
 import { t } from "@/lib/translations";
@@ -22,16 +23,12 @@ export function PublicationsSection({ items, onChange }: Props) {
   const tr = t[lang].academicCv;
 
   function update(i: number, value: string) {
-    onChange(items.map((item, idx) => idx === i ? { ...item, citation: value } : item));
+    onChange(updateItemAt(items, i, (item) => ({ ...item, citation: value })));
   }
   function add() { onChange([...items, emptyPublication()]); }
-  function remove(i: number) { onChange(items.filter((_, idx) => idx !== i)); }
+  function remove(i: number) { onChange(removeItemAt(items, i)); }
   function move(i: number, dir: -1 | 1) {
-    const t2 = i + dir;
-    if (t2 < 0 || t2 >= items.length) return;
-    const next = [...items];
-    [next[i], next[t2]] = [next[t2], next[i]];
-    onChange(next);
+    onChange(moveItem(items, i, dir));
   }
 
   return (

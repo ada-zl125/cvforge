@@ -4,8 +4,8 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, FileDown, FileImage, FileJson, FileUp, Loader2, PenLine, RotateCcw, Settings, Sparkles, WandSparkles } from "lucide-react";
 import { exportResume, exportJson, type ExportFormat } from "@/lib/export";
-import { withId } from "@/lib/json-utils";
 import { defaultCoverLetterContent, TITLE_MAX } from "@/lib/defaults";
+import { createCoverLetterExportPayload, normalizeCoverLetterContent } from "@/lib/document-normalizers";
 import coverLetterExampleEn from "@/examples/cover-letter-example-en.json";
 import {
   DropdownMenu,
@@ -16,8 +16,6 @@ import {
 import type {
   CoverLetterTemplate,
   CoverLetterContent,
-  AddressLine,
-  ParagraphItem,
 } from "@/lib/types/cover-letter";
 import { Button } from "@/components/ui/button";
 import {
@@ -76,29 +74,19 @@ export function Toolbar({ title, content, template, isAgentMode, onTitleChange, 
   }
 
   function handleLoadExample() {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const raw: any = coverLetterExampleEn.content;
-    const merged: CoverLetterContent = {
-      ...defaultCoverLetterContent,
-      ...raw,
-      sender: {
-        ...defaultCoverLetterContent.sender,
-        ...raw.sender,
-        addressLines: withId<AddressLine>(raw.sender?.addressLines ?? []),
-      },
-      recipient: {
-        ...defaultCoverLetterContent.recipient,
-        ...raw.recipient,
-        addressLines: withId<AddressLine>(raw.recipient?.addressLines ?? []),
-      },
-      paragraphs: withId<ParagraphItem>(raw.paragraphs ?? []),
-    };
-    onImport({ title, template: coverLetterExampleEn.template as CoverLetterTemplate, content: merged });
+    onImport({
+      title,
+      template: coverLetterExampleEn.template as CoverLetterTemplate,
+      content: normalizeCoverLetterContent(coverLetterExampleEn.content),
+    });
     setExampleDialogOpen(false);
   }
 
   function handleExportJson() {
-    exportJson({ _type: "cvforge-cover-letter", title, template, content }, title || "cover-letter");
+    exportJson(
+      createCoverLetterExportPayload({ title, template, content }),
+      title || "cover-letter"
+    );
   }
 
   function handleReset() {
@@ -120,24 +108,11 @@ export function Toolbar({ title, content, template, isAgentMode, onTitleChange, 
           !parsed.content?.sender ||
           !Array.isArray(parsed.content?.paragraphs)
         ) throw new Error("invalid");
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const raw: any = parsed.content;
-        const merged: CoverLetterContent = {
-          ...defaultCoverLetterContent,
-          ...raw,
-          sender: {
-            ...defaultCoverLetterContent.sender,
-            ...raw.sender,
-            addressLines: withId<AddressLine>(raw.sender?.addressLines ?? []),
-          },
-          recipient: {
-            ...defaultCoverLetterContent.recipient,
-            ...raw.recipient,
-            addressLines: withId<AddressLine>(raw.recipient?.addressLines ?? []),
-          },
-          paragraphs: withId<ParagraphItem>(raw.paragraphs),
-        };
-        onImport({ title: parsed.title, template: parsed.template, content: merged });
+        onImport({
+          title: parsed.title,
+          template: parsed.template,
+          content: normalizeCoverLetterContent(parsed.content),
+        });
       } catch {
         setImportErrorOpen(true);
       }

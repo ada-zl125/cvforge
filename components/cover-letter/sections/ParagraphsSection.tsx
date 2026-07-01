@@ -2,6 +2,7 @@
 
 import { ChevronDown, ChevronUp, Plus, Trash2 } from "lucide-react";
 import type { ParagraphItem } from "@/lib/types/cover-letter";
+import { moveItem, removeItemAt, updateItemAt } from "@/lib/list-utils";
 import { Button } from "@/components/ui/button";
 import { useUILanguage } from "@/lib/ui-language";
 import { t } from "@/lib/translations";
@@ -23,19 +24,15 @@ export function ParagraphsSection({ items, onChange, collapsed, onToggleCollapse
   }
 
   function remove(i: number) {
-    onChange(items.filter((_, idx) => idx !== i));
+    onChange(removeItemAt(items, i));
   }
 
   function move(i: number, dir: -1 | 1) {
-    const target = i + dir;
-    if (target < 0 || target >= items.length) return;
-    const next = [...items];
-    [next[i], next[target]] = [next[target], next[i]];
-    onChange(next);
+    onChange(moveItem(items, i, dir));
   }
 
   function update(i: number, text: string) {
-    onChange(items.map((item, idx) => idx === i ? { ...item, text } : item));
+    onChange(updateItemAt(items, i, (item) => ({ ...item, text })));
   }
 
   return (

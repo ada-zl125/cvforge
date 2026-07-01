@@ -3,6 +3,7 @@
 import { Plus, Trash2, ChevronUp, ChevronDown } from "lucide-react";
 import type { AwardItem, ResumeLanguage } from "@/lib/types/resume";
 import { defaultDate } from "@/lib/defaults";
+import { moveItem, removeItemAt, updateItemAt } from "@/lib/list-utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,7 +26,7 @@ export function AwardsSection({ items, onChange, language }: AwardsSectionProps)
   const contentZh = language === "zh";
 
   function update(index: number, field: keyof AwardItem, value: string) {
-    onChange(items.map((item, i) => (i === index ? { ...item, [field]: value } : item)));
+    onChange(updateItemAt(items, index, (item) => ({ ...item, [field]: value })));
   }
 
   function add() {
@@ -33,15 +34,11 @@ export function AwardsSection({ items, onChange, language }: AwardsSectionProps)
   }
 
   function remove(index: number) {
-    onChange(items.filter((_, i) => i !== index));
+    onChange(removeItemAt(items, index));
   }
 
   function move(index: number, direction: -1 | 1) {
-    const target = index + direction;
-    if (target < 0 || target >= items.length) return;
-    const next = [...items];
-    [next[index], next[target]] = [next[target], next[index]];
-    onChange(next);
+    onChange(moveItem(items, index, direction));
   }
 
   return (
