@@ -17,6 +17,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
+import DotField from "@/components/DotField";
+import SplitText from "@/components/SplitText";
 import { useUILanguage } from "@/lib/ui-language";
 import { t } from "@/lib/translations";
 import {
@@ -26,6 +28,9 @@ import {
   RESUME_STORAGE_KEY,
   ACADEMIC_CV_STORAGE_KEY,
   COVER_LETTER_STORAGE_KEY,
+  RESUME_AGENT_STORAGE_KEY,
+  ACADEMIC_CV_AGENT_STORAGE_KEY,
+  COVER_LETTER_AGENT_STORAGE_KEY,
   TITLE_MAX,
 } from "@/lib/defaults";
 import type { ResumeTemplate, ResumeLanguage } from "@/lib/types/resume";
@@ -41,9 +46,9 @@ function GithubIcon({ className }: { className?: string }) {
   );
 }
 
-const LANGUAGE_OPTIONS: { value: ResumeLanguage; label: string }[] = [
-  { value: "en", label: "English" },
-  { value: "zh", label: "中文" },
+const LANGUAGE_OPTIONS: { value: ResumeLanguage }[] = [
+  { value: "en" },
+  { value: "zh" },
 ];
 
 const GITHUB_REPO = "ada-zl125/cvforge";
@@ -162,12 +167,12 @@ function CreateDialog({
                       docLang === opt.value ? "entry-dialog-language-active" : "text-muted-foreground"
                     }`}
                   >
-                    {opt.label}
+                    {opt.value === "en" ? tr.langEnglish : tr.langChinese}
                   </button>
                 ))
               ) : (
                 <span className="entry-dialog-language-active cursor-default rounded-lg px-3 py-2 text-sm font-medium">
-                  English
+                  {tr.langEnglish}
                 </span>
               )}
             </div>
@@ -228,21 +233,24 @@ export default function EntryPage() {
 
   function handleCreateResume(title: string, resumeLang: ResumeLanguage) {
     try {
-      localStorage.setItem(RESUME_STORAGE_KEY, JSON.stringify({ title, template: DEFAULT_TEMPLATE, language: resumeLang, content: defaultResumeContent }));
+      sessionStorage.setItem(RESUME_STORAGE_KEY, JSON.stringify({ title, template: DEFAULT_TEMPLATE, language: resumeLang, content: defaultResumeContent }));
+      sessionStorage.removeItem(RESUME_AGENT_STORAGE_KEY);
     } catch { /* ignore quota errors */ }
     router.push("/editor");
   }
 
   function handleCreateAcademicCv(title: string, cvLang: ResumeLanguage) {
     try {
-      localStorage.setItem(ACADEMIC_CV_STORAGE_KEY, JSON.stringify({ title, template: DEFAULT_TEMPLATE, language: cvLang, content: defaultAcademicCVContent }));
+      sessionStorage.setItem(ACADEMIC_CV_STORAGE_KEY, JSON.stringify({ title, template: DEFAULT_TEMPLATE, language: cvLang, content: defaultAcademicCVContent }));
+      sessionStorage.removeItem(ACADEMIC_CV_AGENT_STORAGE_KEY);
     } catch { /* ignore quota errors */ }
     router.push("/academic-cv");
   }
 
   function handleCreateCoverLetter(title: string) {
     try {
-      localStorage.setItem(COVER_LETTER_STORAGE_KEY, JSON.stringify({ title, template: "classic", content: defaultCoverLetterContent }));
+      sessionStorage.setItem(COVER_LETTER_STORAGE_KEY, JSON.stringify({ title, template: "classic", content: defaultCoverLetterContent }));
+      sessionStorage.removeItem(COVER_LETTER_AGENT_STORAGE_KEY);
     } catch { /* ignore quota errors */ }
     router.push("/cover-letter");
   }
@@ -255,9 +263,26 @@ export default function EntryPage() {
 
   return (
     <div className="relative flex min-h-screen flex-col overflow-hidden bg-white">
+      <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+        <DotField
+          className="absolute inset-0"
+          dotRadius={3.4}
+          dotSpacing={18}
+          cursorRadius={240}
+          cursorForce={0.08}
+          bulgeOnly
+          bulgeStrength={26}
+          glowRadius={150}
+          gradientFrom="rgba(82,82,82,0.5)"
+          gradientTo="rgba(163,163,163,0.42)"
+          glowColor="rgba(0,0,0,0.06)"
+        />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_34%,rgba(255,255,255,0.34),rgba(255,255,255,0.7)_48%,rgba(255,255,255,0.88)_78%)]" />
+      </div>
+
       {/* Header */}
       <header className="relative z-10 flex items-center justify-between px-8 py-5 lg:px-12">
-        <Link href="/" className="inline-flex items-center bg-transparent" aria-label="CVForge home">
+        <Link href="/" className="inline-flex items-center bg-transparent transition duration-300 hover:scale-[1.015] hover:opacity-80" aria-label={lang === "zh" ? "CVForge 首页" : "CVForge home"}>
           <Image
             src={LOGO_SRC}
             alt="CVForge"
@@ -273,11 +298,11 @@ export default function EntryPage() {
             href={GITHUB_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1.5 rounded-md border border-gray-300 px-2.5 py-1 text-xs text-gray-600 transition-colors hover:border-gray-500 hover:text-gray-900"
+            className="group flex items-center gap-1.5 rounded-md border border-gray-300 bg-white/55 px-2.5 py-1 text-xs text-gray-600 shadow-[0_10px_28px_rgba(0,0,0,0.035)] backdrop-blur-sm transition-all duration-300 hover:border-gray-500 hover:bg-white/85 hover:text-gray-900 hover:shadow-[0_16px_36px_rgba(0,0,0,0.07)]"
           >
             <GithubIcon className="h-3.5 w-3.5" />
             <span className="flex items-center gap-1 tabular-nums">
-              <Star className="h-3 w-3 fill-current" />
+              <Star className="h-3 w-3 fill-current transition-transform duration-300 group-hover:scale-110" />
               {stars !== null ? formatStars(stars) : "—"}
             </span>
           </a>
@@ -290,9 +315,19 @@ export default function EntryPage() {
 
           {/* Hero */}
           <div className="mb-14 text-center">
-            <h1 className="text-4xl font-bold leading-[1.1] tracking-tight text-[#0f0f0f] lg:text-5xl">
-              {tr.heroTitle}
-            </h1>
+            <SplitText
+              key={lang}
+              tag="h1"
+              text={tr.heroTitle}
+              splitType="words"
+              delay={55}
+              duration={0.8}
+              threshold={0}
+              rootMargin="0px"
+              from={{ opacity: 0, y: 18 }}
+              to={{ opacity: 1, y: 0 }}
+              className="text-4xl font-bold leading-[1.1] tracking-tight text-[#0f0f0f] lg:text-5xl"
+            />
             <p className="mt-4 text-[15px] leading-relaxed text-gray-700">
               {tr.heroSubtitle}
             </p>
@@ -300,11 +335,11 @@ export default function EntryPage() {
               href={GITHUB_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-5 inline-flex items-center gap-2 rounded-full border border-gray-300 px-4 py-1.5 text-sm text-gray-600 transition-colors hover:border-gray-500 hover:text-gray-900"
+              className="group mt-5 inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white/55 px-4 py-1.5 text-sm text-gray-600 shadow-[0_12px_32px_rgba(0,0,0,0.04)] backdrop-blur-sm transition-all duration-300 hover:border-gray-500 hover:bg-white/85 hover:text-gray-900 hover:shadow-[0_18px_42px_rgba(0,0,0,0.08)]"
             >
               <GithubIcon className="h-4 w-4" />
               <span>GitHub</span>
-              <Star className="h-3.5 w-3.5 fill-current" />
+              <Star className="h-3.5 w-3.5 fill-current transition-transform duration-300 group-hover:scale-110" />
               {stars !== null ? (
                 <span className="tabular-nums font-medium">{formatStars(stars)}</span>
               ) : (
@@ -314,14 +349,14 @@ export default function EntryPage() {
           </div>
 
           {/* Entry items */}
-          <div className="border-t border-gray-100">
-            <div className="ml-2 divide-y divide-gray-100">
+          <div className="backdrop-blur-[2px]">
+            <div className="space-y-0">
               {entryItems.map((item) => (
                 <button
-                  key={item.num}
+                  key={`${lang}-${item.num}`}
                   type="button"
                   onClick={item.onClick}
-                  className="group flex w-full cursor-pointer items-center gap-5 border-l-2 border-l-transparent px-3 py-5 text-left transition-colors duration-200 hover:border-l-[#0f0f0f] hover:bg-gray-50/72"
+                  className="group relative -mt-px first:mt-0 flex w-full cursor-pointer items-center gap-5 overflow-hidden border-y border-gray-200/80 bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.58)_0%,rgba(255,255,255,0.34)_48%,rgba(255,255,255,0.08)_100%)] px-3 py-5 text-left backdrop-blur-[1px] transition-all duration-300 hover:-translate-y-px hover:border-y-[#0f0f0f] hover:bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.78)_0%,rgba(255,255,255,0.5)_48%,rgba(255,255,255,0.14)_100%)] hover:shadow-[0_18px_42px_rgba(0,0,0,0.055)]"
                 >
                   <span className="w-7 shrink-0 text-sm tabular-nums text-gray-500 transition-colors duration-200 group-hover:text-gray-700">
                     {item.num}

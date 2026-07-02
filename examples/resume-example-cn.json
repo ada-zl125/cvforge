@@ -162,7 +162,7 @@
       {
         "id": "a1b2c3d4-0006-4000-8000-000000000004",
         "category": "技术栈",
-        "items": "Numpy, Pandas, Matplotlib, Scikit-Learn, PyTorch, LangChain, LangGraph, LlamaIndex, AutoGen"
+        "items": "NumPy, Pandas, Matplotlib, Scikit-Learn, PyTorch, LangChain, LangGraph, LlamaIndex, AutoGen"
       },
       {
         "id": "a1b2c3d4-0006-4000-8000-000000000005",

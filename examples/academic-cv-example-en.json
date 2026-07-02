@@ -189,7 +189,7 @@
         "descriptions": [
           {
             "id": "d61afd89-9e25-4a60-96e8-6680c94ac5b3",
-            "value": "Research Assistant in Large Language Models, focusing on training and fine-tuning transformer-based models. Built and evaluated models using PyTorch and Hugging Face for tasks such as text generation and summarization."
+            "value": "Research Assistant in Large Language Models, focusing on training and fine-tuning transformer-based models. Built and evaluated models using PyTorch and Hugging Face for tasks such as text generation and summarisation."
           },
           {
             "id": "1b9d9b05-469a-4dae-9d9a-1116eeb92514",
@@ -273,7 +273,7 @@
       {
         "id": "ae-cp-0001-4000-8000-000000000001",
         "event": "Data Science and Machine Learning Example Conference",
-        "title": " Adaptive Data Selection for Efficient Pretraining of Large Language Models",
+        "title": "Adaptive Data Selection for Efficient Pretraining of Large Language Models",
         "location": "London, UK",
         "date": "Dec 2024",
         "type": "Oral"
@@ -330,7 +330,7 @@
       {
         "id": "d0425c60-85ba-4610-b434-83b0842f8bb3",
         "category": "Tech Stack",
-        "items": "Numpy, Pandas, Matplotlib, Scikit-Learn, Pytorch, LangChain, LangGraph, Llamalndex, AutoGen"
+        "items": "NumPy, Pandas, Matplotlib, Scikit-Learn, PyTorch, LangChain, LangGraph, LlamaIndex, AutoGen"
       },
       {
         "id": "555ecd58-7ddc-4e31-a569-dfddea870349",
@@ -340,7 +340,7 @@
       {
         "id": "72f45bfc-e068-47e6-9bcf-8f249d926d1e",
         "category": "Others",
-        "items": "Microsoft Office, Adobe Premiere, Adobe After Effects, Adobe PhotoShop"
+        "items": "Microsoft Office, Adobe Premiere, Adobe After Effects, Adobe Photoshop"
       }
     ],
     "references": [

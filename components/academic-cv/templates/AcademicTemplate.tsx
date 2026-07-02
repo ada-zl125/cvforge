@@ -7,6 +7,8 @@ import {
   LINE_STYLE,
   getFontFamily, boldFontStyle,
 } from "@/lib/template-styles";
+import { useUILanguage } from "@/lib/ui-language";
+import { t } from "@/lib/translations";
 import type {
   AcademicCVContent,
   AcademicSectionType,
@@ -22,6 +24,7 @@ import type {
   AcademicEducationExtraFieldType,
 } from "@/lib/types/academic-cv";
 import type { ContactField, SkillGroup } from "@/lib/types/resume";
+import { formatDegreeField } from "@/lib/json-utils";
 
 const SECTION_TITLES_ZH: Record<AcademicSectionType, string> = {
   researchInterests:       "研究兴趣",
@@ -169,9 +172,7 @@ function AcademicEducationBlock({ items, lang, fontFamily }: { items: AcademicEd
     <section className="mb-2">
       {items.map((edu, index) => {
         const dateText = [edu.startDate, edu.endDate].filter(Boolean).join(" – ");
-        const degreeLine = lang === "zh"
-          ? [edu.field, edu.degree].filter(Boolean).join("")
-          : [edu.degree, edu.field].filter(Boolean).join(" ");
+        const degreeLine = formatDegreeField(edu.degree, edu.field, lang);
         return (
           <PageBreakAvoid key={edu.id} style={index > 0 ? { marginTop: "6px" } : undefined}>
             {index === 0 && <SectionTitle type="education" lang={lang} fontFamily={fontFamily} />}
@@ -435,6 +436,8 @@ interface AcademicTemplateProps {
 }
 
 export function AcademicTemplate({ content, language = "en" }: AcademicTemplateProps) {
+  const { lang } = useUILanguage();
+  const uiTr = t[lang];
   const activeSections = content.sections ?? [];
   const hasContent = content.personal.fullName || activeSections.length > 0;
   const fontFamily = getFontFamily(language);
@@ -449,7 +452,7 @@ export function AcademicTemplate({ content, language = "en" }: AcademicTemplateP
 
       {!hasContent && (
         <p className="mt-24 text-center text-sm text-gray-400">
-          Fill in the form on the left to see your CV here.
+          {uiTr.emptyAcademicCvPreview}
         </p>
       )}
 

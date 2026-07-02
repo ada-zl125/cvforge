@@ -2,9 +2,11 @@
 
 import { ChevronDown, ChevronUp, Plus, Trash2 } from "lucide-react";
 import type { ParagraphItem } from "@/lib/types/cover-letter";
+import { moveItem, removeItemAt, updateItemAt } from "@/lib/list-utils";
 import { Button } from "@/components/ui/button";
 import { useUILanguage } from "@/lib/ui-language";
 import { t } from "@/lib/translations";
+import { normalizeTextareaValue } from "@/lib/text";
 
 interface Props {
   items: ParagraphItem[];
@@ -22,19 +24,15 @@ export function ParagraphsSection({ items, onChange, collapsed, onToggleCollapse
   }
 
   function remove(i: number) {
-    onChange(items.filter((_, idx) => idx !== i));
+    onChange(removeItemAt(items, i));
   }
 
   function move(i: number, dir: -1 | 1) {
-    const target = i + dir;
-    if (target < 0 || target >= items.length) return;
-    const next = [...items];
-    [next[i], next[target]] = [next[target], next[i]];
-    onChange(next);
+    onChange(moveItem(items, i, dir));
   }
 
   function update(i: number, text: string) {
-    onChange(items.map((item, idx) => idx === i ? { ...item, text } : item));
+    onChange(updateItemAt(items, i, (item) => ({ ...item, text })));
   }
 
   return (
@@ -44,7 +42,7 @@ export function ParagraphsSection({ items, onChange, collapsed, onToggleCollapse
         className="section-header flex w-full cursor-pointer items-center justify-between px-4 py-3 text-sm font-semibold tracking-tight transition-colors hover:text-foreground"
         onClick={onToggleCollapse}
       >
-        {"Body Paragraphs"}
+        {tr.sectionParagraphs}
         <ChevronDown className={`size-4 text-muted-foreground transition-transform duration-200 ${collapsed ? "-rotate-90" : ""}`} />
       </button>
 
@@ -55,8 +53,8 @@ export function ParagraphsSection({ items, onChange, collapsed, onToggleCollapse
               <div key={item.id} className="flex gap-1.5">
                 {/* Textarea */}
                 <textarea
-                  value={item.text}
-                  onChange={(e) => update(i, e.target.value)}
+                  value={normalizeTextareaValue(item.text)}
+                  onChange={(e) => update(i, normalizeTextareaValue(e.target.value))}
                   placeholder={tr.paragraphPlaceholder}
                   rows={4}
                   className="flex-1 resize-none rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"

@@ -1,6 +1,7 @@
 "use client";
 
 import type { ResumeContent, ResumeLanguage, ContactField, EducationItem, ExperienceItem, ProjectItem, SkillGroup, AwardItem, SectionType } from "@/lib/types/resume";
+import { formatDegreeField } from "@/lib/json-utils";
 import { PageBreakAvoid } from "@/components/shared/PageBreakAvoid";
 import { BulletItem } from "@/components/shared/BulletItem";
 import {
@@ -8,6 +9,8 @@ import {
   LINE_STYLE,
   getFontFamily, boldFontStyle,
 } from "@/lib/template-styles";
+import { useUILanguage } from "@/lib/ui-language";
+import { t } from "@/lib/translations";
 
 interface AcademicTemplateProps {
   content: ResumeContent;
@@ -183,9 +186,7 @@ function EducationBlock({ items, lang, fontFamily }: { items: EducationItem[]; l
         const extraFields = edu.extraFields ?? [];
         const dateText = [edu.startDate, edu.endDate].filter(Boolean).join(" – ");
 
-        const degreeLine = lang === "zh"
-          ? [edu.field, edu.degree].filter(Boolean).join("")
-          : [edu.degree, edu.field].filter(Boolean).join(" ");
+        const degreeLine = formatDegreeField(edu.degree, edu.field, lang);
 
         return (
           <PageBreakAvoid key={edu.id} style={index > 0 ? { marginTop: "6px" } : undefined}>
@@ -333,6 +334,8 @@ const SECTION_RENDERERS: Record<SectionType, SectionRenderer> = {
 /* ---- Main template ---- */
 
 export function GeneralTemplate({ content, language = "en" }: AcademicTemplateProps) {
+  const { lang } = useUILanguage();
+  const uiTr = t[lang];
   const activeSections = content.sections ?? [];
   const hasContent = content.personal.fullName || activeSections.length > 0;
   const fontFamily = getFontFamily(language);
@@ -355,7 +358,7 @@ export function GeneralTemplate({ content, language = "en" }: AcademicTemplatePr
 
       {!hasContent && (
         <p className="mt-24 text-center text-sm text-gray-400">
-          Fill in the form on the left to see your resume here.
+          {uiTr.emptyResumePreview}
         </p>
       )}
 

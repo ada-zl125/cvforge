@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { ChevronDown, ChevronUp, Plus, Trash2, Mail, Phone, MapPin, Globe, Camera } from "lucide-react";
 import type { PersonalInfo, ContactField, ContactFieldType, ResumeLanguage } from "@/lib/types/resume";
+import SpotlightCard from "@/components/SpotlightCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -131,7 +132,10 @@ export function PersonalSection({ data: rawData, onChange, collapsed, onToggleCo
         language={language}
       />
 
-      <section className="section-card rounded-lg border border-border">
+      <SpotlightCard
+        className="section-card rounded-md border border-black/10 bg-white"
+        spotlightColor="rgba(0, 0, 0, 0.065)"
+      >
         {/* Section header — always visible */}
         <button
           type="button"
@@ -144,7 +148,7 @@ export function PersonalSection({ data: rawData, onChange, collapsed, onToggleCo
 
         {/* Collapsible content */}
         {!collapsed && (
-          <div className="border-t border-border px-4 pb-4 pt-3">
+          <div className="border-t border-black/10 bg-white/42 px-4 pb-4 pt-3">
             {/* Full Name */}
             <div className="mb-4 flex flex-col gap-1.5">
               <Label htmlFor="fullName">{zh ? "姓名" : "Full Name"}</Label>
@@ -253,7 +257,7 @@ export function PersonalSection({ data: rawData, onChange, collapsed, onToggleCo
             </DropdownMenu>
           </div>
         )}
-      </section>
+      </SpotlightCard>
     </>
   );
 }

@@ -1,7 +1,7 @@
 <div align="center">
   <img src="public/logo-text-horizontal.png" alt="CVForge" width="280" />
   <br /><br />
-  <p>Professional resumes, effortlessly. No account needed.</p>
+  <p>Professional documents, assisted by AI. No account needed.</p>
   <p>
     <a href="https://ada-zl125.github.io/cvforge"><img src="https://img.shields.io/badge/live-cvforge-4f46e5?style=flat-square" alt="Live Site" /></a>
     &nbsp;
@@ -15,51 +15,57 @@
 
 ---
 
-![CVForge editor screenshot](public/edit-screenshot.png)
+![CVForge editor screenshot](public/agent-screenshot.png)
 
-CVForge is a free, open-source document builder for job seekers and academics. Everything runs in the browser — no sign-up, no server, no data stored anywhere. Build your document and export when you are ready.
+CVForge is a free, open-source document builder for job seekers and academics. It combines structured editing, live preview, export tools, and Agent Mode in one focused workspace. No account is required.
 
 > **Status** &nbsp; Approaching v1.0. Core editors are stable. Feedback and contributions are welcome.
 
 ## Features
 
-**Resume Editor**
+CVForge helps you create polished application documents with structured editing, AI assistance, live preview, and export tools.
 
-A general-purpose resume builder with a live A4 preview. Add, reorder, and rename sections to fit any role. Supports English and Chinese content.
+**Document types**
 
-**Academic CV Editor**
+Create resumes, academic CVs, and cover letters. Resumes and academic CVs support English and Chinese document modes. Cover letters currently support English document mode only.
 
-A full-featured academic CV editor covering research experience, publications, conference presentations, grants, teaching, professional service, and references.
+**Editing workflow**
 
-**Cover Letter Editor**
+Fill in structured fields manually, or use Agent Mode to add content, polish wording, review changes, and improve a document through chat. Agent Mode can also follow project instructions and retrieve relevant excerpts from uploaded PDF, MD, or TXT reference files.
 
-A structured cover letter editor with sender and recipient blocks, body paragraphs, and the same live A4 preview found in the other editors.
+**Agent Mode**
 
-**Export and Import**
+Use Agent Mode when you want a writing partner inside the editor. It can reason about your current document, polish sections, add missing content, ask focused follow-up questions, follow project instructions, use uploaded reference files, highlight changes, and help you undo the last agent edit if needed.
 
-Export any document as PDF, PNG, or JSON. JSON exports are fully portable — import them back into CVForge at any time to resume editing.
+**Export and import**
 
-**No Account Required**
-
-CVForge is entirely stateless. Your work lives in your browser's local storage and never touches a server.
+Preview your document in A4 format, then export it as PDF, PNG, or JSON. JSON files can be imported back into CVForge for later editing.
 
 ## Tech Stack
 
 | Layer | Technology |
 |---|---|
-| Framework | Next.js 16 (App Router, Turbopack) |
-| Language | TypeScript (strict mode) |
+| Framework | Next.js 16.2 with App Router and Turbopack |
+| Runtime | React 19.2 client components |
+| Language | TypeScript |
 | Styling | Tailwind CSS v4 |
-| Components | shadcn/ui |
-| Deployment | GitHub Pages (static export) |
+| UI | shadcn style local components, Base UI, lucide-react |
+| Animation | GSAP and local React Bits style components |
+| Agent | OpenAI SDK, LangChain tools, Zod schemas |
+| Context search | MiniSearch and PDF.js |
+| Markdown | react-markdown with remark-gfm |
+| Export | html-to-image and jsPDF |
+| Deployment | Static export for GitHub Pages |
 
 The entire codebase was implemented using [Claude Code](https://claude.ai/code) and [OpenAI Codex](https://openai.com/index/openai-codex/).
+
+## Documentation
+
+The [CVForge Wiki](https://github.com/ada-zl125/cvforge/wiki) contains the project overview, core feature notes, technical stack, and a fuller explanation of Agent Mode.
 
 ## Contributing
 
 Contributions are welcome. Please open an issue first to discuss what you would like to change. When submitting a pull request, make sure it targets the `dev` branch and references the related issue. Branch naming follows the pattern `feature/issue-{N}-short-description`.
-
-To run the project locally, clone the repository, run `npm install`, then `npm run dev`.
 
 ## License
 

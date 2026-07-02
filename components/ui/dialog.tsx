@@ -5,7 +5,11 @@ import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import FadeContent from "@/components/FadeContent"
+import SpotlightCard from "@/components/SpotlightCard"
 import { XIcon } from "lucide-react"
+import { useUILanguage } from "@/lib/ui-language"
+import { t } from "@/lib/translations"
 
 function Dialog({ ...props }: DialogPrimitive.Root.Props) {
   return <DialogPrimitive.Root data-slot="dialog" {...props} />
@@ -47,6 +51,9 @@ function DialogContent({
 }: DialogPrimitive.Popup.Props & {
   showCloseButton?: boolean
 }) {
+  const { lang } = useUILanguage()
+  const tr = t[lang]
+
   return (
     <DialogPortal>
       <DialogOverlay />
@@ -58,7 +65,19 @@ function DialogContent({
         )}
         {...props}
       >
-        {children}
+        <SpotlightCard
+          className="dialog-react-bits-surface rounded-[inherit]"
+          spotlightColor="rgba(0, 0, 0, 0.045)"
+        >
+          <FadeContent
+            className="dialog-react-bits-content"
+            duration={180}
+            threshold={0}
+            initialOpacity={0}
+          >
+            {children}
+          </FadeContent>
+        </SpotlightCard>
         {showCloseButton && (
           <DialogPrimitive.Close
             data-slot="dialog-close"
@@ -72,7 +91,7 @@ function DialogContent({
           >
             <XIcon
             />
-            <span className="sr-only">Close</span>
+            <span className="sr-only">{tr.close}</span>
           </DialogPrimitive.Close>
         )}
       </DialogPrimitive.Popup>

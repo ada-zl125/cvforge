@@ -1,10 +1,15 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useSyncExternalStore } from "react";
 
 export type UILang = "en" | "zh";
 
 const STORAGE_KEY = "cvforge-ui-lang";
+const CHANGE_EVENT = "cvforge-ui-lang-change";
+
+function isUILang(value: string | null | undefined): value is UILang {
+  return value === "en" || value === "zh";
+}
 
 interface UILanguageContextValue {
   lang: UILang;
@@ -16,25 +21,35 @@ const UILanguageContext = createContext<UILanguageContextValue>({
   setLang: () => {},
 });
 
-export function UILanguageProvider({ children }: { children: React.ReactNode }) {
-  const [lang, setLangState] = useState<UILang>("en");
+function getStoredLanguage(): UILang {
+  if (typeof window === "undefined") return "en";
+  const stored = localStorage.getItem(STORAGE_KEY);
+  return isUILang(stored) ? stored : "en";
+}
 
-  useEffect(() => {
-    let cancelled = false;
+function subscribeToLanguageChange(onStoreChange: () => void) {
+  window.addEventListener(CHANGE_EVENT, onStoreChange);
+  window.addEventListener("storage", onStoreChange);
+  return () => {
+    window.removeEventListener(CHANGE_EVENT, onStoreChange);
+    window.removeEventListener("storage", onStoreChange);
+  };
+}
 
-    queueMicrotask(() => {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (!cancelled && (stored === "en" || stored === "zh")) setLangState(stored);
-    });
+function getServerLanguage(): UILang {
+  return "en";
+}
 
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+export function UILanguageProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const lang = useSyncExternalStore(subscribeToLanguageChange, getStoredLanguage, getServerLanguage);
 
   function setLang(l: UILang) {
-    setLangState(l);
-    if (typeof window !== "undefined") localStorage.setItem(STORAGE_KEY, l);
+    localStorage.setItem(STORAGE_KEY, l);
+    window.dispatchEvent(new Event(CHANGE_EVENT));
   }
 
   return (

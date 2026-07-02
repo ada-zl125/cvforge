@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Plus, Trash2, ChevronUp, ChevronDown, ChevronRight } from "lucide-react";
 import type { PresentationItem, ResumeLanguage } from "@/lib/types/academic-cv";
+import { moveItem, removeItemAt, updateItemAt } from "@/lib/list-utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,22 +32,18 @@ export function PresentationsSection({ items, onChange, language }: Props) {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
   function update<K extends keyof PresentationItem>(i: number, field: K, value: PresentationItem[K]) {
-    onChange(items.map((item, idx) => idx === i ? { ...item, [field]: value } : item));
+    onChange(updateItemAt(items, i, (item) => ({ ...item, [field]: value })));
   }
   function add() { onChange([...items, emptyPresentation()]); }
-  function remove(i: number) { onChange(items.filter((_, idx) => idx !== i)); }
+  function remove(i: number) { onChange(removeItemAt(items, i)); }
   function move(i: number, dir: -1 | 1) {
-    const t2 = i + dir;
-    if (t2 < 0 || t2 >= items.length) return;
-    const next = [...items];
-    [next[i], next[t2]] = [next[t2], next[i]];
-    onChange(next);
+    onChange(moveItem(items, i, dir));
   }
 
   function removeType(i: number) {
     const next = { ...items[i] };
     delete next.type;
-    onChange(items.map((item, idx) => idx === i ? next : item));
+    onChange(updateItemAt(items, i, () => next));
   }
 
   return (

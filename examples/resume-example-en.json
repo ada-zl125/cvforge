@@ -49,36 +49,36 @@
       {
         "id": "d45b4a5e-debb-4354-a9dd-ed9563985146",
         "company": "Google",
-        "position": "Al Engineer",
+        "position": "AI Engineer",
         "location": "London, UK",
         "startDate": "Sept 2025",
         "endDate": "Present",
         "descriptions": [
           {
             "id": "73c8124e-6c5b-4b11-8879-6bfc047a4431",
-            "value": "Built and maintained scalable Al services using Python and FastAPI, focusing on prompt optimization, evaluation, and\nsystem monitoring."
+            "value": "Built and maintained scalable AI services using Python and FastAPI, focusing on prompt optimisation, evaluation, and\nsystem monitoring."
           },
           {
             "id": "99407cc3-1a64-4ac7-9f05-e0044fd320f3",
-            "value": "Worked on LLM based systems to improve reasoning quality, reliability, and latency across production applications,\ncollaborating with cross functional teams to integrate Al into product work flows."
+            "value": "Worked on LLM-based systems to improve reasoning quality, reliability, and latency across production applications,\ncollaborating with cross-functional teams to integrate AI into product workflows."
           }
         ]
       },
       {
         "id": "de57f1f9-422e-45c0-b6dc-dbc8fbdfcbe8",
         "company": "Microsoft",
-        "position": "Machine Learning Engineer ",
+        "position": "Machine Learning Engineer",
         "location": "HongKong, China",
         "startDate": "Oct 2023",
         "endDate": "Sept 2025",
         "descriptions": [
           {
             "id": "0eb3f4b0-0a26-433d-ab8c-38cd9cf82498",
-            "value": "Developed and maintained machine leaming pipelines for large scale data processing and model training, supporting\nproduction level reliability and efficiency."
+            "value": "Developed and maintained machine learning pipelines for large-scale data processing and model training, supporting\nproduction-level reliability and efficiency."
           },
           {
             "id": "a8cb32ad-4211-4559-b27e-b6bed9a6cd5f",
-            "value": "Improved model performance and deployment workflows through feature engineering and tuning, and supported\ndeployment and monitoring in real world systems."
+            "value": "Improved model performance and deployment workflows through feature engineering and tuning, and supported\ndeployment and monitoring in real-world systems."
           }
         ]
       }
@@ -155,12 +155,12 @@
       {
         "id": "3e05ae7c-0f51-41a3-93be-5e7c19b09088",
         "category": "Fields",
-        "items": "Al Agent, RAG, LLM Fine-tuning, Machine Learning, Deep Learning, Data Science"
+        "items": "AI Agent, RAG, LLM Fine-tuning, Machine Learning, Deep Learning, Data Science"
       },
       {
         "id": "477b4219-b11d-4ea5-8766-d9428e483b24",
         "category": "Tech Stack",
-        "items": "Numpy, Pandas, Matplotlib, Scikit-Learn, Pytorch, LangChain, LangGraph, Llamalndex, AutoGen"
+        "items": "NumPy, Pandas, Matplotlib, Scikit-Learn, PyTorch, LangChain, LangGraph, LlamaIndex, AutoGen"
       },
       {
         "id": "03ea8826-e515-4c16-bea3-2260caa24a44",
@@ -170,13 +170,13 @@
       {
         "id": "01cbdc65-c4f9-49c6-9eff-da9a2bd571a7",
         "category": "Others",
-        "items": "Microsoft Office, Adobe Premiere, Adobe After Effects, Adobe PhotoShop"
+        "items": "Microsoft Office, Adobe Premiere, Adobe After Effects, Adobe Photoshop"
       }
     ],
     "projects": [
       {
         "id": "667c36fa-7d2a-4598-9c23-9e6de9a9248e",
-        "name": "Data Analysis Agent for Multi-Source Reasoning ",
+        "name": "Data Analysis Agent for Multi-Source Reasoning",
         "websiteLabel": "GitHub",
         "websiteUrl": "https://github.com/zachary-lee-example/project-example",
         "startDate": "Dec 2025",
@@ -184,17 +184,17 @@
         "descriptions": [
           {
             "id": "4f5df032-8c93-4f5e-87af-f54a37531f10",
-            "value": "Built an Al agent for complex data analysis across PostgreSQL CSV and document data using OpenAI and Llama to enable\nmulti step reasoning with Python and SQL tool execution."
+            "value": "Built an AI agent for complex data analysis across PostgreSQL, CSV and document data using OpenAI and Llama to enable\nmulti-step reasoning with Python and SQL tool execution."
           },
           {
             "id": "e2e8c93f-f550-45e9-a95f-27166447a9a1",
-            "value": "Implemented with Python LangChain LangGraph FastAPI and FAISS and deployed as a scalable API service with\nimproved accuracy and latency through optimized context management and tool selection."
+            "value": "Implemented with Python, LangChain, LangGraph, FastAPI and FAISS and deployed as a scalable API service with\nimproved accuracy and latency through optimised context management and tool selection."
           }
         ]
       },
       {
         "id": "cc399925-8d23-4ef2-934f-3a19448257cb",
-        "name": "Multimodal Document UnderstandingGoogle ",
+        "name": "Multimodal Document Understanding at Google",
         "websiteLabel": "GitHub",
         "websiteUrl": "https://github.com/zachary-lee-example/project-example",
         "startDate": "Jun 2025",
@@ -206,7 +206,7 @@
           },
           {
             "id": "43295182-c44b-4004-960c-9355d9cb1ee6",
-            "value": "Implemented training with PyTorch and Hugging Face and deployed via FastAPI with improved performance over\ntraditional OCR based approaches."
+            "value": "Implemented training with PyTorch and Hugging Face and deployed via FastAPI with improved performance over\ntraditional OCR-based approaches."
           }
         ]
       }
@@ -214,7 +214,7 @@
     "awards": [
       {
         "id": "01f60261-83a0-490a-af7b-d6ff09f8adf1",
-        "award": "Ranked 1st in the Global Al Agent Hackathon",
+        "award": "Ranked 1st in the Global AI Agent Hackathon",
         "date": "Jan 2022"
       },
       {
@@ -228,6 +228,6 @@
         "date": "Sept 2020"
       }
     ],
-    "summary": "Al Engineer with 3+ years of experience in Machine Learning, Deep Learning, and Data Science. Experienced in building and\neploying end-to-end ML systems, with strong expertise in model development, optimization, and scalable solutions. Skilled a\nurning complex data into actionable insights and delivering impactful Al-driven results."
+    "summary": "AI Engineer with 3+ years of experience in Machine Learning, Deep Learning, and Data Science. Experienced in building and\ndeploying end-to-end ML systems, with strong expertise in model development, optimisation, and scalable solutions. Skilled at\nturning complex data into actionable insights and delivering impactful AI-driven results."
   }
 }
