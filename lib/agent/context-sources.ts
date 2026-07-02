@@ -19,6 +19,7 @@ const CONTEXT_RETRIEVAL_MAX_CHARS = 18000;
 const CONTEXT_RETRIEVAL_MAX_CHUNKS = 8;
 const CONTEXT_CHUNK_MAX_CHARS = 2400;
 const CONTEXT_CHUNK_OVERLAP_CHARS = 240;
+const CONTEXT_CHUNK_TRUNCATED_WARNING = "\n\n[Context chunk truncated]";
 export const CONTEXT_DOCUMENT_ACCEPT = [
   ".txt",
   ".md",
@@ -151,12 +152,29 @@ function selectChunksWithinBudget(
   for (const chunk of chunks) {
     if (selected.length >= maxChunks) break;
     const sectionSize = chunk.text.length + chunk.sourceName.length + 80;
-    if (used > 0 && used + sectionSize > maxChars) break;
+    if (used + sectionSize > maxChars) {
+      if (selected.length === 0) {
+        const textBudget = Math.max(0, maxChars - chunk.sourceName.length - 80);
+        if (textBudget > 0) {
+          selected.push({
+            ...chunk,
+            text: truncateChunkText(chunk.text, textBudget),
+          });
+        }
+      }
+      break;
+    }
     selected.push(chunk);
     used += sectionSize;
   }
 
   return selected;
+}
+
+function truncateChunkText(text: string, maxChars: number): string {
+  if (text.length <= maxChars) return text;
+  if (maxChars <= CONTEXT_CHUNK_TRUNCATED_WARNING.length) return text.slice(0, maxChars).trim();
+  return `${text.slice(0, maxChars - CONTEXT_CHUNK_TRUNCATED_WARNING.length).trim()}${CONTEXT_CHUNK_TRUNCATED_WARNING}`;
 }
 
 function scoreExactChunkMatches(chunk: AgentContextChunk, queryTerms: string[]): number {

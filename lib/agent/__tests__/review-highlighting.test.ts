@@ -116,4 +116,55 @@ describe("review highlighting", () => {
     expect(googleSnippet?.anchors).toContain("Google");
     expect(snippets.map((snippet) => snippet.text)).not.toContain("Built ML pipelines.");
   });
+
+  it("tracks changed date ranges with nearby anchors", () => {
+    const before = {
+      experience: [{
+        id: "google",
+        company: "Google",
+        position: "AI Engineer",
+        startDate: "Jan 2024",
+        endDate: "Jun 2025",
+      }],
+    };
+    const after = {
+      experience: [{
+        id: "google",
+        company: "Google",
+        position: "AI Engineer",
+        startDate: "Jan 2024",
+        endDate: "Present",
+      }],
+    };
+
+    const snippet = getReviewSnippets(change(before, after)).find((item) => item.text === "Jan 2024 – Present");
+
+    expect(snippet?.anchors).toEqual(expect.arrayContaining(["Google", "AI Engineer"]));
+  });
+
+  it("does not report unchanged repeated strings as edits", () => {
+    const before = {
+      summary: "Built reliable tools.",
+      experience: [{ id: "work", company: "Google", descriptions: [{ id: "d1", value: "Built reliable tools." }] }],
+    };
+    const after = {
+      summary: "Built reliable tools.",
+      experience: [{ id: "work", company: "Google", descriptions: [{ id: "d1", value: "Built reliable tools." }] }],
+    };
+
+    expect(getReviewSnippets(change(before, after))).toEqual([]);
+  });
+
+  it("limits review snippets so large edits stay usable", () => {
+    const before = { skills: [] };
+    const after = {
+      skills: Array.from({ length: 60 }, (_, index) => ({
+        id: `skill-${index}`,
+        category: `Category ${index}`,
+        items: `Skill ${index}`,
+      })),
+    };
+
+    expect(getReviewSnippets(change(before, after))).toHaveLength(40);
+  });
 });
