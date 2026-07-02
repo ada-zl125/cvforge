@@ -100,7 +100,7 @@ Before implementing a feature, follow this workflow:
 Guidelines:
 
 1. Issue and pull request descriptions should be concise, clear, and written in English. Avoid redundant details and dashes.
-2. Commit messages should be one clear English sentence. Avoid dashes.
+2. Commit messages should be one clear English sentence. Avoid dashes. For example, "git commit -m "feat: xxxxx (#\[issue-number\])""
 3. Always request approval before creating a new branch, before each push, and before opening a pull request.
 4. After opening a pull request, request review. Once the user approves and the pull request is merged, remind the user to remove the redundant branch.
 
