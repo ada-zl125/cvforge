@@ -31,7 +31,11 @@ Create resumes, academic CVs, and cover letters. Resumes and academic CVs suppor
 
 **Editing workflow**
 
-Fill in structured fields manually, or use Agent Mode to add content, polish wording, review changes, and improve a document through chat. Agent Mode can also use project instructions and uploaded PDF, MD, or TXT files as background context.
+Fill in structured fields manually, or use Agent Mode to add content, polish wording, review changes, and improve a document through chat. Agent Mode can also follow project instructions and retrieve relevant excerpts from uploaded PDF, MD, or TXT reference files.
+
+**Agent Mode**
+
+Use Agent Mode when you want a writing partner inside the editor. It can reason about your current document, polish sections, add missing content, ask focused follow-up questions, follow project instructions, use uploaded reference files, highlight changes, and help you undo the last agent edit if needed.
 
 **Export and import**
 
@@ -48,17 +52,20 @@ Preview your document in A4 format, then export it as PDF, PNG, or JSON. JSON fi
 | UI | shadcn style local components, Base UI, lucide-react |
 | Animation | GSAP and local React Bits style components |
 | Agent | OpenAI SDK, LangChain tools, Zod schemas |
+| Context search | MiniSearch and PDF.js |
 | Markdown | react-markdown with remark-gfm |
 | Export | html-to-image and jsPDF |
 | Deployment | Static export for GitHub Pages |
 
 The entire codebase was implemented using [Claude Code](https://claude.ai/code) and [OpenAI Codex](https://openai.com/index/openai-codex/).
 
+## Documentation
+
+The [CVForge Wiki](https://github.com/ada-zl125/cvforge/wiki) contains the project overview, core feature notes, technical stack, and a fuller explanation of Agent Mode.
+
 ## Contributing
 
 Contributions are welcome. Please open an issue first to discuss what you would like to change. When submitting a pull request, make sure it targets the `dev` branch and references the related issue. Branch naming follows the pattern `feature/issue-{N}-short-description`.
-
-To run the project locally, clone the repository, run `npm install`, then `npm run dev`.
 
 ## License
 

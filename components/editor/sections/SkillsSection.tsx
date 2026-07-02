@@ -2,6 +2,7 @@
 
 import { Plus, Trash2, ChevronUp, ChevronDown } from "lucide-react";
 import type { SkillGroup, ResumeLanguage } from "@/lib/types/resume";
+import { moveItem, removeItemAt, updateItemAt } from "@/lib/list-utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,8 +24,7 @@ export function SkillsSection({ items, onChange, language }: SkillsSectionProps)
   const contentZh = language === "zh";
 
   function update(index: number, field: "category" | "items", value: string) {
-    const next = items.map((g, i) => (i === index ? { ...g, [field]: value } : g));
-    onChange(next);
+    onChange(updateItemAt(items, index, (group) => ({ ...group, [field]: value })));
   }
 
   function add() {
@@ -32,15 +32,11 @@ export function SkillsSection({ items, onChange, language }: SkillsSectionProps)
   }
 
   function remove(index: number) {
-    onChange(items.filter((_, i) => i !== index));
+    onChange(removeItemAt(items, index));
   }
 
   function move(index: number, direction: -1 | 1) {
-    const target = index + direction;
-    if (target < 0 || target >= items.length) return;
-    const next = [...items];
-    [next[index], next[target]] = [next[target], next[index]];
-    onChange(next);
+    onChange(moveItem(items, index, direction));
   }
 
   return (

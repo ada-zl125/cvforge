@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Plus, Trash2, ChevronUp, ChevronDown, ChevronRight } from "lucide-react";
 import type { ServiceItem, ResumeLanguage } from "@/lib/types/academic-cv";
+import { moveItem, removeItemAt, updateItemAt } from "@/lib/list-utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,16 +26,12 @@ export function ServiceSection({ items, onChange, language }: Props) {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
   function update<K extends keyof ServiceItem>(i: number, field: K, value: ServiceItem[K]) {
-    onChange(items.map((item, idx) => idx === i ? { ...item, [field]: value } : item));
+    onChange(updateItemAt(items, i, (item) => ({ ...item, [field]: value })));
   }
   function add() { onChange([...items, emptyService()]); }
-  function remove(i: number) { onChange(items.filter((_, idx) => idx !== i)); }
+  function remove(i: number) { onChange(removeItemAt(items, i)); }
   function move(i: number, dir: -1 | 1) {
-    const t2 = i + dir;
-    if (t2 < 0 || t2 >= items.length) return;
-    const next = [...items];
-    [next[i], next[t2]] = [next[t2], next[i]];
-    onChange(next);
+    onChange(moveItem(items, i, dir));
   }
 
   const zh = lang === "zh";

@@ -4,8 +4,8 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, FileDown, FileImage, FileJson, FileUp, Loader2, PenLine, RotateCcw, Settings, Sparkles, WandSparkles } from "lucide-react";
 import { exportResume, exportJson, type ExportFormat } from "@/lib/export";
-import { withId, mergeDegreeField, stripDegreeField } from "@/lib/json-utils";
 import { defaultAcademicCVContent, TITLE_MAX } from "@/lib/defaults";
+import { createAcademicCVExportPayload, normalizeAcademicCVContent } from "@/lib/document-normalizers";
 import academicCvExampleEn from "@/examples/academic-cv-example-en.json";
 import academicCvExampleCn from "@/examples/academic-cv-example-cn.json";
 import {
@@ -18,17 +18,6 @@ import type {
   AcademicCVTemplate,
   ResumeLanguage,
   AcademicCVContent,
-  AcademicEducationItem,
-  AcademicEducationExtraField,
-  AcademicExperienceItem,
-  TeachingItem,
-  PublicationItem,
-  PresentationItem,
-  GrantAwardItem,
-  ServiceItem,
-  SkillGroup,
-  ReferenceItem,
-  DescriptionField,
 } from "@/lib/types/academic-cv";
 import { Button } from "@/components/ui/button";
 import {
@@ -91,31 +80,20 @@ export function Toolbar({ title, template, language, content, isAgentMode, onSet
 
   function handleLoadExample() {
     const example = language === "zh" ? academicCvExampleCn : academicCvExampleEn;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const raw: any = example.content;
-    const merged: AcademicCVContent = {
-      ...defaultAcademicCVContent,
-      ...raw,
-      personal: { ...defaultAcademicCVContent.personal, ...raw.personal },
-      education: withId<AcademicEducationItem>(raw.education).map((ed) => { const e = mergeDegreeField(ed, example.language); return { ...e, extraFields: withId<AcademicEducationExtraField>(e.extraFields) }; }),
-      researchExperience: withId<AcademicExperienceItem>(raw.researchExperience).map((e) => ({ ...e, descriptions: withId<DescriptionField>(e.descriptions ?? []) })),
-      teachingExperience: withId<TeachingItem>(raw.teachingExperience ?? []).map((e) => ({ ...e, descriptions: withId<DescriptionField>(e.descriptions ?? []) })),
-      industryExperience: withId<AcademicExperienceItem>(raw.industryExperience).map((e) => ({ ...e, descriptions: withId<DescriptionField>(e.descriptions ?? []) })),
-      publications: withId<PublicationItem>(raw.publications),
-      manuscriptsUnderReview: withId<PublicationItem>(raw.manuscriptsUnderReview),
-      conferencePresentations: withId<PresentationItem>(raw.conferencePresentations),
-      grantsAndAwards: withId<GrantAwardItem>(raw.grantsAndAwards ?? []),
-      professionalService: withId<ServiceItem>(raw.professionalService),
-      technicalSkills: withId<SkillGroup>(raw.technicalSkills),
-      references: withId<ReferenceItem>(raw.references),
-    };
-    onImport({ title, template: example.template as AcademicCVTemplate, language: example.language as ResumeLanguage, content: merged });
+    const exampleLanguage = example.language as ResumeLanguage;
+    onImport({
+      title,
+      template: example.template as AcademicCVTemplate,
+      language: exampleLanguage,
+      content: normalizeAcademicCVContent(example.content, exampleLanguage),
+    });
   }
 
   function handleExportJson() {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { photo: _photo, ...personal } = content.personal;
-    exportJson({ _type: "cvforge-academic-cv", title, template, language, content: { ...content, personal, education: stripDegreeField(content.education) } }, title || "academic-cv");
+    exportJson(
+      createAcademicCVExportPayload({ title, template, language, content }),
+      title || "academic-cv"
+    );
   }
 
   function handleReset() {
@@ -137,25 +115,12 @@ export function Toolbar({ title, template, language, content, isAgentMode, onSet
           !parsed.content?.personal ||
           !Array.isArray(parsed.content?.sections)
         ) throw new Error("invalid");
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const raw: any = parsed.content;
-        const merged: AcademicCVContent = {
-          ...defaultAcademicCVContent,
-          ...raw,
-          personal: { ...defaultAcademicCVContent.personal, ...raw.personal },
-          education: withId<AcademicEducationItem>(raw.education).map((ed) => { const e = mergeDegreeField(ed, parsed.language); return { ...e, extraFields: withId<AcademicEducationExtraField>(e.extraFields) }; }),
-          researchExperience: withId<AcademicExperienceItem>(raw.researchExperience).map((e) => ({ ...e, descriptions: withId<DescriptionField>(e.descriptions ?? []) })),
-          teachingExperience: withId<TeachingItem>(raw.teachingExperience ?? []).map((e) => ({ ...e, descriptions: withId<DescriptionField>(e.descriptions ?? []) })),
-          industryExperience: withId<AcademicExperienceItem>(raw.industryExperience).map((e) => ({ ...e, descriptions: withId<DescriptionField>(e.descriptions ?? []) })),
-          publications: withId<PublicationItem>(raw.publications),
-          manuscriptsUnderReview: withId<PublicationItem>(raw.manuscriptsUnderReview),
-          conferencePresentations: withId<PresentationItem>(raw.conferencePresentations),
-          grantsAndAwards: withId<GrantAwardItem>(raw.grantsAndAwards),
-          professionalService: withId<ServiceItem>(raw.professionalService),
-          technicalSkills: withId<SkillGroup>(raw.technicalSkills),
-          references: withId<ReferenceItem>(raw.references),
-        };
-        onImport({ title: parsed.title, template: parsed.template, language: parsed.language, content: merged });
+        onImport({
+          title: parsed.title,
+          template: parsed.template,
+          language: parsed.language,
+          content: normalizeAcademicCVContent(parsed.content, parsed.language),
+        });
       } catch {
         setImportErrorOpen(true);
       }

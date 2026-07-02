@@ -10,7 +10,11 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 CVForge is a stateless browser based document builder for resumes, academic CVs, and cover letters. It has no user accounts and no database. Users create a document from the landing page, edit it in the matching editor, and export it when finished.
 
-Document editing state is stored in `sessionStorage`, so a page refresh keeps the current work, while closing the tab starts a clean session next time. LLM configuration is the only long lived user setting stored in `localStorage`.
+Document editing state, Agent Mode chat state, uploaded reference context, project instructions, clarification state, and recent agent changes are stored in `sessionStorage`. A page refresh keeps the current tab state, while closing the tab starts a clean session next time.
+
+LLM configuration and UI language preference are the only long lived user settings stored in `localStorage`.
+
+Agent Mode helps users edit documents through structured tools. It supports clarification flow, undo, review highlights, project instructions, and local reference files. Uploaded reference files are searched locally and only relevant excerpts are sent into the agent context.
 
 ## Tech Stack
 
@@ -24,36 +28,43 @@ Document editing state is stored in `sessionStorage`, so a page refresh keeps th
 | Animation | GSAP, React Bits inspired local components, and CSS transitions |
 | Agent runtime | OpenAI SDK with LangChain DynamicStructuredTool wrappers |
 | Agent validation | Zod schemas for tool arguments |
+| Reference search | MiniSearch for browser side full text retrieval |
+| PDF text extraction | PDF.js for selectable text PDF files |
 | Markdown rendering | react-markdown with remark-gfm |
 | Export | html-to-image and jsPDF for browser side PNG and PDF export |
+| Testing | Vitest with jsdom for focused unit tests |
+| CI | GitHub Actions for code quality, unit tests, and build checks |
 | Deployment | Static export via `next.config.ts` with optional `NEXT_PUBLIC_BASE_PATH` |
 
 ## Current Project Structure
 
 ```
 app/
-  page.tsx                  # Landing page and document creation dialogs
-  editor/page.tsx           # Resume editor route
-  academic-cv/page.tsx      # Academic CV editor route
-  cover-letter/page.tsx     # Cover letter editor route
-  privacy/page.tsx          # Privacy policy
-  terms/page.tsx            # Terms of service
+  page.tsx                  Landing page and document creation dialogs
+  editor/                   Resume editor route
+  academic-cv/              Academic CV editor route
+  cover-letter/             Cover letter editor route
+  privacy/                  Privacy policy route
+  terms/                    Terms of service route
 components/
-  editor/                   # Resume editor UI, sections, toolbar, template
-  academic-cv/              # Academic CV editor UI, sections, toolbar, template
-  cover-letter/             # Cover letter editor UI, sections, toolbar, template
-  shared/                   # Shared editor frame, preview helpers, agent panel, editor hooks
-  shared/agent-panel/       # Pure agent panel UI components
-  ui/                       # Shared UI primitives
+  editor/                   Resume editor UI
+  academic-cv/              Academic CV editor UI
+  cover-letter/             Cover letter editor UI
+  shared/                   Shared editor frame, preview, agent panel, and hooks
+  ui/                       Shared UI primitives
 examples/
-  *.json                    # English and Chinese examples used by editors and agent prompts
+  *.json                    Example document content
 lib/
-  agent/                    # Agent loop, tools, executor, session state, text normalization
-  types/                    # Document data types
-  editor-state.ts           # Session backed editor state hook
-  storage.ts                # Session storage helpers
-  ui-language.tsx           # UI language store with hydration safe snapshots
-  export.ts                 # Browser side export helpers
+  agent/                    Agent loop, tools, executor, context, review, and session logic
+  types/                    Document data types
+  document-normalizers.ts   Import, example, and export data normalisation
+  editor-state.ts           Session backed editor state hook
+  storage.ts                Session storage helpers
+  ui-language.tsx           UI language store with hydration safe snapshots
+  export.ts                 Browser side export helpers
+.github/workflows/
+  ci.yml                    Code quality, unit test, and build checks
+  deploy.yml                GitHub Pages deployment
 ```
 
 ## Current State Model
@@ -75,60 +86,32 @@ lib/
 - Keep agent UI components separate from agent state and tool execution logic.
 
 
-# GitHub Requirements
+# Development Workflow
 
-## Branch Naming
+Before implementing a feature, follow this workflow:
 
-Use lowercase kebab-case with a clear prefix:
-
-- feature/basic-agent-mode
-- refactor/edit-page-ui
-- fix/ci-error
-
-Recommended prefixes:
-
-- feature/ — new features
-- fix/ — bug fixes
-- refactor/ — code or structure refactoring
-- chore/ — maintenance tasks
-- docs/ — documentation updates
-- test/ — test-related changes
-
-## Issue Titles
-
-Keep issue titles concise and action-oriented:
-
-- Add initial agent mode support
-- Refactor edit page layout
-- Fix CI pipeline error
+1. Create an issue for the task. Keep the issue title and description concise, clear, and focused.
+2. Create a branch for the issue, such as `feat/preprocessor` or `experiment/baseline-solution`. Do all related work on this branch.
+3. Analyse the problem and implement the required code or file changes.
+4. After completing the work for the issue, request approval before pushing changes or opening a pull request.
+5. Open a pull request to the dev branch and wait for CI validation.
+6. After the pull request is successfully merged into dev, mark the issue as completed and remind the user to delete the related branch.
 
 Guidelines:
 
-- Use imperative mood (Add, Fix, Refactor)
-- Focus on one clear objective
-- Avoid unnecessary details
+1. Issue and pull request descriptions should be concise, clear, and written in English. Avoid redundant details and dashes.
+2. Commit messages should be one clear English sentence. Avoid dashes. For example, "git commit -m "feat: xxxxx (#\[issue-number\])""
+3. Always request approval before creating a new branch, before each push, and before opening a pull request.
+4. After opening a pull request, request review. Once the user approves and the pull request is merged, remind the user to remove the redundant branch.
 
-## Commit, Issue, PR Description
-
-Descriptions should be:
-
-- Clear and concise English
-- Focused only on relevant changes
-- Preferably one sentence
-- No more than three sentences
-
-Examples:
-
-- `git commit -m "Add #xxx: initial support for agent mode."`
-- Refactor edit page layout and simplify component structure.
-- Fix CI failure caused by missing environment variables.
-
-Avoid:
-
-- Long background explanations
-- Irrelevant context
-- AI-generated verbose wording
 
 # Coding Style
 
-Keep the code clean and easy to understand, with concise and clear comments written in English. Avoid using dashes in comments.
+Code should be concise, clear, efficient, and easy to read. Maintain good structure and engineering practices. Do not overcomplicate the task, but do not oversimplify it either. 
+
+Use comments where helpful, but keep them short, clear, and in English. Avoid using dashes in comments.
+
+
+# Documentation Style
+
+When writing project documentation, such as README.md, use concise, clear, professional, and accurate English. Avoid redundant or unnecessary wording. Do not use dashes or colons.

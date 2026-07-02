@@ -5,137 +5,12 @@ import FadeContent from "@/components/FadeContent";
 import { PAGE_W, PAGE_H, TOP, BOTTOM, CONTENT_H } from "@/lib/page-constants";
 import { PageBreakProvider } from "@/components/shared/PageBreakAvoid";
 import type { AgentChange } from "@/lib/agent/change-tracking";
+import { getReviewSnippets, type ReviewSnippet } from "@/lib/agent/review-highlighting";
 
 interface PaginatedPreviewPanelProps {
   children: React.ReactNode;
   reviewChange?: AgentChange | null;
   isStreaming?: boolean;
-}
-
-function collectStrings(value: unknown, parts: string[]): void {
-  if (typeof value === "string") {
-    const text = value.trim();
-    if (text) parts.push(text);
-    return;
-  }
-
-  if (Array.isArray(value)) {
-    value.forEach((item) => collectStrings(item, parts));
-    return;
-  }
-
-  if (value && typeof value === "object") {
-    Object.entries(value).forEach(([key, nested]) => {
-      if (key !== "id" && key !== "photo") collectStrings(nested, parts);
-    });
-  }
-}
-
-function formatDateRange(value: unknown): string {
-  if (!value || typeof value !== "object") return "";
-
-  const record = value as Record<string, unknown>;
-  const startDate = typeof record.startDate === "string" ? record.startDate.trim() : "";
-  const endDate = typeof record.endDate === "string" ? record.endDate.trim() : "";
-  return [startDate, endDate].filter(Boolean).join(" – ");
-}
-
-function getItemId(value: unknown): string | undefined {
-  if (!value || typeof value !== "object") return undefined;
-
-  const id = (value as Record<string, unknown>).id;
-  return typeof id === "string" ? id : undefined;
-}
-
-function collectChangedDateRanges(before: unknown, after: unknown, snippets: string[]): void {
-  if (Array.isArray(after)) {
-    const beforeItems = Array.isArray(before) ? before : [];
-    const beforeById = new Map<string, unknown>();
-    beforeItems.forEach((item) => {
-      const id = getItemId(item);
-      if (id) beforeById.set(id, item);
-    });
-
-    after.forEach((item, index) => {
-      const id = getItemId(item);
-      collectChangedDateRanges(id ? beforeById.get(id) : beforeItems[index], item, snippets);
-    });
-    return;
-  }
-
-  if (!after || typeof after !== "object") return;
-
-  const afterRecord = after as Record<string, unknown>;
-  const beforeRecord = before && typeof before === "object" ? before as Record<string, unknown> : {};
-  const afterRange = formatDateRange(afterRecord);
-  const beforeRange = formatDateRange(beforeRecord);
-  if (afterRange && afterRange !== beforeRange) snippets.push(afterRange);
-
-  Object.entries(afterRecord).forEach(([key, value]) => {
-    if (key === "id" || key === "photo") return;
-    collectChangedDateRanges(beforeRecord[key], value, snippets);
-  });
-}
-
-function collectChangedStringLeaves(before: unknown, after: unknown, snippets: string[]): void {
-  if (typeof after === "string") {
-    const text = after.trim();
-    const previous = typeof before === "string" ? before.trim() : "";
-    if (text.length > 1 && text !== previous) snippets.push(text);
-    return;
-  }
-
-  if (Array.isArray(after)) {
-    const beforeItems = Array.isArray(before) ? before : [];
-    const beforeById = new Map<string, unknown>();
-    beforeItems.forEach((item) => {
-      const id = getItemId(item);
-      if (id) beforeById.set(id, item);
-    });
-
-    after.forEach((item, index) => {
-      const id = getItemId(item);
-      collectChangedStringLeaves(id ? beforeById.get(id) : beforeItems[index], item, snippets);
-    });
-    return;
-  }
-
-  if (!after || typeof after !== "object") return;
-
-  const afterRecord = after as Record<string, unknown>;
-  const beforeRecord = before && typeof before === "object" ? before as Record<string, unknown> : {};
-  Object.entries(afterRecord).forEach(([key, value]) => {
-    if (key === "id" || key === "photo") return;
-    collectChangedStringLeaves(beforeRecord[key], value, snippets);
-  });
-}
-
-function getAddedTextSnippets(change: AgentChange): string[] {
-  const beforeParts: string[] = [];
-  const afterParts: string[] = [];
-  const dateRangeParts: string[] = [];
-  const changedLeafParts: string[] = [];
-  collectStrings(change.before, beforeParts);
-  collectStrings(change.after, afterParts);
-  collectChangedDateRanges(change.before, change.after, dateRangeParts);
-  collectChangedStringLeaves(change.before, change.after, changedLeafParts);
-
-  const previous = new Map<string, number>();
-  beforeParts.forEach((part) => previous.set(part, (previous.get(part) ?? 0) + 1));
-
-  const addedParts = afterParts
-    .filter((part) => {
-      const count = previous.get(part) ?? 0;
-      if (count > 0) {
-        previous.set(part, count - 1);
-        return false;
-      }
-      return part.length > 1;
-    });
-
-  return Array.from(new Set([...dateRangeParts, ...changedLeafParts, ...addedParts]))
-    .sort((a, b) => b.length - a.length)
-    .slice(0, 40);
 }
 
 function clearReviewMarks(root: HTMLElement): void {
@@ -145,19 +20,41 @@ function clearReviewMarks(root: HTMLElement): void {
   root.normalize();
 }
 
-function markTextNode(node: Text, snippets: string[]): boolean {
+function normalizeScopeText(value: string): string {
+  return value.replace(/\s+/g, " ").trim();
+}
+
+function getReviewScopeText(node: Text): string {
+  const parent = node.parentElement;
+  const scope =
+    parent?.closest("[data-page-break-avoid]") ??
+    parent?.closest("section") ??
+    parent?.closest("p") ??
+    parent;
+
+  return normalizeScopeText(scope?.textContent ?? "");
+}
+
+function isSnippetInScope(node: Text, snippet: ReviewSnippet): boolean {
+  if (snippet.anchors.length === 0) return true;
+
+  const scopeText = getReviewScopeText(node);
+  return snippet.anchors.some((anchor) => scopeText.includes(anchor));
+}
+
+function markTextNode(node: Text, snippets: ReviewSnippet[]): boolean {
   const source = node.nodeValue ?? "";
   const match = snippets
-    .map((snippet) => ({ snippet, index: source.indexOf(snippet) }))
-    .filter((item) => item.index >= 0)
-    .sort((a, b) => a.index - b.index || b.snippet.length - a.snippet.length)[0];
+    .map((snippet) => ({ snippet, index: source.indexOf(snippet.text) }))
+    .filter((item) => item.index >= 0 && isSnippetInScope(node, item.snippet))
+    .sort((a, b) => a.index - b.index || b.snippet.text.length - a.snippet.text.length)[0];
 
   if (!match) return false;
 
   const fragment = document.createDocumentFragment();
   const before = source.slice(0, match.index);
-  const selected = source.slice(match.index, match.index + match.snippet.length);
-  const after = source.slice(match.index + match.snippet.length);
+  const selected = source.slice(match.index, match.index + match.snippet.text.length);
+  const after = source.slice(match.index + match.snippet.text.length);
 
   if (before) fragment.appendChild(document.createTextNode(before));
 
@@ -188,14 +85,16 @@ function ReviewHighlighter({
     clearReviewMarks(root);
     if (!change) return;
 
-    const snippets = getAddedTextSnippets(change);
+    const snippets = getReviewSnippets(change);
     if (snippets.length === 0) return;
 
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
       acceptNode(node) {
         const parent = node.parentElement;
         if (!parent || parent.closest("mark[data-agent-review]")) return NodeFilter.FILTER_REJECT;
-        return snippets.some((snippet) => (node.nodeValue ?? "").includes(snippet))
+        return snippets.some((snippet) =>
+          (node.nodeValue ?? "").includes(snippet.text) && isSnippetInScope(node as Text, snippet)
+        )
           ? NodeFilter.FILTER_ACCEPT
           : NodeFilter.FILTER_REJECT;
       },

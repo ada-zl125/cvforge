@@ -4,8 +4,8 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, FileDown, FileImage, FileJson, FileUp, Loader2, PenLine, RotateCcw, Settings, Sparkles, WandSparkles } from "lucide-react";
 import { exportResume, exportJson, type ExportFormat } from "@/lib/export";
-import { withId, mergeDegreeField, stripDegreeField, stripResumeLegacyContacts } from "@/lib/json-utils";
 import { defaultResumeContent, TITLE_MAX } from "@/lib/defaults";
+import { createResumeExportPayload, normalizeResumeContent } from "@/lib/document-normalizers";
 import resumeExampleEn from "@/examples/resume-example-en.json";
 import resumeExampleCn from "@/examples/resume-example-cn.json";
 import {
@@ -18,13 +18,6 @@ import type {
   ResumeTemplate,
   ResumeLanguage,
   ResumeContent,
-  ExperienceItem,
-  EducationItem,
-  EducationExtraField,
-  SkillGroup,
-  ProjectItem,
-  AwardItem,
-  DescriptionField,
 } from "@/lib/types/resume";
 import { Button } from "@/components/ui/button";
 import {
@@ -87,33 +80,18 @@ export function Toolbar({ title, template, language, content, isAgentMode, onSet
 
   function handleLoadExample() {
     const example = language === "zh" ? resumeExampleCn : resumeExampleEn;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const raw: any = example.content;
-    const merged: ResumeContent = {
-      ...defaultResumeContent,
-      ...raw,
-      personal: { ...defaultResumeContent.personal, ...raw.personal },
-      experience: withId<ExperienceItem>(raw.experience).map((e) => ({ ...e, descriptions: withId<DescriptionField>(e.descriptions) })),
-      education: withId<EducationItem>(raw.education).map((ed) => { const e = mergeDegreeField(ed, example.language); return { ...e, extraFields: withId<EducationExtraField>(e.extraFields) }; }),
-      skills: withId<SkillGroup>(raw.skills),
-      projects: withId<ProjectItem>(raw.projects).map((p) => ({ ...p, descriptions: withId<DescriptionField>(p.descriptions) })),
-      awards: withId<AwardItem>(raw.awards),
-    };
-    onImport({ title, template: example.template as ResumeTemplate, language: example.language as ResumeLanguage, content: stripResumeLegacyContacts(merged) });
+    const exampleLanguage = example.language as ResumeLanguage;
+    onImport({
+      title,
+      template: example.template as ResumeTemplate,
+      language: exampleLanguage,
+      content: normalizeResumeContent(example.content, exampleLanguage),
+    });
   }
 
   function handleExportJson() {
-    const sanitizedContent = stripResumeLegacyContacts(content);
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { photo: _photo, ...personal } = sanitizedContent.personal;
     exportJson(
-      {
-        _type: "cvforge-resume",
-        title,
-        template,
-        language,
-        content: { ...sanitizedContent, personal, education: stripDegreeField(sanitizedContent.education) },
-      },
+      createResumeExportPayload({ title, template, language, content }),
       title || "resume"
     );
   }
@@ -137,19 +115,12 @@ export function Toolbar({ title, template, language, content, isAgentMode, onSet
           !parsed.content?.personal ||
           !Array.isArray(parsed.content?.sections)
         ) throw new Error("invalid");
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const raw: any = parsed.content;
-        const merged: ResumeContent = {
-          ...defaultResumeContent,
-          ...raw,
-          personal: { ...defaultResumeContent.personal, ...raw.personal },
-          experience: withId<ExperienceItem>(raw.experience).map((e) => ({ ...e, descriptions: withId<DescriptionField>(e.descriptions) })),
-          education: withId<EducationItem>(raw.education).map((ed) => { const e = mergeDegreeField(ed, parsed.language); return { ...e, extraFields: withId<EducationExtraField>(e.extraFields) }; }),
-          skills: withId<SkillGroup>(raw.skills),
-          projects: withId<ProjectItem>(raw.projects).map((p) => ({ ...p, descriptions: withId<DescriptionField>(p.descriptions) })),
-          awards: withId<AwardItem>(raw.awards),
-        };
-        onImport({ title: parsed.title, template: parsed.template, language: parsed.language, content: stripResumeLegacyContacts(merged) });
+        onImport({
+          title: parsed.title,
+          template: parsed.template,
+          language: parsed.language,
+          content: normalizeResumeContent(parsed.content, parsed.language),
+        });
       } catch {
         setImportErrorOpen(true);
       }
