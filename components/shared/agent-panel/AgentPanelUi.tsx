@@ -10,6 +10,7 @@ import SpotlightCard from "@/components/SpotlightCard";
 import { Button } from "@/components/ui/button";
 import type { AgentStatus } from "@/lib/agent/chat";
 import type { AgentChange } from "@/lib/agent/change-tracking";
+import type { AgentContextUsage } from "@/lib/agent/context-usage";
 
 const markdownComponents: Components = {
   p: ({ children }) => (
@@ -110,6 +111,66 @@ export function AgentAvatar({ size = "md", active = false }: { size?: "sm" | "md
       aria-hidden="true"
     >
       <WandSparkles className={iconClass} />
+    </div>
+  );
+}
+
+export function ContextUsageIndicator({
+  usage,
+  label,
+}: {
+  usage: AgentContextUsage | null;
+  label: string;
+}) {
+  const radius = 10;
+  const circumference = 2 * Math.PI * radius;
+  const percentage = usage?.maxInputTokens
+    ? Math.min(100, Math.max(0, (usage.inputTokens / usage.maxInputTokens) * 100))
+    : null;
+
+  return (
+    <div
+      role={percentage === null ? "status" : "meter"}
+      aria-label={label}
+      aria-valuemin={percentage === null ? undefined : 0}
+      aria-valuemax={percentage === null ? undefined : 100}
+      aria-valuenow={percentage === null ? undefined : percentage}
+      title={label}
+      className="relative flex size-8 shrink-0 items-center justify-center text-gray-950"
+    >
+      <svg
+        viewBox="0 0 28 28"
+        className="absolute inset-0 size-full -rotate-90"
+        aria-hidden="true"
+      >
+        <circle
+          cx="14"
+          cy="14"
+          r={radius}
+          fill="none"
+          stroke="currentColor"
+          strokeOpacity="0.1"
+          strokeWidth="2.5"
+        />
+        {percentage !== null && (
+          <circle
+            cx="14"
+            cy="14"
+            r={radius}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={
+              circumference - (percentage / 100) * circumference
+            }
+          />
+        )}
+      </svg>
+      <span className="text-[8px] font-semibold tabular-nums">
+        {percentage === null ? "–" : `${Math.round(percentage)}%`}
+      </span>
     </div>
   );
 }

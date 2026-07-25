@@ -20,6 +20,7 @@ describe("LangChain provider models", () => {
       effort: "medium",
       summary: "auto",
     });
+    expect((model as ChatOpenAI).streamUsage).toBe(true);
   });
 
   it("uses the native Anthropic integration", () => {
@@ -35,6 +36,7 @@ describe("LangChain provider models", () => {
       type: "enabled",
       budget_tokens: 2048,
     });
+    expect((model as ChatAnthropic).streamUsage).toBe(true);
   });
 
   it("uses the native DeepSeek integration", () => {
@@ -52,6 +54,7 @@ describe("LangChain provider models", () => {
     expect(
       (model as ChatDeepSeek).modelKwargs?.parallel_tool_calls
     ).toBeUndefined();
+    expect((model as ChatDeepSeek).streamUsage).toBe(true);
   });
 
   it("uses the native Google integration", () => {
@@ -67,5 +70,6 @@ describe("LangChain provider models", () => {
       includeThoughts: true,
       thinkingBudget: 2048,
     });
+    expect((model as ChatGoogleGenerativeAI).streamUsage).toBe(true);
   });
 });

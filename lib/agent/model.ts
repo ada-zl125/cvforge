@@ -91,7 +91,6 @@ export function createAgentChatModel(
       maxTokens:
         options.maxTokens ?? (thinkingEnabled ? 8192 : undefined),
       temperature: thinkingEnabled ? undefined : options.temperature,
-      streamUsage: false,
       thinking: thinkingEnabled && provider.thinkingControl !== "always"
         ? adaptiveThinking
           ? { type: "adaptive" }
@@ -114,7 +113,6 @@ export function createAgentChatModel(
       maxRetries: options.maxRetries ?? 0,
       maxOutputTokens: options.maxTokens,
       temperature: options.temperature,
-      streamUsage: false,
       thinkingConfig: thinkingEnabled
         ? {
             includeThoughts: true,
@@ -138,7 +136,6 @@ export function createAgentChatModel(
       maxRetries: options.maxRetries ?? 0,
       maxTokens: options.maxTokens,
       temperature: thinkingEnabled ? undefined : options.temperature,
-      streamUsage: false,
       modelKwargs: createCompatibleModelKwargs(provider, thinkingEnabled),
       configuration: {
         baseURL,
@@ -152,7 +149,6 @@ export function createAgentChatModel(
     maxRetries: options.maxRetries ?? 0,
     maxTokens: options.maxTokens,
     temperature: thinkingEnabled ? undefined : options.temperature,
-    streamUsage: false,
     useResponsesApi:
       provider.transport === "openai-responses" && thinkingEnabled,
     reasoning:

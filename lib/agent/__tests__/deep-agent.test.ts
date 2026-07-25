@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { FakeToolCallingModel } from "langchain";
+import { AIMessage, FakeToolCallingModel } from "langchain";
 import type { ResumeContent } from "@/lib/types/resume";
 
 const modelState = vi.hoisted(() => ({
@@ -54,6 +54,31 @@ function createResume(): ResumeContent {
     projects: [],
     awards: [],
   };
+}
+
+class UsageFakeToolCallingModel extends FakeToolCallingModel {
+  override get profile() {
+    return { maxInputTokens: 1_000 };
+  }
+
+  override bindTools(): this {
+    return this;
+  }
+
+  override async _generate(
+    ...args: Parameters<FakeToolCallingModel["_generate"]>
+  ): ReturnType<FakeToolCallingModel["_generate"]> {
+    const result = await super._generate(...args);
+    const message = result.generations[0]?.message;
+    if (AIMessage.isInstance(message)) {
+      message.usage_metadata = {
+        input_tokens: 250,
+        output_tokens: 25,
+        total_tokens: 275,
+      };
+    }
+    return result;
+  }
 }
 
 function createParams(
@@ -374,5 +399,27 @@ describe("Deep Agent runtime", () => {
       }),
     ]);
     discardAgentSession(sessionId);
+  });
+
+  it("reports provider context usage after the completed response", async () => {
+    modelState.current = new UsageFakeToolCallingModel();
+    let contextUsage: {
+      inputTokens: number;
+      maxInputTokens?: number;
+      model: string;
+    } | null = null;
+
+    await runAgentStream({
+      ...createParams(createResume(), () => undefined),
+      onContextUsage: (usage) => {
+        contextUsage = usage;
+      },
+    });
+
+    expect(contextUsage).toEqual({
+      inputTokens: 250,
+      maxInputTokens: 1_000,
+      model: "test-model",
+    });
   });
 });

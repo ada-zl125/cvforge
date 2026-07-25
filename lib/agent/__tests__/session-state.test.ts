@@ -29,6 +29,11 @@ describe("agent session state", () => {
         text: "Useful context",
         createdAt: 1,
       }],
+      contextUsage: {
+        inputTokens: 12_500,
+        maxInputTokens: 128_000,
+        model: "test-model",
+      },
     };
 
     writeAgentPanelSessionState("agent", nextState);
@@ -37,7 +42,28 @@ describe("agent session state", () => {
       messages: [{ role: "user", content: "Polish this" }],
       contextInstruction: "Keep it concise.",
       contextSources: [{ name: "notes.txt", text: "Useful context" }],
+      contextUsage: {
+        inputTokens: 12_500,
+        maxInputTokens: 128_000,
+        model: "test-model",
+      },
     });
+  });
+
+  it("drops invalid context usage from saved state", () => {
+    sessionStorage.setItem("agent", JSON.stringify({
+      contextUsage: {
+        inputTokens: "unknown",
+        maxInputTokens: 128_000,
+        model: "test-model",
+      },
+      contextUsageUnavailable: true,
+    }));
+
+    expect(readAgentPanelSessionState("agent").contextUsage).toBeNull();
+    expect(
+      readAgentPanelSessionState("agent").contextUsageUnavailable
+    ).toBe(true);
   });
 
   it("filters invalid context sources from saved state", () => {

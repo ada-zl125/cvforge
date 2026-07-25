@@ -2,6 +2,7 @@ import type { AgentChange } from "@/lib/agent/change-tracking";
 import type { Message } from "@/lib/agent/chat";
 import type { LLMConfig } from "@/lib/agent/config";
 import type { AgentContextSource } from "@/lib/agent/context-sources";
+import type { AgentContextUsage } from "@/lib/agent/context-usage";
 import type { ClarificationRequest } from "@/lib/agent/tools";
 
 export interface PendingClarification {
@@ -18,11 +19,18 @@ export interface AgentPanelState {
   lastChange: AgentChange | null;
   contextSources: AgentContextSource[];
   contextInstruction: string;
+  contextUsage: AgentContextUsage | null;
+  contextUsageUnavailable: boolean;
 }
 
 type StoredAgentPanelState = Pick<
   AgentPanelState,
-  "messages" | "lastChange" | "contextSources" | "contextInstruction"
+  | "messages"
+  | "lastChange"
+  | "contextSources"
+  | "contextInstruction"
+  | "contextUsage"
+  | "contextUsageUnavailable"
 >;
 
 export function createInitialAgentPanelState(): AgentPanelState {
@@ -39,6 +47,8 @@ export function createInitialAgentPanelState(): AgentPanelState {
     lastChange: null,
     contextSources: [],
     contextInstruction: "",
+    contextUsage: null,
+    contextUsageUnavailable: false,
   };
 }
 
@@ -58,6 +68,31 @@ function readContextSources(value: unknown): AgentContextSource[] {
   );
 }
 
+function readContextUsage(value: unknown): AgentContextUsage | null {
+  if (
+    !isRecord(value) ||
+    typeof value.inputTokens !== "number" ||
+    !Number.isFinite(value.inputTokens) ||
+    value.inputTokens < 0 ||
+    typeof value.model !== "string"
+  ) {
+    return null;
+  }
+
+  const maxInputTokens =
+    typeof value.maxInputTokens === "number" &&
+    Number.isFinite(value.maxInputTokens) &&
+    value.maxInputTokens > 0
+      ? value.maxInputTokens
+      : undefined;
+
+  return {
+    inputTokens: value.inputTokens,
+    maxInputTokens,
+    model: value.model,
+  };
+}
+
 export function readAgentPanelSessionState(storageKey: string): AgentPanelState {
   const initialState = createInitialAgentPanelState();
   if (typeof window === "undefined") return initialState;
@@ -74,6 +109,8 @@ export function readAgentPanelSessionState(storageKey: string): AgentPanelState 
       lastChange: isRecord(parsed.lastChange) ? parsed.lastChange as unknown as AgentChange : null,
       contextSources: readContextSources(parsed.contextSources),
       contextInstruction: typeof parsed.contextInstruction === "string" ? parsed.contextInstruction : "",
+      contextUsage: readContextUsage(parsed.contextUsage),
+      contextUsageUnavailable: parsed.contextUsageUnavailable === true,
     };
   } catch {
     return initialState;
@@ -87,6 +124,8 @@ export function writeAgentPanelSessionState(storageKey: string, state: AgentPane
       lastChange: state.lastChange,
       contextSources: state.contextSources,
       contextInstruction: state.contextInstruction,
+      contextUsage: state.contextUsage,
+      contextUsageUnavailable: state.contextUsageUnavailable,
     };
     sessionStorage.setItem(storageKey, JSON.stringify(storedState));
   } catch {

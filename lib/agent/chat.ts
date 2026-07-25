@@ -30,6 +30,11 @@ import {
 import type { LLMConfig } from "./config";
 import type { AgentChange } from "./change-tracking";
 import { buildContextInstructionContext, type AgentContextSource } from "./context-sources";
+import {
+  extractLatestContextUsage,
+  getModelMaxInputTokens,
+  type AgentContextUsage,
+} from "./context-usage";
 import { createAgentChatModel } from "./model";
 import { normalizeAssistantText } from "./text-normalization";
 
@@ -58,6 +63,7 @@ export interface RunAgentStreamParams<TContent> {
   onTextChunk: (chunk: string) => void;
   onReasoning?: (reasoning: string) => void;
   onStatusChange?: (status: AgentStatus | null) => void;
+  onContextUsage?: (usage: AgentContextUsage | null) => void;
   onClarification?: (
     request: ClarificationRequest,
     resumeToken: string
@@ -74,6 +80,7 @@ export interface ResumeAgentStreamParams<TContent> {
   onTextChunk: (chunk: string) => void;
   onReasoning?: (reasoning: string) => void;
   onStatusChange?: (status: AgentStatus | null) => void;
+  onContextUsage?: (usage: AgentContextUsage | null) => void;
   onClarification?: (
     request: ClarificationRequest,
     resumeToken: string
@@ -222,8 +229,10 @@ interface AgentDefinitionParams {
   documentLanguage: DocumentLanguage;
 }
 
-function createCVForgeAgent(params: AgentDefinitionParams) {
-  const model = createAgentChatModel(params.config);
+function createCVForgeAgent(
+  params: AgentDefinitionParams,
+  model: ReturnType<typeof createAgentChatModel>
+) {
   const tools = createTools(params.docType, params.documentLanguage);
 
   return createDeepAgent({
@@ -298,6 +307,7 @@ interface AgentRuntime {
   config: LLMConfig;
   docType: DocType;
   documentLanguage: DocumentLanguage;
+  maxInputTokens?: number;
   initialized: boolean;
   managedFilePaths: Set<string>;
   invocationContext: AgentInvocationContext;
@@ -310,6 +320,7 @@ interface InvocationCallbacks<TContent> {
   onTextChunk: (chunk: string) => void;
   onReasoning?: (reasoning: string) => void;
   onStatusChange?: (status: AgentStatus | null) => void;
+  onContextUsage?: (usage: AgentContextUsage | null) => void;
   onClarification?: (
     request: ClarificationRequest,
     resumeToken: string
@@ -482,7 +493,8 @@ function sameLLMConfig(left: LLMConfig, right: LLMConfig): boolean {
 function createAgentRuntime<TContent>(
   params: RunAgentStreamParams<TContent>
 ): AgentRuntime {
-  const agent = createCVForgeAgent(params);
+  const model = createAgentChatModel(params.config);
+  const agent = createCVForgeAgent(params, model);
 
   return {
     agent,
@@ -491,6 +503,7 @@ function createAgentRuntime<TContent>(
     config: { ...params.config },
     docType: params.docType,
     documentLanguage: params.documentLanguage,
+    maxInputTokens: getModelMaxInputTokens(model),
     initialized: false,
     managedFilePaths: new Set(),
     invocationContext: {
@@ -539,6 +552,20 @@ function extractClarificationInterrupt(
   );
 }
 
+function reportContextUsage(
+  runtime: AgentRuntime,
+  result: AgentResultState<unknown>,
+  callback: ((usage: AgentContextUsage | null) => void) | undefined
+): void {
+  callback?.(
+    extractLatestContextUsage(
+      result.messages,
+      runtime.config.model,
+      runtime.maxInputTokens
+    )
+  );
+}
+
 async function invokeAgentRuntime<TContent>(
   runtime: AgentRuntime,
   input: AgentStreamInput,
@@ -550,6 +577,7 @@ async function invokeAgentRuntime<TContent>(
     onTextChunk,
     onReasoning,
     onStatusChange,
+    onContextUsage,
     onClarification,
     onDone,
   } = callbacks;
@@ -597,6 +625,11 @@ async function invokeAgentRuntime<TContent>(
     const result = output as unknown as AgentResultState<TContent>;
     latestResult = result;
     throwIfAborted(signal);
+    reportContextUsage(
+      runtime,
+      result as AgentResultState<unknown>,
+      onContextUsage
+    );
 
     const clarification = extractClarificationInterrupt(
       result as AgentResultState<unknown>,
@@ -635,7 +668,14 @@ async function invokeAgentRuntime<TContent>(
     }
     if (isExecutionLimitError(error)) {
       const state =
-        latestResult ?? (await readRuntimeState<TContent>(runtime));
+        (await readRuntimeState<TContent>(runtime)) ?? latestResult;
+      if (state) {
+        reportContextUsage(
+          runtime,
+          state as AgentResultState<unknown>,
+          onContextUsage
+        );
+      }
       onTextChunk(
         `${streamedText ? "\n\n" : ""}${buildExecutionLimitSummary(
           state,

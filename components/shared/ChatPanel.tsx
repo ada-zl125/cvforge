@@ -48,6 +48,7 @@ import {
   AssistantMarkdown,
   AssistantMessageBubble,
   ChangeCard,
+  ContextUsageIndicator,
   UserMessageBubble,
 } from "@/components/shared/agent-panel/AgentPanelUi";
 import { useUILanguage } from "@/lib/ui-language";
@@ -169,6 +170,8 @@ export function ChatPanel<TContent>({
     lastChange,
     contextSources = [],
     contextInstruction = "",
+    contextUsage = null,
+    contextUsageUnavailable = false,
   } = agentState;
   const [streamingText, setStreamingText] = useState("");
   const [agentStatus, setAgentStatus] = useState<AgentStatus | null>(null);
@@ -329,6 +332,24 @@ export function ChatPanel<TContent>({
     }));
   };
 
+  const setContextUsage = (
+    usage: AgentPanelState["contextUsage"]
+  ) => {
+    onAgentStateChange((prev) => ({
+      ...prev,
+      contextUsage: usage,
+      contextUsageUnavailable: usage === null,
+    }));
+  };
+
+  const resetContextUsage = () => {
+    onAgentStateChange((prev) => ({
+      ...prev,
+      contextUsage: null,
+      contextUsageUnavailable: false,
+    }));
+  };
+
   const isConfigured = !!activeConfig;
   const isBusy = isLoading;
   const hasPendingClarification = !!pendingClarification;
@@ -341,6 +362,33 @@ export function ChatPanel<TContent>({
   const providerProfile = activeConfig
     ? resolveLLMProvider(activeConfig)
     : null;
+  const visibleContextUsage =
+    activeConfig && contextUsage?.model === activeConfig.model
+      ? contextUsage
+      : null;
+  const contextUsageLabel = visibleContextUsage
+    ? visibleContextUsage.maxInputTokens
+      ? agentTr.contextUsageKnown(
+          visibleContextUsage.inputTokens.toLocaleString(
+            lang === "zh" ? "zh-CN" : "en-US"
+          ),
+          visibleContextUsage.maxInputTokens.toLocaleString(
+            lang === "zh" ? "zh-CN" : "en-US"
+          ),
+          Math.round(
+            (visibleContextUsage.inputTokens /
+              visibleContextUsage.maxInputTokens) *
+              100
+          )
+        )
+      : agentTr.contextUsageLimitUnknown(
+          visibleContextUsage.inputTokens.toLocaleString(
+            lang === "zh" ? "zh-CN" : "en-US"
+          )
+        )
+    : contextUsageUnavailable
+      ? agentTr.contextUsageUnavailable
+      : agentTr.contextUsagePending;
   const thinkingEnabled =
     providerProfile?.thinkingControl === "always" ||
     (providerProfile?.thinkingControl === "toggle" &&
@@ -443,6 +491,7 @@ export function ChatPanel<TContent>({
     setPendingClarification(null);
     setClarificationAnswer("");
     setLastChange(null);
+    resetContextUsage();
     onReviewChange?.(null);
   };
 
@@ -504,6 +553,7 @@ export function ChatPanel<TContent>({
           if (thinkingEnabled) reasoningTextRef.current = reasoning;
         },
         onStatusChange: setAgentStatus,
+        onContextUsage: setContextUsage,
         onClarification: (request, resumeToken) => {
           setPendingClarification({
             id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
@@ -622,6 +672,7 @@ export function ChatPanel<TContent>({
         if (thinkingEnabled) reasoningTextRef.current = reasoning;
       },
       onStatusChange: setAgentStatus,
+      onContextUsage: setContextUsage,
       onClarification: (request, resumeToken) => {
         setPendingClarification({
           id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
@@ -654,6 +705,7 @@ export function ChatPanel<TContent>({
       | "onTextChunk"
       | "onReasoning"
       | "onStatusChange"
+      | "onContextUsage"
       | "onClarification"
       | "onDone"
     >;
@@ -835,6 +887,8 @@ export function ChatPanel<TContent>({
         ...prev,
         draftConfig: nextConfig,
         activeConfig: nextConfig,
+        contextUsage: null,
+        contextUsageUnavailable: false,
       }));
       setConfigOpen(false);
       setConfigError(null);
@@ -896,6 +950,12 @@ export function ChatPanel<TContent>({
             </div>
           </div>
           <div className="flex items-center gap-1">
+          {isConfigured && (
+            <ContextUsageIndicator
+              usage={visibleContextUsage}
+              label={contextUsageLabel}
+            />
+          )}
           <Button
             variant="ghost"
             size="icon-sm"

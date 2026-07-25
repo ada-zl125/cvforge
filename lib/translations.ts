@@ -115,6 +115,12 @@ const t = {
       contextPdfWorkerFailed: (name: string) => `Could not initialize PDF reading for ${name}. Please refresh and try again, or upload a TXT/MD version.`,
       contextReadFailed: (name: string) => `Could not read ${name}.`,
       contextSourceChars: (chars: number) => `${chars.toLocaleString()} chars`,
+      contextUsagePending: "Context usage appears after the next agent response.",
+      contextUsageKnown: (used: string, limit: string, percent: number) =>
+        `Context usage ${used} of ${limit} input tokens, ${percent}%`,
+      contextUsageLimitUnknown: (used: string) =>
+        `Context usage ${used} input tokens. The model context limit is unavailable.`,
+      contextUsageUnavailable: "The provider did not report context usage for the last response.",
       clearContextTitle: "Clear chat context",
       configureTitle: "Configure LLM settings",
       checkingTitle: "Checking LLM Settings",
@@ -362,6 +368,12 @@ const t = {
       contextPdfWorkerFailed: (name: string) => `无法初始化 ${name} 的 PDF 读取。请刷新后重试，或上传 TXT/MD 版本。`,
       contextReadFailed: (name: string) => `无法读取 ${name}。`,
       contextSourceChars: (chars: number) => `${chars.toLocaleString()} 字符`,
+      contextUsagePending: "下一次 Agent 回复完成后显示上下文用量。",
+      contextUsageKnown: (used: string, limit: string, percent: number) =>
+        `上下文用量 ${used} / ${limit} input tokens，${percent}%`,
+      contextUsageLimitUnknown: (used: string) =>
+        `上下文用量 ${used} input tokens，当前模型的上下文上限未知。`,
+      contextUsageUnavailable: "Provider 未返回上一轮回复的上下文用量。",
       clearContextTitle: "清空聊天上下文",
       configureTitle: "配置 LLM 设置",
       checkingTitle: "正在检查 LLM 设置",
