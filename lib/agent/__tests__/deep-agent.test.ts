@@ -7,12 +7,31 @@ const modelState = vi.hoisted(() => ({
   creations: 0,
 }));
 
+const backendState = vi.hoisted(() => ({
+  overrides: [] as boolean[],
+}));
+
 vi.mock("@/lib/agent/model", () => ({
   createAgentChatModel: () => {
     modelState.creations += 1;
     return modelState.current;
   },
 }));
+
+vi.mock("deepagents/browser", async (importOriginal) => {
+  const original = await importOriginal<typeof import("deepagents/browser")>();
+  return {
+    ...original,
+    createDeepAgent: (
+      options: Parameters<typeof original.createDeepAgent>[0]
+    ) => {
+      backendState.overrides.push(
+        Object.prototype.hasOwnProperty.call(options, "backend")
+      );
+      return original.createDeepAgent(options);
+    },
+  };
+});
 
 import {
   createAgentSessionId,
@@ -64,6 +83,7 @@ describe("Deep Agent runtime", () => {
   beforeEach(() => {
     modelState.current = null;
     modelState.creations = 0;
+    backendState.overrides = [];
   });
 
   it("executes document tools through graph state", async () => {
@@ -93,6 +113,7 @@ describe("Deep Agent runtime", () => {
       "Product engineer focused on reliable systems."
     );
     expect(toolNames).toEqual(["set_summary"]);
+    expect(backendState.overrides).toEqual([false]);
   });
 
   it("merges parallel document tools into the latest graph state", async () => {

@@ -14,7 +14,6 @@ import {
 } from "@langchain/langgraph";
 import {
   createDeepAgent,
-  StateBackend,
   type DeepAgentRunStream,
   type FileData,
 } from "deepagents/browser";
@@ -686,7 +685,6 @@ function createAgentRuntime<TContent>(
     stateSchema: agentStateSchema,
     contextSchema: agentContextSchema,
     checkpointer: new MemorySaver(),
-    backend: new StateBackend(),
     permissions: [
       {
         operations: ["write"],
