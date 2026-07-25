@@ -10,7 +10,6 @@ import {
   resolveLLMProvider,
   type LLMProviderProfile,
 } from "./providers";
-import { createReasoningAwareFetch } from "./reasoning-transport";
 
 interface ChatModelOptions {
   maxRetries?: number;
@@ -145,7 +144,6 @@ export function createAgentChatModel(
       modelKwargs: createCompatibleModelKwargs(provider, thinkingEnabled),
       configuration: {
         baseURL,
-        fetch: createReasoningAwareFetch(),
       },
     });
   }
@@ -169,9 +167,6 @@ export function createAgentChatModel(
         : undefined,
     configuration: {
       baseURL,
-      ...(provider.transport === "openai-compatible"
-        ? { fetch: createReasoningAwareFetch() }
-        : {}),
     },
   });
 }
