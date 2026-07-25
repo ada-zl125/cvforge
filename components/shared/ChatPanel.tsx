@@ -58,10 +58,6 @@ import { t } from "@/lib/translations";
 const MAX_CLARIFICATION_ROUNDS = 2;
 const INPUT_MAX_VISIBLE_ROWS = 6;
 type AgentTranslations = typeof t.en.agent | typeof t.zh.agent;
-type ClarificationPatch<TContent> = {
-  content: TContent;
-  toolName: string;
-};
 
 function getContextReadErrorMessage(
   fileName: string,
@@ -140,82 +136,6 @@ function formatClarificationMessage(request: ClarificationRequest, lang: "en" | 
   const reason = localizedReason ? `${agentTr.clarificationReasonLabel}: ${localizedReason}` : "";
   const target = scope ? `\n\n${agentTr.clarificationRelatedFieldLabel}: ${scope}` : "";
   return `${agentTr.clarificationMessageIntro}: ${request.question}\n\n${reason}${target}`.trim();
-}
-
-function normalizeClarificationLocation(answer: string, documentLanguage: DocumentLanguage): string {
-  const trimmed = answer.trim();
-  if (documentLanguage !== "zh") return trimmed;
-
-  const locationMap: Record<string, string> = {
-    "huddersfield, uk": "英国, 哈德斯菲尔德",
-    "huddersfield, united kingdom": "英国, 哈德斯菲尔德",
-    "london, uk": "英国, 伦敦",
-    "london, united kingdom": "英国, 伦敦",
-    "oxford, uk": "英国, 牛津",
-    "oxford, united kingdom": "英国, 牛津",
-  };
-
-  return locationMap[trimmed.toLowerCase()] ?? trimmed;
-}
-
-function findEducationIndexForClarification(education: Array<Record<string, unknown>>, pending: PendingClarification) {
-  const haystack = `${pending.request.question} ${pending.originalUserMessage}`.toLowerCase();
-  const normalizedHaystack = haystack.replace(/^university of\s+/, "");
-  const namedIndex = education.findIndex((item) => {
-    const institution = String(item.institution ?? "").toLowerCase();
-    if (!institution) return false;
-    const normalizedInstitution = institution.replace(/^university of\s+/, "");
-    return (
-      normalizedHaystack.includes(normalizedInstitution) ||
-      normalizedInstitution.includes("huddersfield") && normalizedHaystack.includes("huddersfield") ||
-      String(item.institution ?? "").includes("哈德斯菲尔德") && `${pending.request.question} ${pending.originalUserMessage}`.includes("哈德斯菲尔德")
-    );
-  });
-  if (namedIndex >= 0) return namedIndex;
-
-  const emptyLocationIndexes = education
-    .map((item, index) => ({ index, location: String(item.location ?? "").trim() }))
-    .filter((item) => !item.location)
-    .map((item) => item.index);
-  if (emptyLocationIndexes.length === 1) return emptyLocationIndexes[0];
-  if (education.length === 1) return 0;
-  return -1;
-}
-
-function applyEducationLocationClarification<TContent>(
-  content: TContent,
-  pending: PendingClarification,
-  answer: string,
-  documentLanguage: DocumentLanguage
-): ClarificationPatch<TContent> | null {
-  const scopeText = [
-    pending.request.field,
-    pending.request.section,
-    pending.request.question,
-    pending.request.reason,
-  ].filter(Boolean).join(" ").toLowerCase();
-  const isEducation = /education|school|university|college|学历|教育|学校|大学/.test(scopeText);
-  const isLocation = /location|address|city|country|where|地点|地址|城市|国家|位于|在哪/.test(scopeText);
-  if (!isEducation || !isLocation || !content || typeof content !== "object") return null;
-
-  const current = content as TContent & { education?: Array<Record<string, unknown>> };
-  if (!Array.isArray(current.education) || current.education.length === 0) return null;
-
-  const index = findEducationIndexForClarification(current.education, pending);
-  if (index < 0) return null;
-
-  const location = normalizeClarificationLocation(answer, documentLanguage);
-  const education = current.education.map((item, itemIndex) =>
-    itemIndex === index ? { ...item, location } : item
-  );
-
-  return {
-    content: {
-      ...current,
-      education,
-    },
-    toolName: "set_education",
-  } as ClarificationPatch<TContent>;
 }
 
 function isDocumentEditIntent(text: string): boolean {
@@ -733,18 +653,17 @@ export function ChatPanel<TContent>({
 
     const canAskAnotherClarification = pending.clarificationCount < MAX_CLARIFICATION_ROUNDS;
     const continuationMessage = [
-      `User answered the clarification: ${answer}`,
-      `Clarification question: ${pending.request.question}`,
-      `Continue the original task: ${pending.originalUserMessage}`,
+      "Resume the interrupted task using this clarification.",
+      `Original task: ${pending.originalUserMessage}`,
+      `Question: ${pending.request.question}`,
+      `Answer: ${answer}`,
       pending.request.section ? `Clarification section scope: ${pending.request.section}` : null,
       pending.request.field ? `Clarification field scope: ${pending.request.field}` : null,
       `Clarification round: ${pending.clarificationCount}`,
-      "Use the answer to resolve only the pending uncertainty.",
-      "If the original task now has enough required information, stop asking questions, call the document update tools, and reply with a normal completion message.",
-      "Stay within the same requested section scope for any further clarification. Do not ask about other sections unless the user's original task explicitly requested them.",
+      "Apply the answer only within the original scope, then continue with the tools when the blocker is resolved.",
       canAskAnotherClarification
-        ? "Only call ask_user again when another required detail from the same original task is still missing, cannot be inferred, and cannot be safely omitted. If you ask again, ask exactly one small question."
-        : "Do not call ask_user again. If a detail is still missing, make the safest partial update or ask in normal chat.",
+        ? "Ask one more focused question only if another necessary blocker remains. Otherwise complete the safest accurate result."
+        : "Do not ask another clarification. Complete the safest accurate result with supported information.",
     ].filter(Boolean).join("\n");
     const visibleAnswer =
       lang === "zh"
@@ -771,13 +690,6 @@ export function ChatPanel<TContent>({
     const beforeContent = contentRef.current;
     let latestContent = beforeContent;
     const changedToolNames: string[] = [];
-    const localPatch = applyEducationLocationClarification(contentRef.current, pending, answer, documentLanguage);
-    if (localPatch) {
-      contentRef.current = localPatch.content;
-      latestContent = localPatch.content;
-      changedToolNames.push(localPatch.toolName);
-      onChange(localPatch.content);
-    }
 
     const continuationCallbacks = {
       onContentUpdate: (updated, toolName) => {

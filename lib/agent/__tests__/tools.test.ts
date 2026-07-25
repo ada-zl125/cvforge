@@ -71,6 +71,21 @@ describe("agent tool schemas", () => {
     expect(experienceProperties).toHaveProperty("descriptions");
   });
 
+  it("keeps tool guidance semantic and free of case examples", () => {
+    const schemas = (
+      ["resume", "academic-cv", "cover-letter"] as const
+    ).flatMap((docType) =>
+      createTools(docType, "en").map(
+        (agentTool) =>
+          `${agentTool.description}\n${JSON.stringify(
+            z.toJSONSchema(agentTool.schema as z.ZodType)
+          )}`
+      )
+    );
+
+    expect(schemas.join("\n")).not.toMatch(/\be\.g\.|\bfor example\b|\bsuch as\b/i);
+  });
+
   it("rejects invalid tool arguments before execution", async () => {
     const skillsTool = createTools("resume", "en").find(
       (tool) => tool.name === "set_skills"

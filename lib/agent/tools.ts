@@ -161,8 +161,8 @@ export function createTools<TContent = AnyContent>(
         schema: z.object({
         question: z.string().describe("One concise question for the user"),
         reason: z.string().describe("Brief reason why this cannot be safely inferred"),
-        field: z.string().optional().describe("Suggested field affected inside the requested section, e.g. education.degree"),
-        section: z.string().optional().describe("Requested section affected, e.g. education. Keep this within the user's requested section."),
+        field: z.string().optional().describe("Optional field path affected inside the requested scope"),
+        section: z.string().optional().describe("Optional requested section affected"),
         choices: z.array(z.string()).optional().describe("Optional short answer choices only when natural; omit when the user should type a custom answer"),
       }),
       }
@@ -203,22 +203,15 @@ export function createTools<TContent = AnyContent>(
         description:
           "Record a high-confidence inference or normalization that will be written to the document. Use before or alongside update tools when filling information the user implied but did not state exactly.",
         schema: z.object({
-        original: z.string().describe("The user's original wording or incomplete value, e.g. Huddersfield"),
-        inferred: z.string().describe("The normalized or inferred value that will be used, e.g. University of Huddersfield"),
+        original: z.string().describe("The user's original wording or incomplete value"),
+        inferred: z.string().describe("The normalized or inferred value that will be written"),
         reason: z.string().describe("Brief reason why this inference is high-confidence and low-risk"),
-        field: z.string().optional().describe("Optional field or section affected, e.g. education.institution"),
+        field: z.string().optional().describe("Optional field path or section affected"),
       }),
       }
     )
   );
 
-  const locationExample = documentLanguage === "zh" ? "英国, 伦敦 or 中国, 北京" : "London, UK or Beijing, China";
-  const educationDegreeExample = documentLanguage === "zh"
-    ? "计算机科学理学硕士 or 计算机科学理学学士"
-    : "MSc in Advanced Computing or BSc in Computer Science";
-  const academicDegreeExample = documentLanguage === "zh"
-    ? "计算机科学博士, 高级计算理学硕士, or 计算机科学理学学士"
-    : "PhD in Computer Science, MSc in Advanced Computing, or BSc in Computer Science";
   const optionalKnown = (description: string) =>
     z.string().optional().describe(`${description}. Omit or use an empty string when unknown; do not invent.`);
 
@@ -248,9 +241,9 @@ export function createTools<TContent = AnyContent>(
               id: z.string().optional(),
               company: z.string(),
               position: optionalKnown("Position/title"),
-              location: optionalKnown(`Location in document style, e.g. ${locationExample}`),
-              startDate: optionalKnown("Start date, e.g. Sept 2023 or 2024/09"),
-              endDate: optionalKnown("End date, e.g. Present, Aug 2024, or 至今"),
+              location: optionalKnown("Location formatted consistently with the current document"),
+              startDate: optionalKnown("Start date formatted consistently with the current document"),
+              endDate: optionalKnown("End date formatted consistently with the current document"),
               descriptions: z.array(
                 z.object({
                   id: z.string().optional(),
@@ -268,9 +261,9 @@ export function createTools<TContent = AnyContent>(
             z.object({
               id: z.string().optional(),
               institution: z.string(),
-              degree: optionalKnown(`Degree in CV field style, e.g. ${educationDegreeExample}`),
-              field: z.string().optional().describe(`Optional legacy field of study. Omit when degree already includes the field, e.g. ${educationDegreeExample}.`),
-              location: optionalKnown(`Location in document style, e.g. ${locationExample}`),
+              degree: optionalKnown("Degree title in the document language and established style"),
+              field: z.string().optional().describe("Optional field of study when it is not already represented in the degree"),
+              location: optionalKnown("Location formatted consistently with the current document"),
               startDate: optionalKnown("Start date"),
               endDate: optionalKnown("End date"),
               extraFields: z
@@ -293,7 +286,7 @@ export function createTools<TContent = AnyContent>(
           items: z.array(
             z.object({
               id: z.string().optional(),
-              category: z.string().describe(documentLanguage === "zh" ? "e.g. 技术栈, 语言" : "e.g. Tech Stack, Languages"),
+              category: z.string().describe("Short practical category label in the document language"),
               items: z.string().describe("Comma-separated skills"),
             })
           ),
@@ -306,7 +299,7 @@ export function createTools<TContent = AnyContent>(
             z.object({
               id: z.string().optional(),
               name: z.string(),
-              websiteLabel: z.string().optional().describe("e.g. GitHub, Website"),
+              websiteLabel: z.string().optional().describe("Short display label for the project link"),
               websiteUrl: z.string().optional().describe("Full URL"),
               startDate: optionalKnown("Start date"),
               endDate: optionalKnown("End date"),
@@ -368,9 +361,9 @@ export function createTools<TContent = AnyContent>(
             z.object({
               id: z.string().optional(),
               institution: z.string(),
-              degree: optionalKnown(`Degree in CV field style, e.g. ${academicDegreeExample}`),
-              field: z.string().optional().describe(`Optional legacy field of study. Omit when degree already includes the field, e.g. ${academicDegreeExample}.`),
-              location: optionalKnown(`Location in document style, e.g. ${locationExample}`),
+              degree: optionalKnown("Degree title in the document language and established style"),
+              field: z.string().optional().describe("Optional field of study when it is not already represented in the degree"),
+              location: optionalKnown("Location formatted consistently with the current document"),
               startDate: optionalKnown("Start date"),
               endDate: optionalKnown("End date"),
               extraFields: z
@@ -397,7 +390,7 @@ export function createTools<TContent = AnyContent>(
               role: optionalKnown("Role/title"),
               researchGroup: z.string().optional(),
               department: z.string().optional(),
-              location: optionalKnown(`Location in document style, e.g. ${locationExample}`),
+              location: optionalKnown("Location formatted consistently with the current document"),
               startDate: optionalKnown("Start date"),
               endDate: optionalKnown("End date"),
               descriptions: z
@@ -420,7 +413,7 @@ export function createTools<TContent = AnyContent>(
               id: z.string().optional(),
               institution: z.string(),
               role: optionalKnown("Role/title"),
-              location: optionalKnown(`Location in document style, e.g. ${locationExample}`),
+              location: optionalKnown("Location formatted consistently with the current document"),
               startDate: optionalKnown("Start date"),
               endDate: optionalKnown("End date"),
               course: z.string().optional(),
@@ -445,7 +438,7 @@ export function createTools<TContent = AnyContent>(
               organization: z.string(),
               role: optionalKnown("Role/title"),
               department: z.string().optional(),
-              location: optionalKnown(`Location in document style, e.g. ${locationExample}`),
+              location: optionalKnown("Location formatted consistently with the current document"),
               startDate: optionalKnown("Start date"),
               endDate: optionalKnown("End date"),
               descriptions: z
@@ -490,9 +483,9 @@ export function createTools<TContent = AnyContent>(
               id: z.string().optional(),
               event: z.string(),
               title: z.string(),
-              location: optionalKnown(documentLanguage === "zh" ? "Location in document style, e.g. 美国, 新奥尔良" : "Location in document style, e.g. New Orleans, USA"),
+              location: optionalKnown("Location formatted consistently with the current document"),
               date: optionalKnown("Presentation date"),
-              type: z.string().optional().describe(documentLanguage === "zh" ? "e.g. 口头报告, 海报, 特邀" : "e.g. Oral, Poster, Invited"),
+              type: z.string().optional().describe("Presentation format or participation type"),
             })
           ).describe("Presentation entries ordered reverse-chronologically: most recent presentation first."),
         })
@@ -515,8 +508,8 @@ export function createTools<TContent = AnyContent>(
           items: z.array(
             z.object({
               id: z.string().optional(),
-              role: z.string().describe("e.g. Reviewer"),
-              organization: z.string().describe("e.g. NeurIPS"),
+              role: z.string().describe("Professional service role"),
+              organization: z.string().describe("Organization or venue"),
               date: z.string(),
             })
           ).describe("Professional service entries ordered reverse-chronologically: most recent first."),
@@ -617,7 +610,7 @@ export function createTools<TContent = AnyContent>(
       makeUpdateHandler(
         "set_date",
         z.object({
-          date: z.string().describe("e.g. March 20, 2024"),
+          date: z.string().describe("Letter date formatted consistently with the current document"),
         })
       )
     );
