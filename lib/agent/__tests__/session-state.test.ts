@@ -53,6 +53,24 @@ describe("agent session state", () => {
     ]);
   });
 
+  it("does not persist an in-memory clarification interrupt", () => {
+    const state = createInitialAgentPanelState();
+
+    writeAgentPanelSessionState("agent", {
+      ...state,
+      pendingClarification: {
+        id: "clarification",
+        resumeToken: "runtime",
+        request: {
+          question: "Which role should this target?",
+          reason: "The target is required.",
+        },
+      },
+    });
+
+    expect(readAgentPanelSessionState("agent").pendingClarification).toBeNull();
+  });
+
   it("keeps separate agent sessions isolated by storage key", () => {
     const state = createInitialAgentPanelState();
 

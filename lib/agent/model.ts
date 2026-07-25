@@ -18,8 +18,6 @@ interface ChatModelOptions {
   thinkingEnabled?: boolean;
 }
 
-const contextWindowCache = new Map<string, number | undefined>();
-
 function createCompatibleModelKwargs(
   provider: LLMProviderProfile,
   thinkingEnabled: boolean
@@ -169,25 +167,6 @@ export function createAgentChatModel(
       baseURL,
     },
   });
-}
-
-export function getAgentModelContextWindow(
-  config: LLMConfig
-): number | undefined {
-  const provider = resolveLLMProvider(config);
-  const cacheKey = `${provider.transport}\u0000${config.model}`;
-  if (contextWindowCache.has(cacheKey)) {
-    return contextWindowCache.get(cacheKey);
-  }
-
-  try {
-    const maxInputTokens = createAgentChatModel(config).profile.maxInputTokens;
-    contextWindowCache.set(cacheKey, maxInputTokens);
-    return maxInputTokens;
-  } catch {
-    contextWindowCache.set(cacheKey, undefined);
-    return undefined;
-  }
 }
 
 export async function validateLLMConfig(config: LLMConfig): Promise<void> {

@@ -22,11 +22,12 @@ describe("agent system prompt", () => {
   it("contains general policies without case examples", () => {
     const prompt = buildSystemPrompt("resume", "zh");
 
-    expect(prompt).toContain("Instruction priority");
+    expect(prompt).toContain("Evidence and scope");
     expect(prompt).toContain("Prefer an accurate partial result");
-    expect(prompt).toContain("one missing or ambiguous detail is necessary");
-    expect(prompt).toContain("Array setters replace their section");
-    expect(prompt).toContain("Call independent tools together");
+    expect(prompt).toContain("Ask one focused question");
+    expect(prompt).toContain("Array setters replace a section");
+    expect(prompt).toContain("reverse chronological order");
+    expect(prompt).not.toContain("record_inference");
     expect(prompt).not.toMatch(/\be\.g\.|\bfor example\b|\bsuch as\b|\bexample flow\b/i);
   });
 });

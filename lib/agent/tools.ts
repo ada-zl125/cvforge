@@ -29,13 +29,7 @@ export interface ClarificationRequest {
 export interface AgentToolState<TContent = AnyContent> {
   document: TContent;
   successfulToolNames: string[];
-  inferenceNotes: string[];
   clarificationCount: number;
-}
-
-export interface AgentClarificationScope {
-  allowAskUser: boolean;
-  section?: string;
 }
 
 export interface ClarificationInterrupt {
@@ -80,10 +74,6 @@ export const agentContextSchema = z.object({
   contextInstruction: z.string().optional(),
   referencePaths: z.array(z.string()).default([]),
   currentDocument: z.unknown(),
-  clarificationScope: z.object({
-    allowAskUser: z.boolean(),
-    section: z.string().optional(),
-  }),
 });
 
 export const agentStateSchema = new StateSchema({
@@ -100,16 +90,6 @@ export const agentStateSchema = new StateSchema({
         : update,
   }),
   successfulToolNames: new ReducedValue(
-    z.array(z.string()).default(() => []),
-    {
-      inputSchema: stringListUpdateSchema,
-      reducer: (current, update) =>
-        update.operation === "reset"
-          ? []
-          : [...current, update.value],
-    }
-  ),
-  inferenceNotes: new ReducedValue(
     z.array(z.string()).default(() => []),
     {
       inputSchema: stringListUpdateSchema,
@@ -237,59 +217,13 @@ export function createTools(
       {
         name: "ask_user",
         description:
-          "Ask the user for one focused clarification before continuing a structured document edit. Use this only when a required detail from the user's original task is missing, ambiguous, cannot be safely inferred, and cannot be safely omitted. If the user asked to modify a specific section, the question must stay inside that same section and must not ask about any other section. Do not use this for optional details or general follow-up. Call this tool alone in its model turn.",
+          "Ask the user one focused question when a required detail in the requested scope is missing or ambiguous, cannot be safely derived, and cannot be omitted. Do not ask about optional improvements or unrelated content.",
         schema: z.object({
         question: z.string().describe("One concise question for the user"),
         reason: z.string().describe("Brief reason why this cannot be safely inferred"),
         field: z.string().optional().describe("Optional field path affected inside the requested scope"),
         section: z.string().optional().describe("Optional requested section affected"),
         choices: z.array(z.string()).optional().describe("Optional short answer choices only when natural; omit when the user should type a custom answer"),
-      }),
-      }
-    ),
-    tool(
-      async (
-        args: {
-          original: string;
-          inferred: string;
-          reason: string;
-          field?: string;
-        },
-        runtime: CVForgeToolRuntime
-      ) => {
-        const original = args.original.trim() || "unspecified";
-        const inferred = args.inferred.trim() || "unspecified";
-        const reason = args.reason.trim() || "high-confidence normalization";
-        const field = args.field?.trim();
-        const note = field
-          ? `${field}: "${original}" to "${inferred}" (${reason})`
-          : `"${original}" to "${inferred}" (${reason})`;
-
-        return new Command({
-          update: {
-            inferenceNotes: {
-              operation: "append",
-              value: note,
-            },
-            messages: [
-              toolMessage(
-                runtime.toolCallId,
-                `Recorded inference: ${note}. Mention this to the user after document updates.`,
-                "record_inference"
-              ),
-            ],
-          },
-        });
-      },
-      {
-        name: "record_inference",
-        description:
-          "Record a high-confidence inference or normalization that will be written to the document. Use before or alongside update tools when filling information the user implied but did not state exactly.",
-        schema: z.object({
-        original: z.string().describe("The user's original wording or incomplete value"),
-        inferred: z.string().describe("The normalized or inferred value that will be written"),
-        reason: z.string().describe("Brief reason why this inference is high-confidence and low-risk"),
-        field: z.string().optional().describe("Optional field path or section affected"),
       }),
       }
     )

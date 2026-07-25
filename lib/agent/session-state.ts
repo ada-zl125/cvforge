@@ -6,12 +6,8 @@ import type { ClarificationRequest } from "@/lib/agent/tools";
 
 export interface PendingClarification {
   id: string;
-  resumeToken?: string;
-  originalUserMessage: string;
+  resumeToken: string;
   request: ClarificationRequest;
-  history: Message[];
-  documentState: unknown;
-  clarificationCount: number;
 }
 
 export interface AgentPanelState {
@@ -26,7 +22,7 @@ export interface AgentPanelState {
 
 type StoredAgentPanelState = Pick<
   AgentPanelState,
-  "messages" | "pendingClarification" | "lastChange" | "contextSources" | "contextInstruction"
+  "messages" | "lastChange" | "contextSources" | "contextInstruction"
 >;
 
 export function createInitialAgentPanelState(): AgentPanelState {
@@ -75,7 +71,6 @@ export function readAgentPanelSessionState(storageKey: string): AgentPanelState 
     return {
       ...initialState,
       messages: Array.isArray(parsed.messages) ? parsed.messages as Message[] : initialState.messages,
-      pendingClarification: isRecord(parsed.pendingClarification) ? parsed.pendingClarification as unknown as PendingClarification : null,
       lastChange: isRecord(parsed.lastChange) ? parsed.lastChange as unknown as AgentChange : null,
       contextSources: readContextSources(parsed.contextSources),
       contextInstruction: typeof parsed.contextInstruction === "string" ? parsed.contextInstruction : "",
@@ -89,7 +84,6 @@ export function writeAgentPanelSessionState(storageKey: string, state: AgentPane
   try {
     const storedState: StoredAgentPanelState = {
       messages: state.messages,
-      pendingClarification: state.pendingClarification,
       lastChange: state.lastChange,
       contextSources: state.contextSources,
       contextInstruction: state.contextInstruction,

@@ -6,7 +6,7 @@ import { createAgentChatModel } from "@/lib/agent/model";
 
 describe("agent tool schemas", () => {
   it("exposes the expected tool set for each document type", () => {
-    const common = ["ask_user", "record_inference"];
+    const common = ["ask_user"];
     const resumeTools = createTools("resume", "en").map((tool) => tool.name);
     const academicTools = createTools("academic-cv", "en").map(
       (tool) => tool.name

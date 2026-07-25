@@ -2,13 +2,13 @@
 
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { ChevronRight, Eye, FilePenLine, RotateCcw, Shrink, WandSparkles } from "lucide-react";
+import { ChevronRight, Eye, FilePenLine, RotateCcw, WandSparkles } from "lucide-react";
 import AnimatedContent from "@/components/AnimatedContent";
 import FadeContent from "@/components/FadeContent";
 import ShinyText from "@/components/ShinyText";
 import SpotlightCard from "@/components/SpotlightCard";
 import { Button } from "@/components/ui/button";
-import type { AgentStatus, AgentContextUsage } from "@/lib/agent/chat";
+import type { AgentStatus } from "@/lib/agent/chat";
 import type { AgentChange } from "@/lib/agent/change-tracking";
 
 const markdownComponents: Components = {
@@ -150,66 +150,6 @@ export function AgentEmptyState({
         </div>
       </div>
     </FadeContent>
-  );
-}
-
-export function ContextSummaryMessage({
-  content,
-  label,
-}: {
-  content: string;
-  label: string;
-}) {
-  return (
-    <div className="flex justify-start py-1">
-      <div className="w-full min-w-0 rounded-md border border-dashed border-gray-200 bg-gray-50 px-3 py-2 text-xs text-muted-foreground">
-        <div className="mb-2 flex items-center gap-1.5 font-medium text-gray-700">
-          <Shrink className="size-3.5" />
-          <span>{label}</span>
-        </div>
-        <div className="text-gray-700">
-          <AssistantMarkdown content={content} />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export function ContextUsageIndicator({
-  usage,
-  title,
-}: {
-  usage: AgentContextUsage | null;
-  title: string;
-}) {
-  const percent = usage?.percent ?? 0;
-  const visiblePercent = percent > 0 ? Math.max(percent, 4) : 0;
-  const tone =
-    percent >= 90
-      ? "#ef4444"
-      : percent >= 70
-        ? "#f59e0b"
-        : percent > 0
-          ? "#374151"
-          : "#d1d5db";
-
-  return (
-    <div
-      className="flex h-7 w-7 shrink-0 items-center justify-center"
-      title={title}
-      aria-label={title}
-      role="img"
-    >
-      <div
-        className="flex h-[18px] w-[18px] items-center justify-center rounded-full border border-gray-200"
-        style={{
-          background: `conic-gradient(${tone} ${visiblePercent}%, #e5e7eb ${visiblePercent}% 100%)`,
-        }}
-        aria-hidden="true"
-      >
-        <div className="h-2.5 w-2.5 rounded-full bg-card shadow-[inset_0_0_0_1px_rgba(0,0,0,0.04)]" />
-      </div>
-    </div>
   );
 }
 

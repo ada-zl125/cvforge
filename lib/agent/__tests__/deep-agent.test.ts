@@ -35,7 +35,7 @@ vi.mock("deepagents/browser", async (importOriginal) => {
 
 import {
   createAgentSessionId,
-  discardAgentResume,
+  discardAgentSession,
   resumeAgentStream,
   runAgentStream,
   type RunAgentStreamParams,
@@ -216,7 +216,7 @@ describe("Deep Agent runtime", () => {
       "Software engineer targeting platform roles."
     );
     expect(toolNames).toEqual(["set_summary"]);
-    discardAgentResume(resumeToken);
+    discardAgentSession(resumeToken);
   });
 
   it("retrieves uploaded references through the virtual filesystem", async () => {
@@ -373,6 +373,6 @@ describe("Deep Agent runtime", () => {
         items: "TypeScript",
       }),
     ]);
-    discardAgentResume(sessionId);
+    discardAgentSession(sessionId);
   });
 });

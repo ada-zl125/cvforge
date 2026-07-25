@@ -55,6 +55,24 @@ describe("agent executor", () => {
     expect(updated.projects[0].descriptions[0].id).toEqual(expect.any(String));
   });
 
+  it("keeps ongoing entries first and undated entries stable", () => {
+    const updated = executeToolCall("resume", defaultResumeContent, "set_experience", {
+      items: [
+        { company: "Undated One", descriptions: [] },
+        { company: "Past", endDate: "December 2024", descriptions: [] },
+        { company: "Current", endDate: "Present", descriptions: [] },
+        { company: "Undated Two", descriptions: [] },
+      ],
+    }) as ResumeContent;
+
+    expect(updated.experience.map((item) => item.company)).toEqual([
+      "Current",
+      "Past",
+      "Undated One",
+      "Undated Two",
+    ]);
+  });
+
   it("removes resume sections when a tool clears their content", () => {
     const content = { ...defaultResumeContent, sections: ["summary", "skills"] as ResumeContent["sections"] };
     const withoutSummary = executeToolCall("resume", content, "set_summary", { text: "" }) as ResumeContent;
