@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
-import { Send, SlidersHorizontal, Loader2, AlertCircle, Settings, Eraser, Shrink, FilePenLine, Square, Paperclip, Trash2, Upload, Eye } from "lucide-react";
+import { Send, SlidersHorizontal, Loader2, AlertCircle, Settings, Eraser, Shrink, FilePenLine, Square, Paperclip, Trash2, Upload, Eye, BrainCircuit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import FadeContent from "@/components/FadeContent";
 import SpotlightCard from "@/components/SpotlightCard";
@@ -30,6 +30,7 @@ import {
   writeLLMConfig,
 } from "@/lib/agent/config";
 import { validateLLMConfig } from "@/lib/agent/model";
+import { resolveLLMProvider } from "@/lib/agent/providers";
 import type { ClarificationRequest, DocType, DocumentLanguage } from "@/lib/agent/tools";
 import { buildAgentChange, contentSignature, type AgentChange } from "@/lib/agent/change-tracking";
 import {
@@ -202,6 +203,7 @@ export function ChatPanel<TContent>({
   const messagesRef = useRef(messages);
   const contentRef = useRef(content);
   const streamingTextRef = useRef("");
+  const reasoningTextRef = useRef("");
   const abortControllerRef = useRef<AbortController | null>(null);
   const pendingResumeTokenRef = useRef(pendingClarification?.resumeToken);
 
@@ -353,6 +355,21 @@ export function ChatPanel<TContent>({
         contextInstruction,
       })
     : null;
+  const providerProfile = activeConfig
+    ? resolveLLMProvider(activeConfig)
+    : null;
+  const thinkingEnabled =
+    providerProfile?.thinkingControl === "always" ||
+    (providerProfile?.thinkingControl === "toggle" &&
+      !!activeConfig?.thinkingEnabled);
+  const thinkingButtonTitle =
+    providerProfile?.thinkingControl === "always"
+      ? agentTr.thinkingAlwaysOn
+      : !providerProfile || providerProfile.thinkingControl === "unavailable"
+        ? agentTr.thinkingUnavailable
+        : thinkingEnabled
+          ? agentTr.disableThinking
+          : agentTr.enableThinking;
   const canUndoLastChange =
     !!lastChange && contentSignature(content) === lastChange.afterSignature;
   const agentDocLabel =
@@ -437,6 +454,7 @@ export function ChatPanel<TContent>({
     setMessages([]);
     setStreamingText("");
     streamingTextRef.current = "";
+    reasoningTextRef.current = "";
     setAgentStatus(null);
     setError(null);
     setPendingClarification(null);
@@ -470,6 +488,7 @@ export function ChatPanel<TContent>({
       ]);
       setStreamingText("");
       streamingTextRef.current = "";
+      reasoningTextRef.current = "";
       setAgentStatus(null);
     } catch (err) {
       let errorMsg: string = agentTr.compactFailed;
@@ -527,6 +546,7 @@ export function ChatPanel<TContent>({
       setMessages(nextMessages);
       setStreamingText("");
       streamingTextRef.current = "";
+      reasoningTextRef.current = "";
 
       await runAgentStream({
         config: activeConfig,
@@ -548,6 +568,9 @@ export function ChatPanel<TContent>({
           setAgentStatus(null);
           streamingTextRef.current += chunk;
           setStreamingText((prev) => prev + chunk);
+        },
+        onReasoning: (reasoning) => {
+          if (thinkingEnabled) reasoningTextRef.current = reasoning;
         },
         onStatusChange: setAgentStatus,
         onClarification: (request, resumeToken) => {
@@ -577,11 +600,13 @@ export function ChatPanel<TContent>({
               {
                 role: "assistant",
                 content: finalText,
+                reasoning: reasoningTextRef.current || undefined,
               },
             ]);
           }
           setAgentStatus(null);
           streamingTextRef.current = "";
+          reasoningTextRef.current = "";
           setStreamingText("");
           recordAgentChange(beforeContent, latestContent, changedToolNames);
         },
@@ -596,6 +621,7 @@ export function ChatPanel<TContent>({
           },
         ]);
         streamingTextRef.current = "";
+        reasoningTextRef.current = "";
         setStreamingText("");
         setAgentStatus(null);
         recordAgentChange(beforeContent, latestContent, changedToolNames);
@@ -630,6 +656,7 @@ export function ChatPanel<TContent>({
         },
       ]);
       streamingTextRef.current = "";
+      reasoningTextRef.current = "";
       setStreamingText("");
       setAgentStatus(null);
     } finally {
@@ -685,6 +712,7 @@ export function ChatPanel<TContent>({
     setMessages((prev) => [...prev, { role: "user", content: visibleAnswer }]);
     setStreamingText("");
     streamingTextRef.current = "";
+    reasoningTextRef.current = "";
     const abortController = new AbortController();
     abortControllerRef.current = abortController;
     const beforeContent = contentRef.current;
@@ -703,6 +731,9 @@ export function ChatPanel<TContent>({
         setAgentStatus(null);
         streamingTextRef.current += chunk;
         setStreamingText((prev) => prev + chunk);
+      },
+      onReasoning: (reasoning) => {
+        if (thinkingEnabled) reasoningTextRef.current = reasoning;
       },
       onStatusChange: setAgentStatus,
       onClarification: (request, resumeToken) => {
@@ -736,11 +767,13 @@ export function ChatPanel<TContent>({
             {
               role: "assistant",
               content: finalText,
+              reasoning: reasoningTextRef.current || undefined,
             },
           ]);
         }
         setAgentStatus(null);
         streamingTextRef.current = "";
+        reasoningTextRef.current = "";
         setStreamingText("");
         recordAgentChange(beforeContent, latestContent, changedToolNames);
       },
@@ -749,6 +782,7 @@ export function ChatPanel<TContent>({
       | "onContentUpdate"
       | "signal"
       | "onTextChunk"
+      | "onReasoning"
       | "onStatusChange"
       | "onClarification"
       | "onDone"
@@ -788,6 +822,7 @@ export function ChatPanel<TContent>({
           },
         ]);
         streamingTextRef.current = "";
+        reasoningTextRef.current = "";
         setStreamingText("");
         setAgentStatus(null);
         recordAgentChange(beforeContent, latestContent, changedToolNames);
@@ -821,6 +856,7 @@ export function ChatPanel<TContent>({
         },
       ]);
       streamingTextRef.current = "";
+      reasoningTextRef.current = "";
       setStreamingText("");
       setAgentStatus(null);
     } finally {
@@ -935,10 +971,17 @@ export function ChatPanel<TContent>({
     setIsSavingConfig(true);
     setConfigError(null);
     try {
-      const nextConfig = {
+      const candidateConfig: LLMConfig = {
         baseURL: draftConfig.baseURL.trim().replace(/\/+$/, ""),
         apiKey: draftConfig.apiKey.trim(),
         model: draftConfig.model.trim(),
+        thinkingEnabled: draftConfig.thinkingEnabled,
+      };
+      const nextConfig: LLMConfig = {
+        ...candidateConfig,
+        thinkingEnabled:
+          resolveLLMProvider(candidateConfig).thinkingControl === "toggle" &&
+          candidateConfig.thinkingEnabled,
       };
 
       await validateLLMConfig(nextConfig);
@@ -958,6 +1001,31 @@ export function ChatPanel<TContent>({
     }
   };
 
+  const handleThinkingToggle = () => {
+    if (
+      !activeConfig ||
+      providerProfile?.thinkingControl !== "toggle" ||
+      isBusy ||
+      hasPendingClarification
+    ) {
+      return;
+    }
+
+    const nextConfig: LLMConfig = {
+      ...activeConfig,
+      thinkingEnabled: !thinkingEnabled,
+    };
+    writeLLMConfig(nextConfig);
+    onAgentStateChange((prev) => ({
+      ...prev,
+      activeConfig: nextConfig,
+      draftConfig: {
+        ...prev.draftConfig,
+        thinkingEnabled: nextConfig.thinkingEnabled,
+      },
+    }));
+  };
+
   return (
     <div className="flex h-full flex-col bg-[#fbfbfa]">
       {/* Top bar */}
@@ -965,14 +1033,24 @@ export function ChatPanel<TContent>({
         className="shrink-0 border-b border-black/10 bg-white"
         spotlightColor="rgba(0, 0, 0, 0.045)"
       >
-      <div className="flex items-center justify-between px-3 py-2.5">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <AgentAvatar active={isConfigured} />
-          <div className="min-w-0">
-            <h2 className="text-sm font-semibold leading-5 text-gray-950">{agentTr.agentMode}</h2>
+        <div className="flex items-center justify-between px-3 py-2.5">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <AgentAvatar active={isConfigured} />
+            <div className="min-w-0">
+              <h2 className="text-sm font-semibold leading-5 text-gray-950">
+                {agentTr.agentMode}
+              </h2>
+              {activeConfig && providerProfile && (
+                <p
+                  className="max-w-40 truncate text-[10px] leading-4 text-muted-foreground"
+                  title={`${providerProfile.label} · ${activeConfig.model}`}
+                >
+                  {providerProfile.label} · {activeConfig.model}
+                </p>
+              )}
+            </div>
           </div>
-        </div>
-        <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1">
           <ContextUsageIndicator
             usage={contextUsage}
             title={
@@ -1030,6 +1108,30 @@ export function ChatPanel<TContent>({
           <Button
             variant="ghost"
             size="icon-sm"
+            onClick={handleThinkingToggle}
+            disabled={
+              !isConfigured ||
+              isBusy ||
+              hasPendingClarification ||
+              providerProfile?.thinkingControl !== "toggle"
+            }
+            aria-pressed={thinkingEnabled}
+            aria-label={thinkingButtonTitle}
+            className={`relative hover:text-foreground disabled:pointer-events-none disabled:opacity-35 ${
+              thinkingEnabled
+                ? "bg-black/[0.07] text-gray-950"
+                : "text-muted-foreground"
+            }`}
+            title={thinkingButtonTitle}
+          >
+            <BrainCircuit className="size-4" />
+            {thinkingEnabled && (
+              <span className="absolute right-0.5 top-0.5 size-1.5 rounded-full bg-emerald-500" />
+            )}
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
             onClick={() => setConfigOpen(true)}
             disabled={hasPendingClarification}
             className="text-muted-foreground hover:text-foreground"
@@ -1037,8 +1139,8 @@ export function ChatPanel<TContent>({
           >
             <SlidersHorizontal className="size-4" />
           </Button>
+          </div>
         </div>
-      </div>
       </SpotlightCard>
 
       {/* Messages */}
@@ -1113,7 +1215,12 @@ export function ChatPanel<TContent>({
               }
 
               return (
-                <AssistantMessageBubble key={idx} content={msg.content} />
+                <AssistantMessageBubble
+                  key={idx}
+                  content={msg.content}
+                  reasoning={msg.reasoning}
+                  reasoningLabel={agentTr.reasoningLabel}
+                />
               );
             })}
             {streamingText && (

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { ChatOpenAI } from "@langchain/openai";
 import { z } from "zod";
 import { createTools } from "@/lib/agent/tools";
 import { createAgentChatModel } from "@/lib/agent/model";
@@ -105,7 +106,12 @@ describe("OpenAI compatible model configuration", () => {
       apiKey: "test-key",
       baseURL: "https://example.test/v1/",
       model: "gpt-4.1-mini",
+      thinkingEnabled: false,
     });
+    expect(model).toBeInstanceOf(ChatOpenAI);
+    if (!(model instanceof ChatOpenAI)) {
+      throw new Error("Expected ChatOpenAI");
+    }
     const params = model.invocationParams();
 
     expect(model.useResponsesApi).toBe(false);

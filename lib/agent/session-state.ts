@@ -37,6 +37,7 @@ export function createInitialAgentPanelState(): AgentPanelState {
       baseURL: "",
       apiKey: "",
       model: "",
+      thinkingEnabled: false,
     },
     pendingClarification: null,
     lastChange: null,

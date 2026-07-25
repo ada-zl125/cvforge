@@ -2,7 +2,7 @@
 
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Eye, FilePenLine, RotateCcw, Shrink, WandSparkles } from "lucide-react";
+import { ChevronRight, Eye, FilePenLine, RotateCcw, Shrink, WandSparkles } from "lucide-react";
 import AnimatedContent from "@/components/AnimatedContent";
 import FadeContent from "@/components/FadeContent";
 import ShinyText from "@/components/ShinyText";
@@ -305,7 +305,15 @@ export function UserMessageBubble({ content }: { content: string }) {
   );
 }
 
-export function AssistantMessageBubble({ content }: { content: string }) {
+export function AssistantMessageBubble({
+  content,
+  reasoning,
+  reasoningLabel,
+}: {
+  content: string;
+  reasoning?: string;
+  reasoningLabel: string;
+}) {
   return (
     <AnimatedContent
       distance={10}
@@ -313,6 +321,17 @@ export function AssistantMessageBubble({ content }: { content: string }) {
       threshold={0}
       className="w-full py-1"
     >
+      {reasoning && (
+        <details className="group mb-2 text-gray-500">
+          <summary className="flex w-fit cursor-pointer list-none items-center gap-1 text-[11px] font-medium leading-5 hover:text-gray-700 [&::-webkit-details-marker]:hidden">
+            <ChevronRight className="size-3 transition-transform group-open:rotate-90" />
+            {reasoningLabel}
+          </summary>
+          <div className="ml-1 mt-1 whitespace-pre-wrap break-words border-l border-gray-200 pl-3 text-[11px] leading-5 text-gray-500">
+            {reasoning}
+          </div>
+        </details>
+      )}
       <AssistantMarkdown content={content} />
     </AnimatedContent>
   );

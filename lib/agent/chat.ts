@@ -28,11 +28,13 @@ import type { LLMConfig } from "./config";
 import type { AgentChange } from "./change-tracking";
 import { buildContextInstructionContext, buildReferenceContext, type AgentContextSource } from "./context-sources";
 import { createAgentChatModel } from "./model";
+import { extractAssistantReasoning } from "./reasoning";
 import { normalizeAssistantText } from "./text-normalization";
 
 export interface Message {
   role: "user" | "assistant";
   content: string;
+  reasoning?: string;
   kind?: "context-summary" | "change-card";
   change?: AgentChange;
 }
@@ -57,6 +59,7 @@ export interface RunAgentStreamParams<TContent> {
   contextInstruction?: string;
   signal?: AbortSignal;
   onTextChunk: (chunk: string) => void;
+  onReasoning?: (reasoning: string) => void;
   onStatusChange?: (status: AgentStatus | null) => void;
   onClarification?: (
     request: ClarificationRequest,
@@ -73,6 +76,7 @@ export interface ResumeAgentStreamParams<TContent> {
   onContentUpdate: (updated: TContent, toolName: string) => void;
   signal?: AbortSignal;
   onTextChunk: (chunk: string) => void;
+  onReasoning?: (reasoning: string) => void;
   onStatusChange?: (status: AgentStatus | null) => void;
   onClarification?: (
     request: ClarificationRequest,
@@ -444,6 +448,7 @@ export async function compactAgentHistory<TContent>({
   const model = createAgentChatModel(config, {
     maxRetries: 2,
     temperature: 0,
+    thinkingEnabled: false,
   });
 
   const completion = await model.invoke([
@@ -495,6 +500,7 @@ interface InvocationCallbacks<TContent> {
   onContentUpdate: (updated: TContent, toolName: string) => void;
   signal?: AbortSignal;
   onTextChunk: (chunk: string) => void;
+  onReasoning?: (reasoning: string) => void;
   onStatusChange?: (status: AgentStatus | null) => void;
   onClarification?: (
     request: ClarificationRequest,
@@ -818,6 +824,7 @@ async function invokeAgentRuntime<TContent>(
     signal,
     onContentUpdate,
     onTextChunk,
+    onReasoning,
     onStatusChange,
     onClarification,
     onDone,
@@ -860,8 +867,10 @@ async function invokeAgentRuntime<TContent>(
 
     suspendedAgentRuntimes.delete(runtime.resumeToken);
     const assistantContent = extractFinalAssistantText(result.messages);
+    const reasoning = extractAssistantReasoning(result.messages);
 
     onStatusChange?.(null);
+    if (reasoning) onReasoning?.(reasoning);
     if (assistantContent) {
       onTextChunk(
         withInferenceDisclosure(

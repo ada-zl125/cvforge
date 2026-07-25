@@ -68,4 +68,5 @@ describe("agent session state", () => {
     expect(readAgentPanelSessionState("agent_resume").messages[0].content).toBe("Polish resume");
     expect(readAgentPanelSessionState("agent_cover_letter").messages[0].content).toBe("Polish letter");
   });
+
 });

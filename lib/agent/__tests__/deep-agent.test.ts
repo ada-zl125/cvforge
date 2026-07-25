@@ -41,6 +41,7 @@ function createParams(
       apiKey: "test-key",
       baseURL: "https://example.test/v1",
       model: "test-model",
+      thinkingEnabled: false,
     },
     docType: "resume",
     documentLanguage: "en",
