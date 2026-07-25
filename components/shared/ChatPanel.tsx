@@ -1032,7 +1032,7 @@ export function ChatPanel<TContent>({
         onMouseEnter={() => isConfigured && setIsHoveringChat(true)}
         onMouseLeave={() => setIsHoveringChat(false)}
       >
-        {!isConfigured ? (
+        {!isConfigured && messages.length === 0 && streamingText === "" ? (
           <FadeContent duration={360} threshold={0} initialOpacity={0}>
             <SpotlightCard
               className="rounded-md border border-dashed border-black/12 bg-white px-3 py-3"

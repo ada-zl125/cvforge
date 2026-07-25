@@ -3,7 +3,6 @@
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ChevronRight, Eye, FilePenLine, RotateCcw, WandSparkles } from "lucide-react";
-import AnimatedContent from "@/components/AnimatedContent";
 import FadeContent from "@/components/FadeContent";
 import ShinyText from "@/components/ShinyText";
 import SpotlightCard from "@/components/SpotlightCard";
@@ -293,16 +292,11 @@ export function ChangeCard({
 
 export function UserMessageBubble({ content }: { content: string }) {
   return (
-    <AnimatedContent
-      distance={10}
-      duration={0.28}
-      threshold={0}
-      className="flex justify-end"
-    >
+    <div className="flex animate-in justify-end fade-in-0 duration-200 motion-reduce:animate-none">
       <div className="max-w-[85%] whitespace-pre-wrap break-words rounded-2xl border border-black/10 bg-gray-100 px-3 py-2 text-sm leading-6 text-gray-950">
         {content}
       </div>
-    </AnimatedContent>
+    </div>
   );
 }
 
@@ -316,12 +310,7 @@ export function AssistantMessageBubble({
   reasoningLabel: string;
 }) {
   return (
-    <AnimatedContent
-      distance={10}
-      duration={0.28}
-      threshold={0}
-      className="w-full py-1"
-    >
+    <div className="w-full animate-in py-1 fade-in-0 duration-200 motion-reduce:animate-none">
       {reasoning && (
         <details className="group mb-2 text-gray-500">
           <summary className="flex w-fit cursor-pointer list-none items-center gap-1 text-[11px] font-medium leading-5 hover:text-gray-700 [&::-webkit-details-marker]:hidden">
@@ -334,6 +323,6 @@ export function AssistantMessageBubble({
         </details>
       )}
       <AssistantMarkdown content={content} />
-    </AnimatedContent>
+    </div>
   );
 }
