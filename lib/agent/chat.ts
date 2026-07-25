@@ -511,6 +511,35 @@ interface InvocationCallbacks<TContent> {
 
 const suspendedAgentRuntimes = new Map<string, SuspendedAgentRuntime>();
 
+export function keepSelectedToolCallContent(
+  content: AIMessage["content"],
+  selectedToolCallId: string | undefined,
+  discardedToolCallIds: Set<string>
+): AIMessage["content"] {
+  if (!Array.isArray(content) || discardedToolCallIds.size === 0) {
+    return content;
+  }
+
+  return content.filter((block) => {
+    if (!isRecordValue(block)) return true;
+
+    const type = typeof block.type === "string" ? block.type : "";
+    if (!["tool_use", "tool_call", "function_call"].includes(type)) {
+      return true;
+    }
+
+    const id =
+      typeof block.id === "string"
+        ? block.id
+        : typeof block.call_id === "string"
+          ? block.call_id
+          : undefined;
+    if (!id) return true;
+
+    return id === selectedToolCallId || !discardedToolCallIds.has(id);
+  });
+}
+
 const serialToolCallMiddleware = createMiddleware({
   name: "CVForgeSerialToolCalls",
   afterModel: (state) => {
@@ -520,8 +549,18 @@ const serialToolCallMiddleware = createMiddleware({
 
     const selectedToolCall =
       toolCalls.find((toolCall) => toolCall.name === "ask_user") ?? toolCalls[0];
+    const discardedToolCallIds = new Set(
+      toolCalls
+        .filter((toolCall) => toolCall !== selectedToolCall)
+        .map((toolCall) => toolCall.id)
+        .filter((id): id is string => Boolean(id))
+    );
     const replacement = new AIMessage({
-      content: lastMessage.content,
+      content: keepSelectedToolCallContent(
+        lastMessage.content,
+        selectedToolCall.id,
+        discardedToolCallIds
+      ),
       id: lastMessage.id,
       name: lastMessage.name,
       tool_calls: [selectedToolCall],

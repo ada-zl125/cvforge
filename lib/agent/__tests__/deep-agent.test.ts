@@ -12,6 +12,7 @@ vi.mock("@/lib/agent/model", () => ({
 
 import {
   discardAgentResume,
+  keepSelectedToolCallContent,
   resumeAgentStream,
   runAgentStream,
   type RunAgentStreamParams,
@@ -57,6 +58,32 @@ function createParams(
 describe("Deep Agent runtime", () => {
   beforeEach(() => {
     modelState.current = null;
+  });
+
+  it("preserves reasoning while discarding unselected provider tool blocks", () => {
+    const content = [
+      { type: "thinking", thinking: "Inspect the current document." },
+      {
+        type: "tool_use",
+        id: "summary-call",
+        name: "set_summary",
+        input: { text: "Updated summary" },
+      },
+      {
+        type: "tool_use",
+        id: "skills-call",
+        name: "set_skills",
+        input: { items: [] },
+      },
+    ];
+
+    expect(
+      keepSelectedToolCallContent(
+        content,
+        "summary-call",
+        new Set(["skills-call"])
+      )
+    ).toEqual(content.slice(0, 2));
   });
 
   it("executes document tools through graph state", async () => {
