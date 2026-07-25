@@ -1,6 +1,11 @@
 import { z } from "zod";
 import { tool, ToolMessage, type ToolRuntime } from "langchain";
-import { Command, interrupt } from "@langchain/langgraph";
+import {
+  Command,
+  ReducedValue,
+  StateSchema,
+  interrupt,
+} from "@langchain/langgraph";
 import type { DynamicStructuredTool } from "@langchain/core/tools";
 import type { ResumeContent } from "@/lib/types/resume";
 import type { AcademicCVContent } from "@/lib/types/academic-cv";
@@ -28,8 +33,9 @@ export interface AgentToolState<TContent = AnyContent> {
   clarificationCount: number;
 }
 
-export interface AgentToolContext<TContent = AnyContent> {
-  onContentUpdate?: (updated: TContent, toolName: string) => void;
+export interface AgentClarificationScope {
+  allowAskUser: boolean;
+  section?: string;
 }
 
 export interface ClarificationInterrupt {
@@ -37,19 +43,92 @@ export interface ClarificationInterrupt {
   request: ClarificationRequest;
 }
 
-export const agentStateSchema = z.object({
-  document: z.unknown(),
-  successfulToolNames: z.array(z.string()).default([]),
-  inferenceNotes: z.array(z.string()).default([]),
-  clarificationCount: z.number().int().nonnegative().default(0),
+const documentMutationSchema = z.object({
+  docType: z.enum(["resume", "academic-cv", "cover-letter"]),
+  toolName: z.string(),
+  args: z.unknown(),
 });
 
+type DocumentMutation = z.infer<typeof documentMutationSchema>;
+
+function isDocumentMutation(value: unknown): value is DocumentMutation {
+  return documentMutationSchema.safeParse(value).success;
+}
+
+const stringListUpdateSchema = z.discriminatedUnion("operation", [
+  z.object({
+    operation: z.literal("append"),
+    value: z.string(),
+  }),
+  z.object({
+    operation: z.literal("reset"),
+  }),
+]);
+
+const counterUpdateSchema = z.discriminatedUnion("operation", [
+  z.object({
+    operation: z.literal("increment"),
+    value: z.number().int().nonnegative(),
+  }),
+  z.object({
+    operation: z.literal("set"),
+    value: z.number().int().nonnegative(),
+  }),
+]);
+
 export const agentContextSchema = z.object({
-  onContentUpdate: z
-    .custom<(updated: unknown, toolName: string) => void>(
-      (value) => typeof value === "function"
-    )
-    .optional(),
+  contextInstruction: z.string().optional(),
+  referencePaths: z.array(z.string()).default([]),
+  currentDocument: z.unknown(),
+  clarificationScope: z.object({
+    allowAskUser: z.boolean(),
+    section: z.string().optional(),
+  }),
+});
+
+export const agentStateSchema = new StateSchema({
+  document: new ReducedValue(z.unknown().default(null), {
+    inputSchema: z.unknown(),
+    reducer: (current, update) =>
+      isDocumentMutation(update)
+        ? executeToolCall(
+            update.docType,
+            current,
+            update.toolName,
+            update.args
+          )
+        : update,
+  }),
+  successfulToolNames: new ReducedValue(
+    z.array(z.string()).default(() => []),
+    {
+      inputSchema: stringListUpdateSchema,
+      reducer: (current, update) =>
+        update.operation === "reset"
+          ? []
+          : [...current, update.value],
+    }
+  ),
+  inferenceNotes: new ReducedValue(
+    z.array(z.string()).default(() => []),
+    {
+      inputSchema: stringListUpdateSchema,
+      reducer: (current, update) =>
+        update.operation === "reset"
+          ? []
+          : [...current, update.value],
+    }
+  ),
+  clarificationCount: new ReducedValue(
+    z.number().int().nonnegative().default(0),
+    {
+      inputSchema: counterUpdateSchema,
+      reducer: (current, update) =>
+        update.operation === "set"
+          ? update.value
+          : current + update.value,
+    }
+  ),
 });
 
 type CVForgeToolRuntime = ToolRuntime<
@@ -67,7 +146,7 @@ function toolMessage(toolCallId: string, content: string, name: string): ToolMes
   });
 }
 
-export function createTools<TContent = AnyContent>(
+export function createTools(
   docType: DocType,
   documentLanguage: DocumentLanguage
 ): DynamicStructuredTool[] {
@@ -81,22 +160,19 @@ export function createTools<TContent = AnyContent>(
       ) => {
         runtime.signal?.throwIfAborted();
         const normalizedArgs = normalizeToolArgsForDocumentLanguage(args, documentLanguage);
-        const updated = executeToolCall(
-          docType,
-          runtime.state.document,
-          toolName,
-          normalizedArgs
-        ) as TContent;
         runtime.signal?.throwIfAborted();
-        runtime.context.onContentUpdate?.(updated, toolName);
 
         return new Command({
           update: {
-            document: updated,
-            successfulToolNames: [
-              ...(runtime.state.successfulToolNames ?? []),
+            document: {
+              docType,
               toolName,
-            ],
+              args: normalizedArgs,
+            },
+            successfulToolNames: {
+              operation: "append",
+              value: toolName,
+            },
             messages: [
               toolMessage(runtime.toolCallId, `Updated ${toolName}`, toolName),
             ],
@@ -117,7 +193,8 @@ export function createTools<TContent = AnyContent>(
         args: ClarificationRequest,
         runtime: CVForgeToolRuntime
       ) => {
-        if (runtime.state.clarificationCount >= MAX_CLARIFICATION_ROUNDS) {
+        const state = runtime.state as AgentToolState;
+        if (state.clarificationCount >= MAX_CLARIFICATION_ROUNDS) {
           return "The clarification limit has been reached. Continue with the safest accurate partial update or ask in normal chat.";
         }
 
@@ -143,7 +220,10 @@ export function createTools<TContent = AnyContent>(
 
         return new Command({
           update: {
-            clarificationCount: runtime.state.clarificationCount + 1,
+            clarificationCount: {
+              operation: "increment",
+              value: 1,
+            },
             messages: [
               toolMessage(
                 runtime.toolCallId,
@@ -187,7 +267,10 @@ export function createTools<TContent = AnyContent>(
 
         return new Command({
           update: {
-            inferenceNotes: [...(runtime.state.inferenceNotes ?? []), note],
+            inferenceNotes: {
+              operation: "append",
+              value: note,
+            },
             messages: [
               toolMessage(
                 runtime.toolCallId,

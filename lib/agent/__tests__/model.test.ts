@@ -47,9 +47,11 @@ describe("LangChain provider models", () => {
 
     expect(model).toBeInstanceOf(ChatDeepSeek);
     expect((model as ChatDeepSeek).modelKwargs).toMatchObject({
-      parallel_tool_calls: false,
       thinking: { type: "enabled" },
     });
+    expect(
+      (model as ChatDeepSeek).modelKwargs?.parallel_tool_calls
+    ).toBeUndefined();
   });
 
   it("uses the native Google integration", () => {

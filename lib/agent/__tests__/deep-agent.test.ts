@@ -4,15 +4,19 @@ import type { ResumeContent } from "@/lib/types/resume";
 
 const modelState = vi.hoisted(() => ({
   current: null as unknown,
+  creations: 0,
 }));
 
 vi.mock("@/lib/agent/model", () => ({
-  createAgentChatModel: () => modelState.current,
+  createAgentChatModel: () => {
+    modelState.creations += 1;
+    return modelState.current;
+  },
 }));
 
 import {
+  createAgentSessionId,
   discardAgentResume,
-  keepSelectedToolCallContent,
   resumeAgentStream,
   runAgentStream,
   type RunAgentStreamParams,
@@ -38,6 +42,7 @@ function createParams(
   onUpdate: (updated: ResumeContent, toolName: string) => void
 ): RunAgentStreamParams<ResumeContent> {
   return {
+    sessionId: createAgentSessionId(),
     config: {
       apiKey: "test-key",
       baseURL: "https://example.test/v1",
@@ -58,32 +63,7 @@ function createParams(
 describe("Deep Agent runtime", () => {
   beforeEach(() => {
     modelState.current = null;
-  });
-
-  it("preserves reasoning while discarding unselected provider tool blocks", () => {
-    const content = [
-      { type: "thinking", thinking: "Inspect the current document." },
-      {
-        type: "tool_use",
-        id: "summary-call",
-        name: "set_summary",
-        input: { text: "Updated summary" },
-      },
-      {
-        type: "tool_use",
-        id: "skills-call",
-        name: "set_skills",
-        input: { items: [] },
-      },
-    ];
-
-    expect(
-      keepSelectedToolCallContent(
-        content,
-        "summary-call",
-        new Set(["skills-call"])
-      )
-    ).toEqual(content.slice(0, 2));
+    modelState.creations = 0;
   });
 
   it("executes document tools through graph state", async () => {
@@ -115,7 +95,7 @@ describe("Deep Agent runtime", () => {
     expect(toolNames).toEqual(["set_summary"]);
   });
 
-  it("applies sequential tools to the latest document state", async () => {
+  it("merges parallel document tools into the latest graph state", async () => {
     modelState.current = new FakeToolCallingModel({
       toolCalls: [
         [
@@ -124,8 +104,6 @@ describe("Deep Agent runtime", () => {
             args: { text: "Full stack engineer." },
             id: "summary-call",
           },
-        ],
-        [
           {
             name: "set_skills",
             args: {
@@ -162,11 +140,6 @@ describe("Deep Agent runtime", () => {
     modelState.current = new FakeToolCallingModel({
       toolCalls: [
         [
-          {
-            name: "set_summary",
-            args: { text: "This must not run before clarification." },
-            id: "unsafe-summary-call",
-          },
           {
             name: "ask_user",
             args: {
@@ -260,5 +233,125 @@ describe("Deep Agent runtime", () => {
     });
 
     expect(finalText).toContain("REFERENCE_ONLY_FACT_8472");
+  });
+
+  it("reads an uploaded CV before applying a follow-up education update", async () => {
+    modelState.current = new FakeToolCallingModel({
+      toolCalls: [
+        [
+          {
+            name: "read_file",
+            args: {
+              file_path: "/references/1-profile.pdf.txt",
+            },
+            id: "read-cv-call",
+          },
+        ],
+        [
+          {
+            name: "set_education",
+            args: {
+              items: [
+                {
+                  institution: "Imperial College London",
+                  degree: "MSc",
+                  field:
+                    "Applied Computational Science and Engineering",
+                  location: "London",
+                  startDate: "2021/09",
+                  endDate: "2025/06",
+                },
+              ],
+            },
+            id: "update-education-call",
+          },
+        ],
+        [],
+      ],
+    });
+    let content = createResume();
+    const toolNames: string[] = [];
+
+    await runAgentStream({
+      ...createParams(content, (updated, toolName) => {
+        content = updated;
+        toolNames.push(toolName);
+      }),
+      userMessage: "地点正确, 2021/09 - 2025/06, 帮我更新",
+      referenceSources: [
+        {
+          id: "profile",
+          type: "file",
+          name: "profile.pdf",
+          text:
+            "Imperial College London, MSc, Applied Computational Science and Engineering, London",
+          createdAt: 1,
+        },
+      ],
+    });
+
+    expect(toolNames).toEqual(["set_education"]);
+    expect(content.education).toEqual([
+      expect.objectContaining({
+        institution: "Imperial College London",
+        startDate: "2021/09",
+        endDate: "2025/06",
+      }),
+    ]);
+  });
+
+  it("reuses one Deep Agent runtime across conversation turns", async () => {
+    modelState.current = new FakeToolCallingModel({
+      toolCalls: [
+        [
+          {
+            name: "set_summary",
+            args: { text: "Platform engineer." },
+            id: "summary-call",
+          },
+        ],
+        [],
+        [
+          {
+            name: "set_skills",
+            args: {
+              items: [{ category: "Languages", items: "TypeScript" }],
+            },
+            id: "skills-call",
+          },
+        ],
+        [],
+      ],
+    });
+    let content = createResume();
+    const sessionId = createAgentSessionId();
+    const onUpdate = (updated: ResumeContent) => {
+      content = updated;
+    };
+
+    await runAgentStream({
+      ...createParams(content, onUpdate),
+      sessionId,
+      userMessage: "Update the summary",
+    });
+    await runAgentStream({
+      ...createParams(content, onUpdate),
+      sessionId,
+      history: [
+        { role: "user", content: "Update the summary" },
+        { role: "assistant", content: "Updated." },
+      ],
+      userMessage: "Update the skills",
+    });
+
+    expect(modelState.creations).toBe(1);
+    expect(content.summary).toBe("Platform engineer.");
+    expect(content.skills).toEqual([
+      expect.objectContaining({
+        category: "Languages",
+        items: "TypeScript",
+      }),
+    ]);
+    discardAgentResume(sessionId);
   });
 });

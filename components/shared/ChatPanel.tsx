@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   compactAgentHistory,
+  createAgentSessionId,
   discardAgentResume,
   estimateAgentContextUsage,
   resumeAgentStream,
@@ -139,25 +140,6 @@ function formatClarificationMessage(request: ClarificationRequest, lang: "en" | 
   return `${agentTr.clarificationMessageIntro}: ${request.question}\n\n${reason}${target}`.trim();
 }
 
-function isDocumentEditIntent(text: string): boolean {
-  return /\b(add|update|set|change|fill|insert|write|rewrite|polish|improve|optimi[sz]e|refine|edit|revise|replace)\b/i.test(text) ||
-    /添加|更新|修改|填写|填入|写入|润色|优化|改写|编辑|替换|补充/.test(text);
-}
-
-function shouldReplaceWithNoChangeNotice(params: {
-  before: unknown;
-  after: unknown;
-  toolNames: string[];
-  userMessage: string;
-  streamedText: string;
-  forceEditIntent?: boolean;
-}) {
-  if (params.toolNames.length > 0) return false;
-  if (!params.streamedText.trim()) return false;
-  if (contentSignature(params.before) !== contentSignature(params.after)) return false;
-  return params.forceEditIntent || isDocumentEditIntent(params.userMessage);
-}
-
 export function ChatPanel<TContent>({
   docType,
   documentLanguage,
@@ -205,7 +187,7 @@ export function ChatPanel<TContent>({
   const streamingTextRef = useRef("");
   const reasoningTextRef = useRef("");
   const abortControllerRef = useRef<AbortController | null>(null);
-  const pendingResumeTokenRef = useRef(pendingClarification?.resumeToken);
+  const agentSessionIdRef = useRef(createAgentSessionId());
 
   useEffect(() => {
     messagesRef.current = messages;
@@ -216,13 +198,10 @@ export function ChatPanel<TContent>({
   }, [content]);
 
   useEffect(() => {
-    pendingResumeTokenRef.current = pendingClarification?.resumeToken;
-  }, [pendingClarification?.resumeToken]);
-
-  useEffect(() => {
+    const agentSessionId = agentSessionIdRef.current;
     return () => {
       abortControllerRef.current?.abort();
-      discardAgentResume(pendingResumeTokenRef.current);
+      discardAgentResume(agentSessionId);
       onAgentRunningChange?.(false);
     };
   }, [onAgentRunningChange]);
@@ -342,11 +321,15 @@ export function ChatPanel<TContent>({
   const isConfigured = !!activeConfig;
   const isBusy = isLoading || isCompacting;
   const hasPendingClarification = !!pendingClarification;
-  const isChatDisabled = !isConfigured || isBusy || hasPendingClarification;
+  const isChatDisabled =
+    !isConfigured ||
+    isBusy ||
+    isProcessingContext ||
+    hasPendingClarification;
   const hasChatContext = messages.length > 0 || streamingText !== "";
   const contextUsage = activeConfig
     ? estimateAgentContextUsage({
-        model: activeConfig.model,
+        config: activeConfig,
         docType,
         documentLanguage,
         content,
@@ -450,7 +433,7 @@ export function ChatPanel<TContent>({
   const handleClearContext = () => {
     if (isBusy || !hasChatContext) return;
 
-    discardAgentResume(pendingClarification?.resumeToken);
+    discardAgentResume(agentSessionIdRef.current);
     setMessages([]);
     setStreamingText("");
     streamingTextRef.current = "";
@@ -479,6 +462,7 @@ export function ChatPanel<TContent>({
         history: messages,
       });
 
+      discardAgentResume(agentSessionIdRef.current);
       setMessages([
         {
           role: "assistant",
@@ -518,7 +502,7 @@ export function ChatPanel<TContent>({
 
   const handleSend = async () => {
     const userMsg = inputValue.trim();
-    if (!userMsg || isLoading) return;
+    if (!userMsg || isLoading || isProcessingContext) return;
 
     if (!activeConfig || !isLLMConfigComplete(activeConfig)) {
       setMessages((prev) => [
@@ -549,6 +533,7 @@ export function ChatPanel<TContent>({
       reasoningTextRef.current = "";
 
       await runAgentStream({
+        sessionId: agentSessionIdRef.current,
         config: activeConfig,
         docType,
         documentLanguage,
@@ -585,15 +570,7 @@ export function ChatPanel<TContent>({
           });
         },
         onDone: () => {
-          const finalText = shouldReplaceWithNoChangeNotice({
-            before: beforeContent,
-            after: latestContent,
-            toolNames: changedToolNames,
-            userMessage: userMsg,
-            streamedText: streamingTextRef.current,
-          })
-            ? agentTr.noDocumentChangeNotice
-            : streamingTextRef.current;
+          const finalText = streamingTextRef.current;
           if (finalText) {
             setMessages((prev) => [
               ...prev,
@@ -751,16 +728,7 @@ export function ChatPanel<TContent>({
         });
       },
       onDone: () => {
-        const finalText = shouldReplaceWithNoChangeNotice({
-          before: beforeContent,
-          after: latestContent,
-          toolNames: changedToolNames,
-          userMessage: continuationMessage,
-          streamedText: streamingTextRef.current,
-          forceEditIntent: true,
-        })
-          ? agentTr.noDocumentChangeNotice
-          : streamingTextRef.current;
+        const finalText = streamingTextRef.current;
         if (finalText) {
           setMessages((prev) => [
             ...prev,
@@ -801,6 +769,7 @@ export function ChatPanel<TContent>({
       if (!resumed) {
         await runAgentStream({
           ...continuationCallbacks,
+          sessionId: agentSessionIdRef.current,
           config: activeConfig,
           docType,
           documentLanguage,
@@ -810,6 +779,10 @@ export function ChatPanel<TContent>({
           referenceSources: contextSources,
           contextInstruction,
           initialClarificationCount: pending.clarificationCount,
+          clarificationScope: {
+            allowAskUser: canAskAnotherClarification,
+            section: pending.request.section,
+          },
         });
       }
     } catch (err) {

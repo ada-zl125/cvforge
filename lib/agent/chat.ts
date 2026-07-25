@@ -2,22 +2,27 @@
 
 import {
   AIMessage,
-  createMiddleware,
+  dynamicSystemPromptMiddleware,
   modelCallLimitMiddleware,
   modelRetryMiddleware,
   toolErrorMiddleware,
 } from "langchain";
-import { Command, MemorySaver } from "@langchain/langgraph";
+import {
+  Command,
+  GraphRecursionError,
+  MemorySaver,
+} from "@langchain/langgraph";
 import {
   createDeepAgent,
   StateBackend,
-  type DeepAgent,
+  type DeepAgentRunStream,
   type FileData,
 } from "deepagents/browser";
 import {
   agentContextSchema,
   agentStateSchema,
   createTools,
+  type AgentClarificationScope,
   type AgentToolState,
   type ClarificationInterrupt,
   type ClarificationRequest,
@@ -27,7 +32,10 @@ import {
 import type { LLMConfig } from "./config";
 import type { AgentChange } from "./change-tracking";
 import { buildContextInstructionContext, buildReferenceContext, type AgentContextSource } from "./context-sources";
-import { createAgentChatModel } from "./model";
+import {
+  createAgentChatModel,
+  getAgentModelContextWindow,
+} from "./model";
 import { extractAssistantReasoning } from "./reasoning";
 import { normalizeAssistantText } from "./text-normalization";
 
@@ -48,6 +56,7 @@ export interface AgentContextUsage {
 }
 
 export interface RunAgentStreamParams<TContent> {
+  sessionId: string;
   config: LLMConfig;
   docType: DocType;
   documentLanguage: DocumentLanguage;
@@ -67,6 +76,7 @@ export interface RunAgentStreamParams<TContent> {
   ) => void;
   initialClarificationCount?: number;
   onDone: () => void;
+  clarificationScope?: AgentClarificationScope;
 }
 
 export interface ResumeAgentStreamParams<TContent> {
@@ -85,53 +95,13 @@ export interface ResumeAgentStreamParams<TContent> {
   onDone: () => void;
 }
 
-const MAX_AGENT_MODEL_CALLS = 20;
+const MAX_AGENT_MODEL_CALLS = 24;
+const AGENT_RECURSION_LIMIT = MAX_AGENT_MODEL_CALLS * 8 + 16;
 const MAX_CLARIFICATION_ROUNDS = 2;
 const DOCUMENT_CONTEXT_MAX_CHARS = 12000;
 const COMPACT_TRANSCRIPT_MAX_CHARS = 16000;
 
 const DEFAULT_CONTEXT_WINDOW_TOKENS = 128000;
-
-const MODEL_CONTEXT_WINDOWS: Array<[RegExp, number]> = [
-  [/gpt-4\.1|gpt-4o|o3|o4|gpt-5/i, 128000],
-  [/claude-3\.7|claude-3-7|claude-3\.5|claude-3-5|claude-3/i, 200000],
-  [/gemini-1\.5|gemini-2/i, 1000000],
-  [/deepseek/i, 128000],
-  [/qwen/i, 128000],
-  [/llama/i, 128000],
-  [/mistral/i, 128000],
-];
-
-type ClarificationScope =
-  | { allowAskUser: true; section?: string }
-  | { allowAskUser: false; reason: string };
-
-function extractClarificationSectionScope(userMessage: string): string | undefined {
-  return userMessage.match(/^Clarification section scope:\s*(.+)$/im)?.[1]?.trim();
-}
-
-function extractClarificationRound(userMessage: string): number | undefined {
-  const rawRound = userMessage.match(/^Clarification round:\s*(\d+)$/im)?.[1];
-  if (!rawRound) return undefined;
-
-  const round = Number.parseInt(rawRound, 10);
-  return Number.isFinite(round) ? round : undefined;
-}
-
-function resolveClarificationScope(userMessage: string): ClarificationScope {
-  const clarificationRound = extractClarificationRound(userMessage);
-  if (clarificationRound !== undefined && clarificationRound >= MAX_CLARIFICATION_ROUNDS) {
-    return {
-      allowAskUser: false,
-      reason: "The clarification round limit has been reached.",
-    };
-  }
-
-  const continuationScope = extractClarificationSectionScope(userMessage);
-  if (continuationScope) return { allowAskUser: true, section: continuationScope };
-
-  return { allowAskUser: true };
-}
 
 export function buildSystemPrompt(
   docType: DocType,
@@ -166,48 +136,14 @@ Follow runtime and safety rules first, then the current user request, project in
 
 ## Tool use
 - Document tools are the only way to change the visible document.
-- Call at most one tool per model turn. Reassess the latest state after every result.
-- Use \`ask_user\` alone in its turn. Use \`record_inference\` before the corresponding document update.
+- Call independent tools together when their work can proceed safely in parallel.
+- Use \`record_inference\` with the corresponding document updates whenever possible.
 - Do not narrate tool execution. Finish the requested work before replying.
 
 ## Language and response
 - The document language is ${documentLanguage}. Use it for generated document content and replies unless the user explicitly requests another language.
 - Preserve proper nouns in their conventional form and follow the document's established punctuation and spacing.
 - Reply clearly and concisely. Report only completed changes, material omissions, and disclosed inferences.`;
-}
-
-function toolLabel(toolName: string, zh: boolean): string {
-  const labels: Record<string, { en: string; zh: string }> = {
-    update_personal: { en: "personal information", zh: "个人信息" },
-    update_sender: { en: "sender information", zh: "发件人信息" },
-    update_recipient: { en: "recipient information", zh: "收件人信息" },
-    set_summary: { en: "summary", zh: "个人简介" },
-    set_education: { en: "education", zh: "教育经历" },
-    set_experience: { en: "experience", zh: "工作经历" },
-    set_skills: { en: "skills", zh: "技能" },
-    set_projects: { en: "projects", zh: "项目经历" },
-    set_awards: { en: "awards", zh: "荣誉奖项" },
-    set_research_interests: { en: "research interests", zh: "研究兴趣" },
-    set_research_experience: { en: "research experience", zh: "研究经历" },
-    set_teaching_experience: { en: "teaching experience", zh: "教学经历" },
-    set_industry_experience: { en: "industry experience", zh: "行业经历" },
-    set_publications: { en: "publications", zh: "发表论文" },
-    set_manuscripts_under_review: { en: "manuscripts under review", zh: "审稿中论文" },
-    set_conference_presentations: { en: "conference presentations", zh: "会议展示" },
-    set_grants_and_awards: { en: "grants and awards", zh: "基金与奖项" },
-    set_professional_service: { en: "professional service", zh: "学术服务" },
-    set_technical_skills: { en: "technical skills", zh: "技术技能" },
-    set_references: { en: "references", zh: "推荐人" },
-    set_paragraphs: { en: "body paragraphs", zh: "正文段落" },
-    set_date: { en: "date", zh: "日期" },
-  };
-
-  const fallback = toolName.replace(/^set_|^update_/, "").replaceAll("_", " ");
-  return labels[toolName]?.[zh ? "zh" : "en"] ?? fallback;
-}
-
-function isDocumentUpdateTool(toolName: string): boolean {
-  return toolName !== "record_inference" && toolName !== "ask_user";
 }
 
 function hasChineseText(text: string): boolean {
@@ -247,16 +183,19 @@ function formatInferenceDisclosure(inferenceNotes: string[], zh: boolean): strin
 
 function buildFallbackCompletion(toolNames: string[], documentLanguage: DocumentLanguage, inferenceNotes: string[] = []): string {
   const zh = documentLanguage === "zh";
-  const uniqueToolNames = Array.from(new Set(toolNames.filter(isDocumentUpdateTool)));
-  const changed = uniqueToolNames.map((name) => toolLabel(name, zh)).join(", ");
+  const changedCount = new Set(toolNames).size;
   const inferenceDisclosure = formatInferenceDisclosure(inferenceNotes, zh);
 
   if (zh) {
-    const completion = changed ? `已完成, 已更新${changed}。` : "已完成。";
+    const completion = changedCount > 0
+      ? `已完成，共更新 ${changedCount} 个文档部分。`
+      : "已完成。";
     return normalizeAssistantText(inferenceDisclosure ? `${completion}${inferenceDisclosure}` : completion, documentLanguage);
   }
 
-  const completion = changed ? `Done. I updated your ${changed}.` : "Done.";
+  const completion = changedCount > 0
+    ? `Done. I updated ${changedCount} document ${changedCount === 1 ? "section" : "sections"}.`
+    : "Done.";
   return normalizeAssistantText(inferenceDisclosure ? `${completion} ${inferenceDisclosure}` : completion, documentLanguage);
 }
 
@@ -361,13 +300,8 @@ function estimateTokens(text: string): number {
   return Math.ceil(cjkChars * 1.2 + nonCjkChars / 4);
 }
 
-function getModelContextWindow(model: string): number {
-  const matched = MODEL_CONTEXT_WINDOWS.find(([pattern]) => pattern.test(model));
-  return matched?.[1] ?? DEFAULT_CONTEXT_WINDOW_TOKENS;
-}
-
 export function estimateAgentContextUsage<TContent>({
-  model,
+  config,
   docType,
   documentLanguage,
   content,
@@ -375,7 +309,7 @@ export function estimateAgentContextUsage<TContent>({
   referenceSources,
   contextInstruction,
 }: {
-  model: string;
+  config: LLMConfig;
   docType: DocType;
   documentLanguage: DocumentLanguage;
   content: TContent;
@@ -401,7 +335,8 @@ export function estimateAgentContextUsage<TContent>({
     serializedHistory,
   ].join("\n\n");
   const usedTokens = estimateTokens(contextText) + history.length * 6 + 256;
-  const maxTokens = getModelContextWindow(model);
+  const maxTokens =
+    getAgentModelContextWindow(config) ?? DEFAULT_CONTEXT_WINDOW_TOKENS;
   const percent = Math.min(100, Math.max(0, Math.ceil((usedTokens / maxTokens) * 100)));
 
   return {
@@ -454,7 +389,7 @@ export async function compactAgentHistory<TContent>({
   const completion = await model.invoke([
       {
         role: "system",
-        content: `You compress conversation context for a resume/CV/cover-letter editing agent.
+        content: `You compress conversation context for a document editing agent.
 
 Write a compact memory note for future turns. Preserve only information that helps the next agent continue the work:
 - User goals, constraints, preferences, and requested writing style
@@ -486,14 +421,47 @@ Do not include greetings, generic encouragement, tool chatter, or redundant deta
 type AgentResultState<TContent> = AgentToolState<TContent> & {
   messages: unknown[];
   files: Record<string, FileData>;
+  todos?: Array<{
+    content?: string;
+    status?: string;
+  }>;
   __interrupt__?: Array<{ id?: string; value?: unknown }>;
 };
 
-interface SuspendedAgentRuntime {
-  agent: DeepAgent;
-  resumeToken: string;
+interface AgentInvocationContext {
+  contextInstruction?: string;
+  referencePaths: string[];
+  currentDocument: unknown;
+  clarificationScope: AgentClarificationScope;
+}
+
+interface AgentRuntimeGraph {
+  streamEvents: (
+    input: Record<string, unknown> | Command<string>,
+    config: {
+      version: "v3";
+      configurable: { thread_id: string };
+      context: AgentInvocationContext;
+      recursionLimit: number;
+      signal?: AbortSignal;
+    }
+  ) => Promise<DeepAgentRunStream>;
+  getState: (config: {
+    configurable: { thread_id: string };
+  }) => Promise<{ values: unknown }>;
+}
+
+interface AgentRuntime {
+  agent: AgentRuntimeGraph;
+  sessionId: string;
   threadId: string;
+  config: LLMConfig;
+  docType: DocType;
   documentLanguage: DocumentLanguage;
+  initialized: boolean;
+  managedFilePaths: Set<string>;
+  invocationContext: AgentInvocationContext;
+  reportedSuccessfulToolCount: number;
 }
 
 interface InvocationCallbacks<TContent> {
@@ -509,70 +477,7 @@ interface InvocationCallbacks<TContent> {
   onDone: () => void;
 }
 
-const suspendedAgentRuntimes = new Map<string, SuspendedAgentRuntime>();
-
-export function keepSelectedToolCallContent(
-  content: AIMessage["content"],
-  selectedToolCallId: string | undefined,
-  discardedToolCallIds: Set<string>
-): AIMessage["content"] {
-  if (!Array.isArray(content) || discardedToolCallIds.size === 0) {
-    return content;
-  }
-
-  return content.filter((block) => {
-    if (!isRecordValue(block)) return true;
-
-    const type = typeof block.type === "string" ? block.type : "";
-    if (!["tool_use", "tool_call", "function_call"].includes(type)) {
-      return true;
-    }
-
-    const id =
-      typeof block.id === "string"
-        ? block.id
-        : typeof block.call_id === "string"
-          ? block.call_id
-          : undefined;
-    if (!id) return true;
-
-    return id === selectedToolCallId || !discardedToolCallIds.has(id);
-  });
-}
-
-const serialToolCallMiddleware = createMiddleware({
-  name: "CVForgeSerialToolCalls",
-  afterModel: (state) => {
-    const lastMessage = [...state.messages].reverse().find(AIMessage.isInstance);
-    const toolCalls = lastMessage?.tool_calls ?? [];
-    if (!lastMessage || toolCalls.length <= 1) return;
-
-    const selectedToolCall =
-      toolCalls.find((toolCall) => toolCall.name === "ask_user") ?? toolCalls[0];
-    const discardedToolCallIds = new Set(
-      toolCalls
-        .filter((toolCall) => toolCall !== selectedToolCall)
-        .map((toolCall) => toolCall.id)
-        .filter((id): id is string => Boolean(id))
-    );
-    const replacement = new AIMessage({
-      content: keepSelectedToolCallContent(
-        lastMessage.content,
-        selectedToolCall.id,
-        discardedToolCallIds
-      ),
-      id: lastMessage.id,
-      name: lastMessage.name,
-      tool_calls: [selectedToolCall],
-      invalid_tool_calls: lastMessage.invalid_tool_calls,
-      additional_kwargs: lastMessage.additional_kwargs,
-      response_metadata: lastMessage.response_metadata,
-      usage_metadata: lastMessage.usage_metadata,
-    });
-
-    return { messages: [replacement] };
-  },
-});
+const agentRuntimes = new Map<string, AgentRuntime>();
 
 function isRecordValue(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -605,7 +510,7 @@ function extractFinalAssistantText(messages: unknown[]): string {
   return "";
 }
 
-function createRuntimeId(): string {
+export function createAgentSessionId(): string {
   if (typeof globalThis.crypto?.randomUUID === "function") {
     return globalThis.crypto.randomUUID();
   }
@@ -638,13 +543,15 @@ function safeReferenceName(name: string, index: number): string {
 function buildAgentFiles(
   content: unknown,
   referenceSources: AgentContextSource[] = [],
-  contextInstruction?: string
+  contextInstruction: string | undefined,
+  previousPaths: Set<string>
 ): {
-  files: Record<string, FileData>;
+  files: Record<string, FileData | null>;
+  managedPaths: Set<string>;
   referencePaths: string[];
 } {
   const timestamp = new Date().toISOString();
-  const files: Record<string, FileData> = {
+  const files: Record<string, FileData | null> = {
     "/context/current-document.json": fileData(
       JSON.stringify(compactDocumentValue(content), null, 2),
       "application/json",
@@ -667,11 +574,16 @@ function buildAgentFiles(
     return path;
   });
 
-  return { files, referencePaths };
+  const managedPaths = new Set(Object.keys(files));
+  for (const previousPath of previousPaths) {
+    if (!managedPaths.has(previousPath)) files[previousPath] = null;
+  }
+
+  return { files, managedPaths, referencePaths };
 }
 
 function buildClarificationScopeContext(
-  clarificationScope: ClarificationScope
+  clarificationScope: AgentClarificationScope
 ): string {
   if (clarificationScope.allowAskUser) {
     return [
@@ -684,7 +596,7 @@ function buildClarificationScopeContext(
 
   return [
     "Current request clarification scope:",
-    `Do not call ask_user for this turn. Reason: ${clarificationScope.reason}`,
+    "Do not call ask_user because the clarification budget has been exhausted.",
     "Proceed with the safest accurate result and omit unsupported details.",
   ].join("\n");
 }
@@ -692,7 +604,7 @@ function buildClarificationScopeContext(
 function buildRuntimeSystemPrompt(
   docType: DocType,
   content: unknown,
-  clarificationScope: ClarificationScope,
+  clarificationScope: AgentClarificationScope,
   contextInstruction: string | undefined,
   referencePaths: string[]
 ): string {
@@ -709,10 +621,11 @@ function buildRuntimeSystemPrompt(
   return [
     `## CVForge Deep Agent Runtime
 - The custom document tools are the only way to change the visible document. Never use write_file or edit_file as a substitute for a document update tool.
-- Call at most one tool per model turn. After receiving its result, reassess the latest state before choosing another tool.
+- Call independent document and research tools together when they can run safely in parallel.
 - Use the virtual filesystem for local research, reference lookup, planning, and context offloading.
 - /context/current-document.json is a read-only snapshot of the document at the start of this run. The graph document state used by custom tools is authoritative after updates.
 - The general-purpose subagent is read-only. Use it for focused analysis of large reference material, then make any document changes yourself with the custom tools.
+- Prefer completing the highest-value supported work first. If runtime limits prevent full completion, preserve completed work and state what remains.
 - Complete the user's task before replying. Keep the final reply concise and do not expose internal todos, filesystem paths, or implementation details.`,
     buildDocumentContext(docType, content),
     buildClarificationScopeContext(clarificationScope),
@@ -751,33 +664,25 @@ function shouldRetryModelError(error: Error): boolean {
   return status === undefined || status === 408 || status === 429 || status >= 500;
 }
 
-function createAgentRuntime<TContent>(
-  params: RunAgentStreamParams<TContent>,
-  clarificationScope: ClarificationScope,
-  referencePaths: string[]
-): SuspendedAgentRuntime {
-  const model = createAgentChatModel(params.config);
-  const allTools = createTools<TContent>(
-    params.docType,
-    params.documentLanguage
+function sameLLMConfig(left: LLMConfig, right: LLMConfig): boolean {
+  return (
+    left.apiKey === right.apiKey &&
+    left.baseURL === right.baseURL &&
+    left.model === right.model &&
+    left.thinkingEnabled === right.thinkingEnabled
   );
-  const availableTools = clarificationScope.allowAskUser
-    ? allTools
-    : allTools.filter((agentTool) => agentTool.name !== "ask_user");
+}
+
+function createAgentRuntime<TContent>(
+  params: RunAgentStreamParams<TContent>
+): AgentRuntime {
+  const model = createAgentChatModel(params.config);
+  const tools = createTools(params.docType, params.documentLanguage);
   const agent = createDeepAgent({
     name: "cvforge-agent",
     model,
-    tools: availableTools,
-    systemPrompt: {
-      base: buildSystemPrompt(params.docType, params.documentLanguage),
-      suffix: buildRuntimeSystemPrompt(
-        params.docType,
-        params.getContent(),
-        clarificationScope,
-        params.contextInstruction,
-        referencePaths
-      ),
-    },
+    tools,
+    systemPrompt: buildSystemPrompt(params.docType, params.documentLanguage),
     stateSchema: agentStateSchema,
     contextSchema: agentContextSchema,
     checkpointer: new MemorySaver(),
@@ -807,7 +712,17 @@ function createAgentRuntime<TContent>(
       },
     ],
     middleware: [
-      serialToolCallMiddleware,
+      dynamicSystemPromptMiddleware<AgentInvocationContext>(
+        (state, runtime) =>
+          buildRuntimeSystemPrompt(
+            params.docType,
+            (state as unknown as Partial<AgentToolState<unknown>>).document ??
+              runtime.context.currentDocument,
+            runtime.context.clarificationScope,
+            runtime.context.contextInstruction,
+            runtime.context.referencePaths
+          )
+      ),
       toolErrorMiddleware({
         onError: (error, request) => {
           const errorName = error instanceof Error ? error.name : "ToolError";
@@ -821,18 +736,48 @@ function createAgentRuntime<TContent>(
       }),
       modelCallLimitMiddleware({
         runLimit: MAX_AGENT_MODEL_CALLS,
-        exitBehavior: "end",
+        exitBehavior: "error",
       }),
     ],
   });
-  const runtimeId = createRuntimeId();
 
   return {
-    agent,
-    resumeToken: runtimeId,
-    threadId: runtimeId,
+    agent: agent as unknown as AgentRuntimeGraph,
+    sessionId: params.sessionId,
+    threadId: params.sessionId,
+    config: { ...params.config },
+    docType: params.docType,
     documentLanguage: params.documentLanguage,
+    initialized: false,
+    managedFilePaths: new Set(),
+    invocationContext: {
+      contextInstruction: params.contextInstruction,
+      referencePaths: [],
+      currentDocument: params.getContent(),
+      clarificationScope: params.clarificationScope ?? {
+        allowAskUser: true,
+      },
+    },
+    reportedSuccessfulToolCount: 0,
   };
+}
+
+function getOrCreateAgentRuntime<TContent>(
+  params: RunAgentStreamParams<TContent>
+): AgentRuntime {
+  const current = agentRuntimes.get(params.sessionId);
+  if (
+    current &&
+    current.docType === params.docType &&
+    current.documentLanguage === params.documentLanguage &&
+    sameLLMConfig(current.config, params.config)
+  ) {
+    return current;
+  }
+
+  const runtime = createAgentRuntime(params);
+  agentRuntimes.set(params.sessionId, runtime);
+  return runtime;
 }
 
 function extractClarificationInterrupt(
@@ -855,7 +800,7 @@ function extractClarificationInterrupt(
 }
 
 async function invokeAgentRuntime<TContent>(
-  runtime: SuspendedAgentRuntime,
+  runtime: AgentRuntime,
   input: Record<string, unknown> | Command<string>,
   callbacks: InvocationCallbacks<TContent>
 ): Promise<void> {
@@ -868,24 +813,49 @@ async function invokeAgentRuntime<TContent>(
     onClarification,
     onDone,
   } = callbacks;
+  let latestResult: AgentResultState<TContent> | null = null;
+  let streamedText = "";
+  let streamedReasoning = "";
 
   try {
     throwIfAborted(signal);
     onStatusChange?.("thinking");
-    const result = (await runtime.agent.invoke(input, {
+    const run = await runtime.agent.streamEvents(input, {
+      version: "v3",
       configurable: {
         thread_id: runtime.threadId,
       },
-      context: {
-        onContentUpdate: (updated: unknown, toolName: string) => {
-          throwIfAborted(signal);
-          onStatusChange?.("working");
-          onContentUpdate(updated as TContent, toolName);
-        },
-      },
-      recursionLimit: 120,
+      context: runtime.invocationContext,
+      recursionLimit: AGENT_RECURSION_LIMIT,
       signal,
-    })) as AgentResultState<TContent>;
+    });
+
+    const messageStream = consumeMessageStream(run, {
+      signal,
+      onText: (text) => {
+        streamedText += text;
+        onTextChunk(text);
+      },
+      onReasoning: (reasoning) => {
+        streamedReasoning += reasoning;
+        onReasoning?.(streamedReasoning);
+      },
+    });
+    const valueStream = consumeValueStream<TContent>(run, runtime, {
+      signal,
+      onContentUpdate,
+      onStatusChange,
+      onValue: (value) => {
+        latestResult = value;
+      },
+    });
+    const [, , output] = await Promise.all([
+      messageStream,
+      valueStream,
+      run.output,
+    ]);
+    const result = output as unknown as AgentResultState<TContent>;
+    latestResult = result;
     throwIfAborted(signal);
 
     const clarification = extractClarificationInterrupt(
@@ -895,22 +865,20 @@ async function invokeAgentRuntime<TContent>(
     if (clarification) {
       onStatusChange?.(null);
       if (onClarification) {
-        suspendedAgentRuntimes.set(runtime.resumeToken, runtime);
-        onClarification(clarification, runtime.resumeToken);
+        onClarification(clarification, runtime.sessionId);
       } else {
-        suspendedAgentRuntimes.delete(runtime.resumeToken);
         onTextChunk(clarification.question);
       }
       return;
     }
 
-    suspendedAgentRuntimes.delete(runtime.resumeToken);
     const assistantContent = extractFinalAssistantText(result.messages);
-    const reasoning = extractAssistantReasoning(result.messages);
+    const reasoning =
+      streamedReasoning || extractAssistantReasoning(result.messages);
 
     onStatusChange?.(null);
-    if (reasoning) onReasoning?.(reasoning);
-    if (assistantContent) {
+    if (!streamedReasoning && reasoning) onReasoning?.(reasoning);
+    if (!streamedText && assistantContent) {
       onTextChunk(
         withInferenceDisclosure(
           assistantContent,
@@ -918,7 +886,7 @@ async function invokeAgentRuntime<TContent>(
           runtime.documentLanguage
         )
       );
-    } else if ((result.successfulToolNames?.length ?? 0) > 0) {
+    } else if (!streamedText && (result.successfulToolNames?.length ?? 0) > 0) {
       onTextChunk(
         buildFallbackCompletion(
           result.successfulToolNames,
@@ -926,14 +894,39 @@ async function invokeAgentRuntime<TContent>(
           result.inferenceNotes ?? []
         )
       );
-    } else {
+    } else if (!streamedText) {
       onTextChunk(buildNoResponseFallback(runtime.documentLanguage));
+    } else {
+      const disclosure = formatInferenceDisclosure(
+        result.inferenceNotes ?? [],
+        runtime.documentLanguage === "zh" || hasChineseText(streamedText)
+      );
+      if (
+        disclosure &&
+        !/\binfer|\bnormaliz|\bnormalis|推断|推理|规范化/i.test(streamedText)
+      ) {
+        onTextChunk(`\n\n${disclosure}`);
+      }
     }
   } catch (error) {
-    suspendedAgentRuntimes.delete(runtime.resumeToken);
     onStatusChange?.(null);
     if (isAbortError(error) || signal?.aborted) {
       throw new DOMException("Agent task was canceled.", "AbortError");
+    }
+    if (isExecutionLimitError(error)) {
+      const state =
+        latestResult ?? (await readRuntimeState<TContent>(runtime));
+      onTextChunk(
+        `${streamedText ? "\n\n" : ""}${buildExecutionLimitSummary(
+          state,
+          runtime.documentLanguage
+        )}`
+      );
+      const reasoning =
+        streamedReasoning ||
+        extractAssistantReasoning(state?.messages ?? []);
+      if (!streamedReasoning && reasoning) onReasoning?.(reasoning);
+      return;
     }
     if (error instanceof Error) throw error;
     throw new Error("Agent run failed");
@@ -943,30 +936,156 @@ async function invokeAgentRuntime<TContent>(
   }
 }
 
+async function consumeMessageStream(
+  run: DeepAgentRunStream,
+  callbacks: {
+    signal?: AbortSignal;
+    onText: (text: string) => void;
+    onReasoning: (reasoning: string) => void;
+  }
+): Promise<void> {
+  for await (const message of run.messages) {
+    await Promise.all([
+      (async () => {
+        for await (const text of message.text) {
+          throwIfAborted(callbacks.signal);
+          if (text) callbacks.onText(text);
+        }
+      })(),
+      (async () => {
+        for await (const reasoning of message.reasoning) {
+          throwIfAborted(callbacks.signal);
+          if (reasoning) callbacks.onReasoning(reasoning);
+        }
+      })(),
+    ]);
+  }
+}
+
+async function consumeValueStream<TContent>(
+  run: DeepAgentRunStream,
+  runtime: AgentRuntime,
+  callbacks: {
+    signal?: AbortSignal;
+    onContentUpdate: (updated: TContent, toolName: string) => void;
+    onStatusChange?: (status: AgentStatus | null) => void;
+    onValue: (value: AgentResultState<TContent>) => void;
+  }
+): Promise<void> {
+  for await (const rawValue of run.values) {
+    throwIfAborted(callbacks.signal);
+    const value = rawValue as unknown as AgentResultState<TContent>;
+    callbacks.onValue(value);
+    const toolNames = value.successfulToolNames ?? [];
+    if (toolNames.length <= runtime.reportedSuccessfulToolCount) continue;
+
+    callbacks.onStatusChange?.("working");
+    const newToolNames = toolNames.slice(runtime.reportedSuccessfulToolCount);
+    runtime.reportedSuccessfulToolCount = toolNames.length;
+    for (const toolName of newToolNames) {
+      callbacks.onContentUpdate(value.document, toolName);
+    }
+  }
+}
+
+function isExecutionLimitError(error: unknown): boolean {
+  return (
+    error instanceof GraphRecursionError ||
+    (error instanceof Error &&
+      error.name === "ModelCallLimitMiddlewareError")
+  );
+}
+
+async function readRuntimeState<TContent>(
+  runtime: AgentRuntime
+): Promise<AgentResultState<TContent> | null> {
+  try {
+    const snapshot = await runtime.agent.getState({
+      configurable: {
+        thread_id: runtime.threadId,
+      },
+    });
+    return snapshot.values as AgentResultState<TContent>;
+  } catch {
+    return null;
+  }
+}
+
+function buildExecutionLimitSummary(
+  state: AgentResultState<unknown> | null,
+  documentLanguage: DocumentLanguage
+): string {
+  const zh = documentLanguage === "zh";
+  const completedTools = Array.from(
+    new Set(state?.successfulToolNames ?? [])
+  );
+  const completedCount = completedTools.length;
+  const remaining = (state?.todos ?? [])
+    .filter((todo) => todo.status !== "completed")
+    .map((todo) => todo.content?.trim())
+    .filter((content): content is string => Boolean(content));
+
+  if (zh) {
+    return [
+      completedCount > 0
+        ? `已保留 ${completedCount} 个文档部分的修改。`
+        : "当前没有可确认的已完成修改。",
+      "本次运行已达到执行限制。",
+      remaining.length > 0
+        ? `尚未完成：${remaining.join("；")}。`
+        : "剩余工作可能尚未完成，可以在下一条消息中继续。",
+    ].join(" ");
+  }
+
+  return [
+    completedCount > 0
+      ? `I preserved updates to ${completedCount} document ${completedCount === 1 ? "section" : "sections"}.`
+      : "There are no confirmed completed updates yet.",
+    "This run reached its execution limit.",
+    remaining.length > 0
+      ? `Remaining work: ${remaining.join("; ")}.`
+      : "Some work may remain and can continue in the next message.",
+  ].join(" ");
+}
+
 export async function runAgentStream<TContent>(
   params: RunAgentStreamParams<TContent>
 ): Promise<void> {
   const content = params.getContent();
-  const clarificationScope = resolveClarificationScope(params.userMessage);
-  const { files, referencePaths } = buildAgentFiles(
+  const runtime = getOrCreateAgentRuntime(params);
+  const { files, managedPaths, referencePaths } = buildAgentFiles(
     content,
     params.referenceSources,
-    params.contextInstruction
+    params.contextInstruction,
+    runtime.managedFilePaths
   );
-  const runtime = createAgentRuntime(
-    params,
-    clarificationScope,
-    referencePaths
-  );
+  runtime.managedFilePaths = managedPaths;
+  runtime.invocationContext = {
+    contextInstruction: params.contextInstruction,
+    referencePaths,
+    currentDocument: content,
+    clarificationScope: params.clarificationScope ?? {
+      allowAskUser:
+        (params.initialClarificationCount ?? 0) < MAX_CLARIFICATION_ROUNDS,
+    },
+  };
+  runtime.reportedSuccessfulToolCount = 0;
+  const messages = runtime.initialized
+    ? [{ role: "user" as const, content: params.userMessage }]
+    : buildAgentMessages(params.history, params.userMessage);
+  runtime.initialized = true;
 
   await invokeAgentRuntime(
     runtime,
     {
-      messages: buildAgentMessages(params.history, params.userMessage),
+      messages,
       document: content,
-      successfulToolNames: [],
-      inferenceNotes: [],
-      clarificationCount: params.initialClarificationCount ?? 0,
+      successfulToolNames: { operation: "reset" },
+      inferenceNotes: { operation: "reset" },
+      clarificationCount: {
+        operation: "set",
+        value: params.initialClarificationCount ?? 0,
+      },
       files,
     },
     params
@@ -976,8 +1095,12 @@ export async function runAgentStream<TContent>(
 export async function resumeAgentStream<TContent>(
   params: ResumeAgentStreamParams<TContent>
 ): Promise<boolean> {
-  const runtime = suspendedAgentRuntimes.get(params.resumeToken);
+  const runtime = agentRuntimes.get(params.resumeToken);
   if (!runtime) return false;
+  runtime.invocationContext = {
+    ...runtime.invocationContext,
+    currentDocument: params.currentContent,
+  };
 
   await invokeAgentRuntime(
     runtime,
@@ -994,5 +1117,5 @@ export async function resumeAgentStream<TContent>(
 
 export function discardAgentResume(resumeToken: string | undefined): void {
   if (!resumeToken) return;
-  suspendedAgentRuntimes.delete(resumeToken);
+  agentRuntimes.delete(resumeToken);
 }

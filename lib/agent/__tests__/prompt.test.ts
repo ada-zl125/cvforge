@@ -26,6 +26,7 @@ describe("agent system prompt", () => {
     expect(prompt).toContain("Prefer an accurate partial result");
     expect(prompt).toContain("one missing or ambiguous detail is necessary");
     expect(prompt).toContain("Array setters replace their section");
+    expect(prompt).toContain("Call independent tools together");
     expect(prompt).not.toMatch(/\be\.g\.|\bfor example\b|\bsuch as\b|\bexample flow\b/i);
   });
 });

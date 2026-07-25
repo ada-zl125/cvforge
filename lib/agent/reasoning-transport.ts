@@ -12,6 +12,11 @@ type ProviderReasoningMetadata = Partial<
   Record<(typeof REASONING_MESSAGE_FIELDS)[number], unknown>
 >;
 
+interface StreamReasoningState {
+  metadata: ProviderReasoningMetadata;
+  toolCallIds: Set<string>;
+}
+
 function isRecord(value: unknown): value is JsonRecord {
   return typeof value === "object" && value !== null;
 }
@@ -79,20 +84,86 @@ function captureReasoningMetadata(
   }
 }
 
+function mergeReasoningValue(current: unknown, update: unknown): unknown {
+  if (typeof current === "string" && typeof update === "string") {
+    return current + update;
+  }
+  if (Array.isArray(current) && Array.isArray(update)) {
+    return [...current, ...update];
+  }
+  return update;
+}
+
+function mergeReasoningMetadata(
+  current: ProviderReasoningMetadata,
+  update: ProviderReasoningMetadata
+): ProviderReasoningMetadata {
+  const merged = { ...current };
+  for (const field of REASONING_MESSAGE_FIELDS) {
+    if (field in update) {
+      merged[field] = mergeReasoningValue(merged[field], update[field]);
+    }
+  }
+  return merged;
+}
+
 function exposeReadableReasoning(payload: unknown): void {
   if (!isRecord(payload) || !Array.isArray(payload.choices)) return;
 
   for (const choice of payload.choices) {
-    if (!isRecord(choice) || !isRecord(choice.message)) continue;
-    if (typeof choice.message.reasoning_content === "string") continue;
+    if (!isRecord(choice)) continue;
+    const message = isRecord(choice.message)
+      ? choice.message
+      : isRecord(choice.delta)
+        ? choice.delta
+        : null;
+    if (!message || typeof message.reasoning_content === "string") continue;
 
     const readableReasoning = reasoningValueToText([
-      choice.message.reasoning,
-      choice.message.reasoning_details,
-      choice.message.extra_content,
+      message.reasoning,
+      message.reasoning_details,
+      message.extra_content,
     ]);
     if (readableReasoning) {
-      choice.message.reasoning_content = readableReasoning;
+      message.reasoning_content = readableReasoning;
+    }
+  }
+}
+
+function captureStreamReasoningMetadata(
+  payload: unknown,
+  streamState: Map<number, StreamReasoningState>,
+  metadataByToolCall: Map<string, ProviderReasoningMetadata>
+): void {
+  if (!isRecord(payload) || !Array.isArray(payload.choices)) return;
+
+  for (const choice of payload.choices) {
+    if (!isRecord(choice)) continue;
+    const index = typeof choice.index === "number" ? choice.index : 0;
+    const message = isRecord(choice.delta)
+      ? choice.delta
+      : isRecord(choice.message)
+        ? choice.message
+        : null;
+    if (!message) continue;
+
+    const current = streamState.get(index) ?? {
+      metadata: {},
+      toolCallIds: new Set<string>(),
+    };
+    const metadata = readReasoningMetadata(message);
+    if (metadata) {
+      current.metadata = mergeReasoningMetadata(current.metadata, metadata);
+    }
+    for (const toolCallId of readToolCallIds(message)) {
+      current.toolCallIds.add(toolCallId);
+    }
+    streamState.set(index, current);
+
+    if (Object.keys(current.metadata).length > 0) {
+      for (const toolCallId of current.toolCallIds) {
+        metadataByToolCall.set(toolCallId, { ...current.metadata });
+      }
     }
   }
 }
@@ -110,6 +181,61 @@ function injectReasoningMetadata(
       .find(Boolean);
     if (metadata) Object.assign(message, metadata);
   }
+}
+
+function transformEventStream(
+  response: Response,
+  metadataByToolCall: Map<string, ProviderReasoningMetadata>
+): Response {
+  if (!response.body || typeof TransformStream === "undefined") return response;
+
+  const decoder = new TextDecoder();
+  const encoder = new TextEncoder();
+  const streamState = new Map<number, StreamReasoningState>();
+  let buffer = "";
+
+  const transformLine = (line: string): string => {
+    const match = /^(\s*data:\s*)(.*)$/.exec(line);
+    if (!match || match[2] === "[DONE]") return line;
+
+    try {
+      const payload = JSON.parse(match[2]);
+      captureStreamReasoningMetadata(
+        payload,
+        streamState,
+        metadataByToolCall
+      );
+      exposeReadableReasoning(payload);
+      return `${match[1]}${JSON.stringify(payload)}`;
+    } catch {
+      return line;
+    }
+  };
+
+  const stream = response.body.pipeThrough(
+    new TransformStream<Uint8Array, Uint8Array>({
+      transform(chunk, controller) {
+        buffer += decoder.decode(chunk, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const line of lines) {
+          controller.enqueue(encoder.encode(`${transformLine(line)}\n`));
+        }
+      },
+      flush(controller) {
+        buffer += decoder.decode();
+        if (buffer) controller.enqueue(encoder.encode(transformLine(buffer)));
+      },
+    })
+  );
+  const headers = new Headers(response.headers);
+  headers.delete("content-length");
+  headers.delete("content-encoding");
+  return new Response(stream, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
 }
 
 export function createReasoningAwareFetch(
@@ -134,6 +260,11 @@ export function createReasoningAwareFetch(
     }
 
     const response = await baseFetch(input, nextInit);
+    if (
+      response.headers.get("content-type")?.includes("text/event-stream")
+    ) {
+      return transformEventStream(response, metadataByToolCall);
+    }
     try {
       const payload = await response.clone().json();
       captureReasoningMetadata(payload, metadataByToolCall);

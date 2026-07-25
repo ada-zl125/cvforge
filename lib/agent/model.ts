@@ -19,13 +19,13 @@ interface ChatModelOptions {
   thinkingEnabled?: boolean;
 }
 
+const contextWindowCache = new Map<string, number | undefined>();
+
 function createCompatibleModelKwargs(
   provider: LLMProviderProfile,
   thinkingEnabled: boolean
 ): Record<string, unknown> {
-  const modelKwargs: Record<string, unknown> = {
-    parallel_tool_calls: false,
-  };
+  const modelKwargs: Record<string, unknown> = {};
 
   switch (provider.thinkingProtocol) {
     case "deepseek":
@@ -166,7 +166,7 @@ export function createAgentChatModel(
     modelKwargs:
       provider.transport === "openai-compatible"
         ? createCompatibleModelKwargs(provider, thinkingEnabled)
-        : { parallel_tool_calls: false },
+        : undefined,
     configuration: {
       baseURL,
       ...(provider.transport === "openai-compatible"
@@ -174,6 +174,25 @@ export function createAgentChatModel(
         : {}),
     },
   });
+}
+
+export function getAgentModelContextWindow(
+  config: LLMConfig
+): number | undefined {
+  const provider = resolveLLMProvider(config);
+  const cacheKey = `${provider.transport}\u0000${config.model}`;
+  if (contextWindowCache.has(cacheKey)) {
+    return contextWindowCache.get(cacheKey);
+  }
+
+  try {
+    const maxInputTokens = createAgentChatModel(config).profile.maxInputTokens;
+    contextWindowCache.set(cacheKey, maxInputTokens);
+    return maxInputTokens;
+  } catch {
+    contextWindowCache.set(cacheKey, undefined);
+    return undefined;
+  }
 }
 
 export async function validateLLMConfig(config: LLMConfig): Promise<void> {

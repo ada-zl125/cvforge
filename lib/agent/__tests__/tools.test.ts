@@ -101,7 +101,7 @@ describe("agent tool schemas", () => {
 });
 
 describe("OpenAI compatible model configuration", () => {
-  it("uses Chat Completions with serial OpenAI tool calls", () => {
+  it("uses Chat Completions without disabling parallel tool calls", () => {
     const model = createAgentChatModel({
       apiKey: "test-key",
       baseURL: "https://example.test/v1/",
@@ -115,6 +115,6 @@ describe("OpenAI compatible model configuration", () => {
     const params = model.invocationParams();
 
     expect(model.useResponsesApi).toBe(false);
-    expect(params.parallel_tool_calls).toBe(false);
+    expect(params.parallel_tool_calls).toBeUndefined();
   });
 });
