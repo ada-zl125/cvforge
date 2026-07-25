@@ -1,5 +1,7 @@
 import { z } from "zod";
-import { DynamicStructuredTool } from "@langchain/core/tools";
+import { tool, ToolMessage, type ToolRuntime } from "langchain";
+import { Command, interrupt } from "@langchain/langgraph";
+import type { DynamicStructuredTool } from "@langchain/core/tools";
 import type { ResumeContent } from "@/lib/types/resume";
 import type { AcademicCVContent } from "@/lib/types/academic-cv";
 import type { CoverLetterContent } from "@/lib/types/cover-letter";
@@ -19,80 +21,195 @@ export interface ClarificationRequest {
   choices?: string[];
 }
 
+export interface AgentToolState<TContent = AnyContent> {
+  document: TContent;
+  successfulToolNames: string[];
+  inferenceNotes: string[];
+  clarificationCount: number;
+}
+
+export interface AgentToolContext<TContent = AnyContent> {
+  onContentUpdate?: (updated: TContent, toolName: string) => void;
+}
+
+export interface ClarificationInterrupt {
+  type: "cvforge_clarification";
+  request: ClarificationRequest;
+}
+
+export const agentStateSchema = z.object({
+  document: z.unknown(),
+  successfulToolNames: z.array(z.string()).default([]),
+  inferenceNotes: z.array(z.string()).default([]),
+  clarificationCount: z.number().int().nonnegative().default(0),
+});
+
+export const agentContextSchema = z.object({
+  onContentUpdate: z
+    .custom<(updated: unknown, toolName: string) => void>(
+      (value) => typeof value === "function"
+    )
+    .optional(),
+});
+
+type CVForgeToolRuntime = ToolRuntime<
+  typeof agentStateSchema,
+  typeof agentContextSchema
+>;
+
+const MAX_CLARIFICATION_ROUNDS = 2;
+
+function toolMessage(toolCallId: string, content: string, name: string): ToolMessage {
+  return new ToolMessage({
+    content,
+    name,
+    tool_call_id: toolCallId,
+  });
+}
+
 export function createTools<TContent = AnyContent>(
   docType: DocType,
-  documentLanguage: DocumentLanguage,
-  getContent: () => TContent,
-  onUpdate: (updated: TContent, toolName: string) => void,
-  onInference?: (note: string) => void,
-  onClarification?: (request: ClarificationRequest) => void
+  documentLanguage: DocumentLanguage
 ): DynamicStructuredTool[] {
   const tools: DynamicStructuredTool[] = [];
 
-  function makeUpdateHandler(toolName: string, argsSchema: z.ZodSchema) {
-    return new DynamicStructuredTool({
+  function makeUpdateHandler(toolName: string, argsSchema: z.ZodObject) {
+    return tool(
+      async (
+        args: unknown,
+        runtime: CVForgeToolRuntime
+      ) => {
+        runtime.signal?.throwIfAborted();
+        const normalizedArgs = normalizeToolArgsForDocumentLanguage(args, documentLanguage);
+        const updated = executeToolCall(
+          docType,
+          runtime.state.document,
+          toolName,
+          normalizedArgs
+        ) as TContent;
+        runtime.signal?.throwIfAborted();
+        runtime.context.onContentUpdate?.(updated, toolName);
+
+        return new Command({
+          update: {
+            document: updated,
+            successfulToolNames: [
+              ...(runtime.state.successfulToolNames ?? []),
+              toolName,
+            ],
+            messages: [
+              toolMessage(runtime.toolCallId, `Updated ${toolName}`, toolName),
+            ],
+          },
+        });
+      },
+      {
       name: toolName,
       description: getToolDescription(docType, toolName),
       schema: argsSchema,
-      func: async (args: unknown) => {
-        const normalizedArgs = normalizeToolArgsForDocumentLanguage(args, documentLanguage);
-        const updated = executeToolCall(docType, getContent(), toolName, normalizedArgs) as TContent;
-        onUpdate(updated, toolName);
-        return `Updated ${toolName}`;
       },
-    });
+    );
   }
 
   tools.push(
-    new DynamicStructuredTool({
-      name: "ask_user",
-      description:
-        "Ask the user for one focused clarification before continuing a structured document edit. Use this only when a required detail from the user's original task is missing, ambiguous, cannot be safely inferred, and cannot be safely omitted. If the user asked to modify a specific section, the question must stay inside that same section and must not ask about any other section. Do not use this for optional details or general follow-up.",
-      schema: z.object({
+    tool(
+      async (
+        args: ClarificationRequest,
+        runtime: CVForgeToolRuntime
+      ) => {
+        if (runtime.state.clarificationCount >= MAX_CLARIFICATION_ROUNDS) {
+          return "The clarification limit has been reached. Continue with the safest accurate partial update or ask in normal chat.";
+        }
+
+        const request: ClarificationRequest = {
+          question:
+            args.question.trim() ||
+            (documentLanguage === "zh"
+              ? "请补充说明这个细节。"
+              : "Could you clarify this detail?"),
+          reason:
+            args.reason.trim() ||
+            (documentLanguage === "zh"
+              ? "这个细节存在歧义, 不应猜测。"
+              : "This detail is ambiguous and should not be guessed."),
+          field: args.field?.trim() || undefined,
+          section: args.section?.trim() || undefined,
+          choices: args.choices?.map((choice) => choice.trim()).filter(Boolean),
+        };
+        const answer = interrupt<ClarificationInterrupt, string>({
+          type: "cvforge_clarification",
+          request,
+        });
+
+        return new Command({
+          update: {
+            clarificationCount: runtime.state.clarificationCount + 1,
+            messages: [
+              toolMessage(
+                runtime.toolCallId,
+                `User clarification response: ${answer}`,
+                "ask_user"
+              ),
+            ],
+          },
+        });
+      },
+      {
+        name: "ask_user",
+        description:
+          "Ask the user for one focused clarification before continuing a structured document edit. Use this only when a required detail from the user's original task is missing, ambiguous, cannot be safely inferred, and cannot be safely omitted. If the user asked to modify a specific section, the question must stay inside that same section and must not ask about any other section. Do not use this for optional details or general follow-up. Call this tool alone in its model turn.",
+        schema: z.object({
         question: z.string().describe("One concise question for the user"),
         reason: z.string().describe("Brief reason why this cannot be safely inferred"),
         field: z.string().optional().describe("Suggested field affected inside the requested section, e.g. education.degree"),
         section: z.string().optional().describe("Requested section affected, e.g. education. Keep this within the user's requested section."),
         choices: z.array(z.string()).optional().describe("Optional short answer choices only when natural; omit when the user should type a custom answer"),
       }),
-      func: async (args: unknown) => {
-        const arg = args as ClarificationRequest;
-        const request = {
-          question: arg.question?.trim() || "Could you clarify this detail?",
-          reason: arg.reason?.trim() || "This detail is ambiguous and should not be guessed.",
-          field: arg.field?.trim() || undefined,
-          section: arg.section?.trim() || undefined,
-          choices: arg.choices?.map((choice) => choice.trim()).filter(Boolean),
-        };
+      }
+    ),
+    tool(
+      async (
+        args: {
+          original: string;
+          inferred: string;
+          reason: string;
+          field?: string;
+        },
+        runtime: CVForgeToolRuntime
+      ) => {
+        const original = args.original.trim() || "unspecified";
+        const inferred = args.inferred.trim() || "unspecified";
+        const reason = args.reason.trim() || "high-confidence normalization";
+        const field = args.field?.trim();
+        const note = field
+          ? `${field}: "${original}" to "${inferred}" (${reason})`
+          : `"${original}" to "${inferred}" (${reason})`;
 
-        onClarification?.(request);
-        return `Asked user for clarification: ${request.question}`;
+        return new Command({
+          update: {
+            inferenceNotes: [...(runtime.state.inferenceNotes ?? []), note],
+            messages: [
+              toolMessage(
+                runtime.toolCallId,
+                `Recorded inference: ${note}. Mention this to the user after document updates.`,
+                "record_inference"
+              ),
+            ],
+          },
+        });
       },
-    }),
-    new DynamicStructuredTool({
-      name: "record_inference",
-      description:
-        "Record a high-confidence inference or normalization that will be written to the document. Use before or alongside update tools when filling information the user implied but did not state exactly.",
-      schema: z.object({
+      {
+        name: "record_inference",
+        description:
+          "Record a high-confidence inference or normalization that will be written to the document. Use before or alongside update tools when filling information the user implied but did not state exactly.",
+        schema: z.object({
         original: z.string().describe("The user's original wording or incomplete value, e.g. Huddersfield"),
         inferred: z.string().describe("The normalized or inferred value that will be used, e.g. University of Huddersfield"),
         reason: z.string().describe("Brief reason why this inference is high-confidence and low-risk"),
         field: z.string().optional().describe("Optional field or section affected, e.g. education.institution"),
       }),
-      func: async (args: unknown) => {
-        const arg = args as { original?: string; inferred?: string; reason?: string; field?: string };
-        const original = arg.original?.trim() || "unspecified";
-        const inferred = arg.inferred?.trim() || "unspecified";
-        const reason = arg.reason?.trim() || "high-confidence normalization";
-        const field = arg.field?.trim();
-        const note = field
-          ? `${field}: "${original}" to "${inferred}" (${reason})`
-          : `"${original}" to "${inferred}" (${reason})`;
-
-        onInference?.(note);
-        return `Recorded inference: ${note}. Mention this to the user after document updates.`;
-      },
-    })
+      }
+    )
   );
 
   const locationExample = documentLanguage === "zh" ? "英国, 伦敦 or 中国, 北京" : "London, UK or Beijing, China";

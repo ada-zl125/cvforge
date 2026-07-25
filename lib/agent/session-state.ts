@@ -6,6 +6,7 @@ import type { ClarificationRequest } from "@/lib/agent/tools";
 
 export interface PendingClarification {
   id: string;
+  resumeToken?: string;
   originalUserMessage: string;
   request: ClarificationRequest;
   history: Message[];
