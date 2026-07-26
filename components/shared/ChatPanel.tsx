@@ -31,7 +31,14 @@ import {
 import { validateLLMConfig } from "@/lib/agent/model";
 import { resolveLLMProvider } from "@/lib/agent/providers";
 import type { DocType, DocumentLanguage } from "@/lib/agent/tools";
-import { buildAgentChange, contentSignature, type AgentChange } from "@/lib/agent/change-tracking";
+import {
+  buildAgentChange,
+  canReviewAgentChange,
+  canUndoAgentChange,
+  contentSignature,
+  type AgentChange,
+} from "@/lib/agent/change-tracking";
+import { getReviewSnippets } from "@/lib/agent/review-highlighting";
 import {
   CONTEXT_DOCUMENT_ACCEPT,
   CONTEXT_MAX_FILE_BYTES,
@@ -401,8 +408,16 @@ export function ChatPanel<TContent>({
         : thinkingEnabled
           ? agentTr.disableThinking
           : agentTr.enableThinking;
+  const currentContentSignature = contentSignature(content);
+  const isChangeInteractionStable = !isBusy && !hasPendingClarification;
   const canUndoLastChange =
-    !!lastChange && contentSignature(content) === lastChange.afterSignature;
+    !!lastChange &&
+    canUndoAgentChange(
+      lastChange,
+      lastChange,
+      currentContentSignature,
+      isChangeInteractionStable,
+    );
   const agentDocLabel =
     docType === "cover-letter"
       ? agentTr.coverLetter
@@ -458,7 +473,16 @@ export function ChatPanel<TContent>({
   };
 
   const handleUndoChange = (change: AgentChange) => {
-    if (change.id !== lastChange?.id || contentSignature(contentRef.current) !== change.afterSignature) return;
+    if (
+      !canUndoAgentChange(
+        change,
+        lastChange,
+        contentSignature(contentRef.current),
+        !isLoading && !pendingClarification,
+      )
+    ) {
+      return;
+    }
 
     contentRef.current = change.before as TContent;
     onChange(change.before as TContent);
@@ -474,8 +498,18 @@ export function ChatPanel<TContent>({
   };
 
   const handleReviewChange = (change: AgentChange) => {
-    onReviewChange?.(null);
-    window.setTimeout(() => onReviewChange?.(change), 0);
+    if (
+      !canReviewAgentChange(
+        change,
+        contentSignature(contentRef.current),
+        !isLoading && !pendingClarification,
+      ) ||
+      getReviewSnippets(change).length === 0
+    ) {
+      return;
+    }
+
+    onReviewChange?.({ ...change });
   };
 
   const handleClearContext = () => {
@@ -1062,15 +1096,24 @@ export function ChatPanel<TContent>({
               const isUser = msg.role === "user";
 
               if (msg.kind === "change-card" && msg.change) {
+                const canReview =
+                  canReviewAgentChange(
+                    msg.change,
+                    currentContentSignature,
+                    isChangeInteractionStable,
+                  ) &&
+                  getReviewSnippets(msg.change).length > 0;
                 return (
                   <ChangeCard
                     key={idx}
                     change={msg.change}
                     latestChangeId={lastChange?.id}
                     canUndo={canUndoLastChange}
+                    canReview={canReview}
                     onUndo={handleUndoChange}
                     onReview={handleReviewChange}
                     reviewLabel={agentTr.reviewChange}
+                    reviewUnavailableTitle={agentTr.reviewChangeUnavailable}
                     undoLabel={agentTr.undoChange}
                     undoUnavailableTitle={agentTr.undoChangeUnavailable}
                   />

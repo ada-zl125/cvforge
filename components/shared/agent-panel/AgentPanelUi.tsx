@@ -285,18 +285,22 @@ export function ChangeCard({
   change,
   latestChangeId,
   canUndo,
+  canReview,
   onUndo,
   onReview,
   reviewLabel,
+  reviewUnavailableTitle,
   undoLabel,
   undoUnavailableTitle,
 }: {
   change: AgentChange;
   latestChangeId?: string;
   canUndo: boolean;
+  canReview: boolean;
   onUndo: (change: AgentChange) => void;
   onReview: (change: AgentChange) => void;
   reviewLabel: string;
+  reviewUnavailableTitle: string;
   undoLabel: string;
   undoUnavailableTitle: string;
 }) {
@@ -329,6 +333,8 @@ export function ChangeCard({
             size="sm"
             className="h-7 gap-1 px-2 text-xs"
             onClick={() => onReview(change)}
+            disabled={!canReview}
+            title={canReview ? reviewLabel : reviewUnavailableTitle}
           >
             <Eye className="size-3.5" />
             {reviewLabel}

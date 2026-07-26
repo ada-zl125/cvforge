@@ -142,6 +142,98 @@ describe("review highlighting", () => {
     expect(snippet?.anchors).toEqual(expect.arrayContaining(["Google", "AI Engineer"]));
   });
 
+  it("matches regenerated items after date sorting without false highlights", () => {
+    const before = {
+      experience: [
+        {
+          id: "alpha-old",
+          company: "Alpha",
+          position: "Engineer",
+          startDate: "2024",
+          endDate: "2025",
+          descriptions: [{ id: "a-old", value: "Built platform tools." }],
+        },
+        {
+          id: "beta-old",
+          company: "Beta",
+          position: "Developer",
+          startDate: "2022",
+          endDate: "2023",
+          descriptions: [{ id: "b-old", value: "Built data services." }],
+        },
+      ],
+    };
+    const after = {
+      experience: [
+        {
+          id: "beta-new",
+          company: "Beta",
+          position: "Developer",
+          startDate: "2022",
+          endDate: "Present",
+          descriptions: [{ id: "b-new", value: "Built data services." }],
+        },
+        {
+          id: "alpha-new",
+          company: "Alpha",
+          position: "Engineer",
+          startDate: "2024",
+          endDate: "2025",
+          descriptions: [{ id: "a-new", value: "Built platform tools." }],
+        },
+      ],
+    };
+
+    const snippets = getReviewSnippets(change(before, after));
+    const texts = snippets.map((snippet) => snippet.text);
+
+    expect(texts).toEqual(expect.arrayContaining(["2022 – Present", "Present"]));
+    [
+      "Alpha",
+      "Beta",
+      "Engineer",
+      "Developer",
+      "Built platform tools.",
+      "Built data services.",
+    ].forEach((text) => expect(texts).not.toContain(text));
+  });
+
+  it("does not report a pure reorder as a text edit", () => {
+    const first = { id: "first-old", company: "Alpha", position: "Engineer" };
+    const second = { id: "second-old", company: "Beta", position: "Developer" };
+    const afterFirst = { ...first, id: "first-new" };
+    const afterSecond = { ...second, id: "second-new" };
+
+    expect(getReviewSnippets(change(
+      { experience: [first, second] },
+      { experience: [afterSecond, afterFirst] },
+    ))).toEqual([]);
+  });
+
+  it("keeps meaningful single character edits reviewable", () => {
+    const snippets = getReviewSnippets(change(
+      { personal: { fullName: "A" } },
+      { personal: { fullName: "B" } },
+    ));
+
+    expect(snippets.map((snippet) => snippet.text)).toContain("B");
+  });
+
+  it("does not invent a highlight target for removed content", () => {
+    const snippets = getReviewSnippets(change(
+      {
+        experience: [{
+          id: "removed",
+          company: "Removed company",
+          position: "Engineer",
+        }],
+      },
+      { experience: [] },
+    ));
+
+    expect(snippets).toEqual([]);
+  });
+
   it("does not report unchanged repeated strings as edits", () => {
     const before = {
       summary: "Built reliable tools.",

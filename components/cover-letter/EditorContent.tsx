@@ -67,7 +67,10 @@ export function CoverLetterEditorContent() {
           template={state.template}
           isAgentMode={isAgentMode}
           onTitleChange={handleTitleChange}
-          onImport={setStoredState}
+          onImport={(next) => {
+            setReviewChange(null);
+            setStoredState(next);
+          }}
           onModeToggle={toggleAgentMode}
         />
       }

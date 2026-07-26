@@ -75,7 +75,10 @@ export function EditorContent() {
           content={content}
           isAgentMode={isAgentMode}
           onSettingsChange={handleSettingsChange}
-          onImport={setStoredState}
+          onImport={(next) => {
+            setReviewChange(null);
+            setStoredState(next);
+          }}
           onModeToggle={toggleAgentMode}
         />
       }
