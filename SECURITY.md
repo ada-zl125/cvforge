@@ -2,12 +2,26 @@
 
 ## Project Scope
 
-CVForge is a fully client-side application. It runs entirely in the browser with no server, no database, and no user accounts. Document data is stored only in the user's own browser local storage and never transmitted anywhere.
+CVForge is a browser based application with no user accounts, application database, or document storage server.
 
-Given this architecture, the attack surface is limited to the browser environment itself.
+Documents, Agent Mode state, uploaded references, and project instructions use `sessionStorage`. LLM configuration, including the API key, and interface language use `localStorage`.
+
+Agent Mode connects from the browser to the model provider configured by the user. When Agent Mode runs, the provider may receive the current document, user request, relevant conversation context, project instructions, and reference content read by the agent. That provider handles the request under its own security and privacy terms.
+
+## Protecting Local Data
+
+1. Use CVForge only on a trusted device and browser profile.
+2. Use a restricted API key when the provider supports it.
+3. Remove the saved model configuration after using a shared device.
+4. Review uploaded files before making them available to Agent Mode.
+5. Clear browser data when local document or model settings should be removed.
+
+CVForge cannot recover deleted browser data or compromised API keys.
 
 ## Reporting a Vulnerability
 
-If you discover a security issue, please open a [GitHub Issue](https://github.com/ada-zl125/cvforge/issues) and label it **security**. There is no need for private disclosure for a project of this scope.
+Do not publish secrets, personal data, or exploit details in a public issue.
 
-Please include a description of the issue, steps to reproduce it, and any relevant context about the potential impact.
+Use GitHub private vulnerability reporting when it is available for this repository. If it is unavailable, open a brief public issue without sensitive details and ask the maintainers to arrange a private channel.
+
+Include the affected area, reproduction steps, expected impact, and a minimal proof when safe.
