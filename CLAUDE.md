@@ -1,2 +1,3 @@
-Please read the following documents before starting your work:
-- [AGENTS.md](./AGENTS.md)
+# Claude Code
+
+Read [AGENTS.md](./AGENTS.md) before starting work.
