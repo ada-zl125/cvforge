@@ -89,14 +89,63 @@ const markdownComponents: Components = {
   ),
 };
 
-export function AssistantMarkdown({ content, streaming = false }: { content: string; streaming?: boolean }) {
+const markdownClassNames = {
+  assistant: "w-full min-w-0 break-words text-sm text-gray-950",
+  reasoning: [
+    "w-full min-w-0 whitespace-pre-wrap break-words text-[11px] leading-5 text-gray-500",
+    "[&_p]:mb-2 [&_p]:leading-5",
+    "[&_ul]:mb-2 [&_ul]:space-y-1",
+    "[&_ol]:mb-2 [&_ol]:space-y-1",
+    "[&_li]:leading-5",
+    "[&_strong]:text-gray-700",
+    "[&_code]:text-[11px] [&_code]:text-gray-700",
+    "[&_pre]:mb-2 [&_pre]:p-2",
+    "[&_blockquote]:mb-2 [&_blockquote]:text-gray-500",
+    "[&_table]:min-w-[420px] [&_table]:text-[11px]",
+    "[&_th]:px-2 [&_th]:py-1.5 [&_th]:text-gray-700",
+    "[&_td]:px-2 [&_td]:py-1.5 [&_td]:text-gray-500",
+    "[&_h1]:mb-2 [&_h1]:text-sm [&_h1]:font-semibold [&_h1]:text-gray-700",
+    "[&_h2]:mb-1.5 [&_h2]:text-xs [&_h2]:font-semibold [&_h2]:text-gray-700",
+    "[&_h3]:mb-1 [&_h3]:font-semibold [&_h3]:text-gray-700",
+    "[&_h4]:mb-1 [&_h4]:font-semibold [&_h4]:text-gray-700",
+    "[&_h5]:mb-1 [&_h5]:font-semibold [&_h5]:text-gray-700",
+    "[&_h6]:mb-1 [&_h6]:font-semibold [&_h6]:text-gray-700",
+    "[&_hr]:my-2 [&_hr]:border-gray-200",
+  ].join(" "),
+} as const;
+
+function MarkdownContent({
+  content,
+  streaming = false,
+  variant,
+}: {
+  content: string;
+  streaming?: boolean;
+  variant: keyof typeof markdownClassNames;
+}) {
   return (
-    <div className="w-full min-w-0 break-words text-sm text-gray-950">
+    <div className={markdownClassNames[variant]}>
       <ReactMarkdown components={markdownComponents} remarkPlugins={[remarkGfm]}>
         {content}
       </ReactMarkdown>
       {streaming && <span className="animate-pulse">▌</span>}
     </div>
+  );
+}
+
+export function AssistantMarkdown({
+  content,
+  streaming = false,
+}: {
+  content: string;
+  streaming?: boolean;
+}) {
+  return (
+    <MarkdownContent
+      content={content}
+      streaming={streaming}
+      variant="assistant"
+    />
   );
 }
 
@@ -317,8 +366,8 @@ export function AssistantMessageBubble({
             <ChevronRight className="size-3 transition-transform group-open:rotate-90" />
             {reasoningLabel}
           </summary>
-          <div className="ml-1 mt-1 whitespace-pre-wrap break-words border-l border-gray-200 pl-3 text-[11px] leading-5 text-gray-500">
-            {reasoning}
+          <div className="ml-1 mt-1 border-l border-gray-200 pl-3">
+            <MarkdownContent content={reasoning} variant="reasoning" />
           </div>
         </details>
       )}

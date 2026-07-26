@@ -39,4 +39,22 @@ describe("agent message bubbles", () => {
     expect(markup).not.toContain("invisible");
     expect(markup).not.toContain("visibility:hidden");
   });
+
+  it("renders reasoning as compact Markdown without enabling raw HTML", () => {
+    const markup = renderToStaticMarkup(
+      <AssistantMessageBubble
+        content="Done"
+        reasoning={"**Plan**\n\n- Read context\n- Update document\n\n****\n\n<script>alert('x')</script>"}
+        reasoningLabel="Reasoning"
+      />,
+    );
+
+    expect(markup).toContain("<strong");
+    expect(markup).toContain("<ul");
+    expect(markup).toContain("<hr");
+    expect(markup).not.toContain("**Plan**");
+    expect(markup).not.toContain("<script>");
+    expect(markup).toContain("&lt;script&gt;");
+    expect(markup).toContain("text-[11px]");
+  });
 });
