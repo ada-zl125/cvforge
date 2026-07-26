@@ -17,9 +17,9 @@
 
 ![CVForge editor screenshot](public/agent-screenshot.png)
 
-CVForge is a free, open-source document builder for job seekers and academics. It combines structured editing, live preview, export tools, and Agent Mode in one focused workspace. No account is required.
+CVForge is a free and open source document builder for job seekers and academics. It combines structured editing, live preview, export tools, and Agent Mode in one focused workspace. No account is required.
 
-> **Status** &nbsp; Approaching v1.0. Core editors are stable. Feedback and contributions are welcome.
+> **Status** &nbsp; Version 1.2.1 is available. Core editors and Agent Mode are stable. Feedback and contributions are welcome.
 
 ## Features
 
@@ -35,7 +35,7 @@ Fill in structured fields manually, or use Agent Mode to add content, polish wor
 
 **Agent Mode**
 
-Use Agent Mode when you want a writing partner inside the editor. It can reason about your current document, polish sections, add missing content, ask focused follow-up questions, follow project instructions, use uploaded reference files, highlight changes, and help you undo the last agent edit if needed.
+Use Agent Mode as a writing partner inside the editor. It can understand the current document, edit content, ask focused questions, follow project instructions, search uploaded references, stream responses, highlight changes, and safely undo the latest agent edit. Model services are identified automatically. Compatible models can provide optional thinking controls and collapsed reasoning output.
 
 **Export and import**
 
@@ -51,8 +51,10 @@ Preview your document in A4 format, then export it as PDF, PNG, or JSON. JSON fi
 | Styling | Tailwind CSS v4 |
 | UI | shadcn style local components, Base UI, lucide-react |
 | Animation | GSAP and local React Bits style components |
-| Agent | LangChain Deep Agents, LangGraph, ChatOpenAI, Zod |
-| Context search | Deep Agents StateBackend and PDF.js |
+| Agent runtime | LangChain Deep Agents and LangGraph |
+| Model integrations | LangChain OpenAI, Anthropic, DeepSeek, and Google integrations |
+| Validation | Zod |
+| Reference context | Deep Agents StateBackend and PDF.js |
 | Markdown | react-markdown with remark-gfm |
 | Export | html-to-image and jsPDF |
 | Deployment | Static export for GitHub Pages |
@@ -65,7 +67,7 @@ The [CVForge Wiki](https://github.com/ada-zl125/cvforge/wiki) contains the proje
 
 ## Contributing
 
-Contributions are welcome. Please open an issue first to discuss what you would like to change. When submitting a pull request, make sure it targets the `dev` branch and references the related issue. Branch naming follows the pattern `feature/issue-{N}-short-description`.
+Contributions are welcome. Read the [Contribution Guide](CONTRIBUTING.md) before starting work. Open an issue to agree on the scope, then submit a focused pull request to the `dev` branch.
 
 ## License
 

@@ -71,25 +71,43 @@ const githubRepoLink = (
 
 function PrivacyEN() {
   return (
-    <LegalPage title="Privacy Policy" updated="Last updated April 2026">
+    <LegalPage title="Privacy Policy" updated="Last updated July 2026">
       <Section title="Summary">
         <p>
-          CVForge is a client-side web utility for creating resumes, academic CVs and cover letters.
-          We do not run a user system, database or application server for storing your documents.
+          CVForge is a browser based document builder. We do not run a user system,
+          application database or document storage server.
         </p>
       </Section>
 
       <Section title="What we collect">
         <p>
-          We do not collect names, email addresses, account details, payment details or resume content.
-          The information you enter into CVForge stays in your browser unless you choose to export it or share it yourself.
+          CVForge does not collect names, email addresses, account details, payment details
+          or document content through an application server.
         </p>
       </Section>
 
-      <Section title="Local browser storage">
+      <Section title="Browser storage">
         <p>
-          CVForge uses your browser&apos;s local storage to keep your draft content and interface language preference on your device.
-          This helps the app continue where you left off. Clearing browser data may remove those drafts.
+          Documents, Agent Mode chat, uploaded references, project instructions and recent
+          agent changes use session storage. A refresh keeps the current tab state. Closing
+          the tab starts a clean session next time.
+        </p>
+        <p>
+          LLM configuration, including the API key, and interface language use local storage.
+          They remain available until you replace them or clear browser data.
+        </p>
+      </Section>
+
+      <Section title="Agent Mode and model providers">
+        <p>
+          When you use Agent Mode, CVForge sends the current request and the context needed
+          to answer it directly from your browser to the model provider you configured.
+          This context may include document content, conversation history, project instructions
+          and reference text read by the agent.
+        </p>
+        <p>
+          CVForge does not proxy or store these requests. The selected provider handles the
+          request under its own terms and privacy policy.
         </p>
       </Section>
 
@@ -118,25 +136,38 @@ function PrivacyEN() {
 
 function PrivacyZH() {
   return (
-    <LegalPage title="隐私政策" updated="最后更新 2026 年 4 月">
+    <LegalPage title="隐私政策" updated="最后更新 2026 年 7 月">
       <Section title="概述">
         <p>
-          CVForge 是一个用于创建求职简历、学术简历和求职信的纯客户端网页工具。
-          我们不提供用户系统，不使用数据库，也不通过应用服务器保存你的文档内容。
+          CVForge 是一个在浏览器中运行的文档工具。我们不提供用户系统、
+          应用数据库或文档存储服务器。
         </p>
       </Section>
 
       <Section title="我们收集什么">
         <p>
-          我们不收集姓名、邮箱、账户信息、支付信息或简历内容。
-          你在 CVForge 中输入的内容会留在你的浏览器中，除非你自行导出或分享。
+          CVForge 不会通过应用服务器收集姓名、邮箱、账户信息、支付信息或文档内容。
         </p>
       </Section>
 
-      <Section title="浏览器本地存储">
+      <Section title="浏览器存储">
         <p>
-          CVForge 会使用浏览器本地存储保存草稿内容和界面语言偏好。
-          这样你下次打开时可以继续编辑。清除浏览器数据可能会删除这些草稿。
+          文档、Agent Mode 对话、上传资料、项目指令和最近的 Agent 修改使用会话存储。
+          刷新页面会保留当前标签页状态，关闭标签页后下次会从全新会话开始。
+        </p>
+        <p>
+          LLM 配置包含 API Key，并和界面语言一起使用本地存储。
+          在你替换这些设置或清除浏览器数据前，它们会保留在当前浏览器中。
+        </p>
+      </Section>
+
+      <Section title="Agent Mode 与模型服务">
+        <p>
+          使用 Agent Mode 时，CVForge 会从浏览器直接向你配置的模型服务发送当前请求和回答所需的上下文。
+          这些内容可能包括文档、对话记录、项目指令和 Agent 读取的参考资料文本。
+        </p>
+        <p>
+          CVForge 不会代理或保存这些请求。所选模型服务会按照其自身条款和隐私政策处理请求。
         </p>
       </Section>
 

@@ -71,7 +71,7 @@ const mitLink = (
 
 function TermsEN() {
   return (
-    <LegalPage title="Terms of Use" updated="Last updated April 2026">
+    <LegalPage title="Terms of Use" updated="Last updated July 2026">
       <Section title="Using CVForge">
         <p>
           CVForge is a free, open source web utility for creating resumes, academic CVs and cover letters.
@@ -86,10 +86,18 @@ function TermsEN() {
         </p>
       </Section>
 
-      <Section title="No server storage">
+      <Section title="Browser storage">
         <p>
           CVForge runs in your browser and stores drafts locally on your device.
           We do not provide cloud storage, account recovery or backup services.
+        </p>
+      </Section>
+
+      <Section title="Agent Mode and model providers">
+        <p>
+          Agent Mode sends the request and required context directly to the model provider
+          you configure. You are responsible for provider access, API key security, usage
+          charges and compliance with the provider terms.
         </p>
       </Section>
 
@@ -99,10 +107,11 @@ function TermsEN() {
         </p>
       </Section>
 
-      <Section title="No professional advice">
+      <Section title="AI output and professional advice">
         <p>
-          CVForge helps with document structure and presentation. It does not provide career, legal, immigration or academic advice.
-          You should review all exported documents before using them.
+          AI output may be incomplete or inaccurate. Review every change and exported
+          document before use. CVForge does not provide career, legal, immigration or
+          academic advice.
         </p>
       </Section>
 
@@ -131,7 +140,7 @@ function TermsEN() {
 
 function TermsZH() {
   return (
-    <LegalPage title="使用条款" updated="最后更新 2026 年 4 月">
+    <LegalPage title="使用条款" updated="最后更新 2026 年 7 月">
       <Section title="使用 CVForge">
         <p>
           CVForge 是一个免费开源的网页工具，用于创建求职简历、学术简历和求职信。
@@ -146,10 +155,17 @@ function TermsZH() {
         </p>
       </Section>
 
-      <Section title="无服务器存储">
+      <Section title="浏览器存储">
         <p>
           CVForge 在浏览器中运行，草稿内容保存在你的设备本地。
           我们不提供云端存储、账户找回或备份服务。
+        </p>
+      </Section>
+
+      <Section title="Agent Mode 与模型服务">
+        <p>
+          Agent Mode 会将请求和必要上下文直接发送给你配置的模型服务。
+          你需要自行负责模型服务访问权限、API Key 安全、使用费用并遵守服务条款。
         </p>
       </Section>
 
@@ -159,10 +175,10 @@ function TermsZH() {
         </p>
       </Section>
 
-      <Section title="非专业建议">
+      <Section title="AI 输出与专业建议">
         <p>
-          CVForge 仅帮助你整理文档结构和版式，不提供职业、法律、移民或学术建议。
-          请在正式使用前自行检查导出的文档。
+          AI 输出可能不完整或不准确。请在使用前检查每项修改和导出的文档。
+          CVForge 不提供职业、法律、移民或学术建议。
         </p>
       </Section>
 
