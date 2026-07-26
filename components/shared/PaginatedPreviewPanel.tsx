@@ -35,40 +35,141 @@ function getReviewScopeText(node: Text): string {
   return normalizeScopeText(scope?.textContent ?? "");
 }
 
-function isSnippetInScope(node: Text, snippet: ReviewSnippet): boolean {
-  if (snippet.anchors.length === 0) return true;
-
-  const scopeText = getReviewScopeText(node);
-  return snippet.anchors.some((anchor) => scopeText.includes(anchor));
+function getSnippetKey(snippet: ReviewSnippet): string {
+  return `${snippet.text}\n${snippet.anchors.join("\n")}`;
 }
 
-function markTextNode(node: Text, snippets: ReviewSnippet[]): boolean {
-  const source = node.nodeValue ?? "";
-  const match = snippets
-    .map((snippet) => ({ snippet, index: source.indexOf(snippet.text) }))
-    .filter((item) => item.index >= 0 && isSnippetInScope(node, item.snippet))
-    .sort((a, b) => a.index - b.index || b.snippet.text.length - a.snippet.text.length)[0];
+function getSnippetScopeScore(node: Text, snippet: ReviewSnippet): number {
+  if (snippet.anchors.length === 0) return 0;
+  const scopeText = getReviewScopeText(node);
+  return snippet.anchors.reduce(
+    (score, anchor) => score + Number(scopeText.includes(anchor)),
+    0,
+  );
+}
 
-  if (!match) return false;
+function getBestScopeScores(
+  nodes: Text[],
+  snippets: ReviewSnippet[],
+): Map<string, number> {
+  const scores = new Map<string, number>();
+
+  nodes.forEach((node) => {
+    const source = node.nodeValue ?? "";
+    snippets.forEach((snippet) => {
+      if (!source.includes(snippet.text)) return;
+      const key = getSnippetKey(snippet);
+      const score = getSnippetScopeScore(node, snippet);
+      scores.set(key, Math.max(scores.get(key) ?? 0, score));
+    });
+  });
+
+  return scores;
+}
+
+function markTextNode(
+  node: Text,
+  snippets: ReviewSnippet[],
+  bestScopeScores: Map<string, number>,
+): boolean {
+  const source = node.nodeValue ?? "";
+  const matches = snippets
+    .flatMap((snippet) => {
+      const score = getSnippetScopeScore(node, snippet);
+      if (score < (bestScopeScores.get(getSnippetKey(snippet)) ?? 0)) return [];
+
+      const indexes: number[] = [];
+      let searchFrom = 0;
+      while (searchFrom < source.length) {
+        const index = source.indexOf(snippet.text, searchFrom);
+        if (index < 0) break;
+        indexes.push(index);
+        searchFrom = index + snippet.text.length;
+      }
+
+      return indexes.map((index) => ({
+        index,
+        text: snippet.text,
+      }));
+    })
+    .sort((a, b) => a.index - b.index || b.text.length - a.text.length);
+
+  const selected: typeof matches = [];
+  let selectedUntil = 0;
+  matches.forEach((match) => {
+    if (match.index < selectedUntil) return;
+    selected.push(match);
+    selectedUntil = match.index + match.text.length;
+  });
+  if (selected.length === 0) return false;
 
   const fragment = document.createDocumentFragment();
-  const before = source.slice(0, match.index);
-  const selected = source.slice(match.index, match.index + match.snippet.text.length);
-  const after = source.slice(match.index + match.snippet.text.length);
+  let cursor = 0;
 
-  if (before) fragment.appendChild(document.createTextNode(before));
+  selected.forEach((match) => {
+    const before = source.slice(cursor, match.index);
+    if (before) fragment.appendChild(document.createTextNode(before));
 
-  const mark = document.createElement("mark");
-  mark.dataset.agentReview = "true";
-  mark.style.backgroundColor = "#fff9db";
-  mark.style.color = "inherit";
-  mark.style.transition = "background-color 180ms ease";
-  mark.textContent = selected;
-  fragment.appendChild(mark);
+    const mark = document.createElement("mark");
+    mark.dataset.agentReview = "true";
+    mark.style.backgroundColor = "#fff9db";
+    mark.style.color = "inherit";
+    mark.style.transition = "background-color 180ms ease";
+    mark.textContent = match.text;
+    fragment.appendChild(mark);
 
+    cursor = match.index + match.text.length;
+  });
+
+  const after = source.slice(cursor);
   if (after) fragment.appendChild(document.createTextNode(after));
   node.replaceWith(fragment);
   return true;
+}
+
+function isMarkVisibleInPage(mark: Element): boolean {
+  const pageWindow = mark.closest("[data-agent-page-window]");
+  if (!pageWindow) return true;
+
+  const markRect = mark.getBoundingClientRect();
+  const pageRect = pageWindow.getBoundingClientRect();
+  return (
+    markRect.bottom > pageRect.top &&
+    markRect.top < pageRect.bottom &&
+    markRect.right > pageRect.left &&
+    markRect.left < pageRect.right
+  );
+}
+
+export function applyReviewHighlights(
+  root: HTMLElement,
+  snippets: ReviewSnippet[],
+): HTMLElement[] {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode(node) {
+      const parent = node.parentElement;
+      if (!parent || parent.closest("mark[data-agent-review]")) {
+        return NodeFilter.FILTER_REJECT;
+      }
+      return snippets.some((snippet) =>
+        (node.nodeValue ?? "").includes(snippet.text)
+      )
+        ? NodeFilter.FILTER_ACCEPT
+        : NodeFilter.FILTER_REJECT;
+    },
+  });
+
+  const nodes: Text[] = [];
+  while (walker.nextNode()) nodes.push(walker.currentNode as Text);
+
+  const bestScopeScores = getBestScopeScores(nodes, snippets);
+  nodes.forEach((node) => {
+    markTextNode(node, snippets, bestScopeScores);
+  });
+
+  return Array.from(
+    root.querySelectorAll<HTMLElement>("mark[data-agent-review]"),
+  );
 }
 
 function ReviewHighlighter({
@@ -88,26 +189,10 @@ function ReviewHighlighter({
     const snippets = getReviewSnippets(change);
     if (snippets.length === 0) return;
 
-    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
-      acceptNode(node) {
-        const parent = node.parentElement;
-        if (!parent || parent.closest("mark[data-agent-review]")) return NodeFilter.FILTER_REJECT;
-        return snippets.some((snippet) =>
-          (node.nodeValue ?? "").includes(snippet.text) && isSnippetInScope(node as Text, snippet)
-        )
-          ? NodeFilter.FILTER_ACCEPT
-          : NodeFilter.FILTER_REJECT;
-      },
-    });
-
-    const nodes: Text[] = [];
-    while (walker.nextNode()) nodes.push(walker.currentNode as Text);
-
-    nodes.forEach((node) => {
-      markTextNode(node, snippets);
-    });
-
-    const firstMark = root.querySelector("mark[data-agent-review]");
+    const marks = applyReviewHighlights(root, snippets);
+    const firstMark =
+      marks.find(isMarkVisibleInPage) ??
+      marks[0];
     firstMark?.scrollIntoView({ behavior: "smooth", block: "center" });
 
     const handlePointerDown = (event: PointerEvent) => {
@@ -368,6 +453,7 @@ export function PaginatedPreviewPanel({ children, reviewChange, isStreaming = fa
             >
               {/* Inset window preserves TOP/BOTTOM margins on every page */}
               <div
+                data-agent-page-window
                 style={{
                   position: "absolute",
                   top: TOP,

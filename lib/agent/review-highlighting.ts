@@ -5,6 +5,8 @@ export interface ReviewSnippet {
   anchors: string[];
 }
 
+const MIN_ARRAY_ITEM_SIMILARITY = 0.5;
+
 function getItemId(value: unknown): string | undefined {
   if (!value || typeof value !== "object") return undefined;
 
@@ -46,6 +48,89 @@ function stringsFrom(value: unknown): string[] {
   return parts;
 }
 
+function similarityScore(before: unknown, after: unknown): number {
+  if (Object.is(before, after)) return 1;
+
+  const beforeStrings = stringsFrom(before).map((value) => value.toLowerCase());
+  const afterStrings = stringsFrom(after).map((value) => value.toLowerCase());
+  if (beforeStrings.length === 0 || afterStrings.length === 0) return 0;
+
+  const remaining = new Map<string, number>();
+  beforeStrings.forEach((value) => {
+    remaining.set(value, (remaining.get(value) ?? 0) + 1);
+  });
+
+  let shared = 0;
+  afterStrings.forEach((value) => {
+    const count = remaining.get(value) ?? 0;
+    if (count <= 0) return;
+    shared += 1;
+    remaining.set(value, count - 1);
+  });
+
+  return (2 * shared) / (beforeStrings.length + afterStrings.length);
+}
+
+function matchBeforeArrayItems(
+  beforeItems: unknown[],
+  afterItems: unknown[],
+): Array<unknown | undefined> {
+  const matches: Array<unknown | undefined> = Array(afterItems.length);
+  const usedBeforeIndexes = new Set<number>();
+
+  afterItems.forEach((afterItem, afterIndex) => {
+    const id = getItemId(afterItem);
+    if (!id) return;
+
+    const beforeIndex = beforeItems.findIndex(
+      (beforeItem, index) =>
+        !usedBeforeIndexes.has(index) && getItemId(beforeItem) === id,
+    );
+    if (beforeIndex < 0) return;
+
+    matches[afterIndex] = beforeItems[beforeIndex];
+    usedBeforeIndexes.add(beforeIndex);
+  });
+
+  afterItems.forEach((afterItem, afterIndex) => {
+    if (matches[afterIndex] !== undefined) return;
+
+    let bestBeforeIndex = -1;
+    let bestScore = 0;
+    beforeItems.forEach((beforeItem, beforeIndex) => {
+      if (usedBeforeIndexes.has(beforeIndex)) return;
+      const score = similarityScore(beforeItem, afterItem);
+      if (score <= bestScore) return;
+      bestScore = score;
+      bestBeforeIndex = beforeIndex;
+    });
+
+    if (
+      bestBeforeIndex < 0 ||
+      bestScore < MIN_ARRAY_ITEM_SIMILARITY
+    ) {
+      return;
+    }
+    matches[afterIndex] = beforeItems[bestBeforeIndex];
+    usedBeforeIndexes.add(bestBeforeIndex);
+  });
+
+  afterItems.forEach((_, afterIndex) => {
+    if (
+      matches[afterIndex] !== undefined ||
+      usedBeforeIndexes.has(afterIndex) ||
+      afterIndex >= beforeItems.length
+    ) {
+      return;
+    }
+
+    matches[afterIndex] = beforeItems[afterIndex];
+    usedBeforeIndexes.add(afterIndex);
+  });
+
+  return matches;
+}
+
 function uniqueStrings(values: string[]): string[] {
   return Array.from(new Set(
     values
@@ -60,21 +145,11 @@ function mergeAnchors(...groups: string[][]): string[] {
 
 function pushSnippet(snippets: ReviewSnippet[], text: string, anchors: string[]): void {
   const trimmed = text.trim();
-  if (trimmed.length <= 1) return;
+  if (!trimmed) return;
   snippets.push({
     text: trimmed,
     anchors: mergeAnchors(anchors).filter((anchor) => anchor !== trimmed),
   });
-}
-
-function getBeforeArrayItem(beforeItems: unknown[], afterItem: unknown, index: number): unknown {
-  const id = getItemId(afterItem);
-  if (id) {
-    const match = beforeItems.find((item) => getItemId(item) === id);
-    if (match) return match;
-  }
-
-  return beforeItems[index];
 }
 
 function collectChangedDateRanges(
@@ -85,9 +160,10 @@ function collectChangedDateRanges(
 ): void {
   if (Array.isArray(after)) {
     const beforeItems = Array.isArray(before) ? before : [];
+    const beforeMatches = matchBeforeArrayItems(beforeItems, after);
     after.forEach((item, index) => {
       collectChangedDateRanges(
-        getBeforeArrayItem(beforeItems, item, index),
+        beforeMatches[index],
         item,
         snippets,
         mergeAnchors(stringsFrom(item), anchors),
@@ -130,9 +206,10 @@ function collectChangedStringLeaves(
 
   if (Array.isArray(after)) {
     const beforeItems = Array.isArray(before) ? before : [];
+    const beforeMatches = matchBeforeArrayItems(beforeItems, after);
     after.forEach((item, index) => {
       collectChangedStringLeaves(
-        getBeforeArrayItem(beforeItems, item, index),
+        beforeMatches[index],
         item,
         snippets,
         mergeAnchors(stringsFrom(item), anchors),

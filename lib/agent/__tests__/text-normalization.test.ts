@@ -11,16 +11,17 @@ describe("agent text normalisation", () => {
     );
   });
 
-  it("normalises known Chinese document values", () => {
+  it("preserves proper nouns while normalising Chinese punctuation", () => {
     const args = normalizeToolArgsForDocumentLanguage({
-      institution: "Imperial College London",
-      location: "London, UK",
+      institution: "Example Institute",
+      location: "Example City, Example Country",
+      description: "负责平台，提升可靠性。",
     }, "zh");
 
     expect(args).toEqual({
-      institution: "伦敦帝国理工学院",
-      location: "英国, 伦敦",
+      institution: "Example Institute",
+      location: "Example City, Example Country",
+      description: "负责平台, 提升可靠性。",
     });
   });
 });
-
