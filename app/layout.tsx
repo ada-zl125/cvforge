@@ -21,8 +21,8 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "CVForge — Professional Resumes, Effortlessly",
-  description: "Create professional resumes in minutes. Focus on your content — CVForge handles the layout.",
+  title: "CVForge | Resume, CV, and Cover Letter Builder",
+  description: "Create resumes, academic CVs, and cover letters with structured editing, live preview, export tools, and Agent Mode.",
 };
 
 export default function RootLayout({

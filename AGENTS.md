@@ -10,11 +10,11 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 CVForge is a stateless browser based document builder for resumes, academic CVs, and cover letters. It has no user accounts and no database. Users create a document from the landing page, edit it in the matching editor, and export it when finished.
 
-Document editing state, Agent Mode chat state, uploaded reference context, project instructions, and recent agent changes are stored in `sessionStorage`. A page refresh keeps the current tab state, while closing the tab starts a clean session next time.
+Document editing state, Agent Mode chat state, uploaded reference context, project instructions, context usage, and recent agent changes are stored in `sessionStorage`. A page refresh keeps the current tab state, while closing the tab starts a clean session next time.
 
 LLM configuration and UI language preference are the only long lived user settings stored in `localStorage`.
 
-Agent Mode helps users edit documents through structured tools. It supports clarification flow, undo, review highlights, project instructions, and local reference files. Uploaded reference files are searched locally and only relevant excerpts are sent into the agent context.
+Agent Mode helps users edit documents through structured tools. It supports clarification, undo, review highlights, project instructions, and local reference files. Deep Agents exposes uploaded references through a local virtual filesystem. Content read by the agent may be sent to the configured model provider.
 
 ## Tech Stack
 
@@ -27,7 +27,7 @@ Agent Mode helps users edit documents through structured tools. It supports clar
 | UI primitives | shadcn/ui style components, Base UI, lucide-react icons |
 | Animation | GSAP, React Bits inspired local components, and CSS transitions |
 | Agent runtime | LangChain Deep Agents with LangGraph and provider native chat models |
-| Agent validation | LangChain tools with Zod schemas and OpenAI function calling |
+| Agent validation | LangChain tools with Zod schemas and provider native tool calling |
 | Reference search | Deep Agents StateBackend virtual filesystem |
 | PDF text extraction | PDF.js for selectable text PDF files |
 | Markdown rendering | react-markdown with remark-gfm |
@@ -55,7 +55,7 @@ components/
 examples/
   *.json                    Example document content
 lib/
-  agent/                    Agent loop, tools, executor, context, review, and session logic
+  agent/                    Deep Agents runtime, tools, executor, context, review, and session logic
   types/                    Document data types
   document-normalizers.ts   Import, example, and export data normalisation
   editor-state.ts           Session backed editor state hook
@@ -71,6 +71,8 @@ lib/
 
 - Editor document state uses `sessionStorage`.
 - Agent chat state uses `sessionStorage`.
+- Agent graph state uses `MemorySaver` within reusable browser runtimes.
+- Uploaded references use the Deep Agents `StateBackend` virtual filesystem.
 - LLM configuration uses `localStorage`.
 - UI language preference uses `localStorage` through `useSyncExternalStore` to avoid hydration mismatch.
 - Resume and academic CV support English and Chinese document modes.
@@ -80,9 +82,11 @@ lib/
 
 - Agent orchestration lives in `lib/agent/chat.ts`.
 - Tool definitions live in `lib/agent/tools.ts`.
-- OpenAI compatible model configuration lives in `lib/agent/model.ts`.
+- Provider chat model configuration lives in `lib/agent/model.ts`.
+- Provider detection and thinking protocol selection live in `lib/agent/providers.ts`.
 - Pure document updates live in `lib/agent/executor.ts`.
 - Agent session state lives in `lib/agent/session-state.ts`.
+- Context usage extraction lives in `lib/agent/context-usage.ts`.
 - Agent text and document language normalization lives in `lib/agent/text-normalization.ts`.
 - Keep agent UI components separate from agent state and tool execution logic.
 
