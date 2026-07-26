@@ -53,7 +53,7 @@ describe("official tool calling protocol", () => {
         {
           id: "call_read",
           name: "read_file",
-          args: { file_path: "/references/profile.pdf.txt" },
+          args: { file_path: "/references/profile.pdf" },
           type: "tool_call",
         },
         {
@@ -92,7 +92,7 @@ describe("official tool calling protocol", () => {
         type: "function",
         function: {
           name: "read_file",
-          arguments: '{"file_path":"/references/profile.pdf.txt"}',
+          arguments: '{"file_path":"/references/profile.pdf"}',
         },
       },
       {

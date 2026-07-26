@@ -382,13 +382,30 @@ function fileData(
   };
 }
 
-function safeReferenceName(name: string, index: number): string {
-  const normalized = name
-    .normalize("NFKC")
-    .replace(/[^a-zA-Z0-9._-]+/g, "_")
-    .replace(/^_+|_+$/g, "")
-    .slice(0, 80);
-  return `${index + 1}-${normalized || "reference"}.txt`;
+function addFileNameSuffix(name: string, suffix: number): string {
+  const extensionIndex = name.lastIndexOf(".");
+  if (extensionIndex <= 0) return `${name} (${suffix})`;
+  return `${name.slice(0, extensionIndex)} (${suffix})${name.slice(extensionIndex)}`;
+}
+
+function safeReferenceName(name: string, usedNames: Set<string>): string {
+  const sanitized = name
+    .replace(/[\u0000-\u001F\u007F/\\]+/g, "_")
+    .trim();
+  const baseName =
+    sanitized && sanitized !== "." && sanitized !== ".." && sanitized !== "~"
+      ? sanitized
+      : "reference";
+  let candidate = baseName;
+  let suffix = 2;
+
+  while (usedNames.has(candidate)) {
+    candidate = addFileNameSuffix(baseName, suffix);
+    suffix += 1;
+  }
+
+  usedNames.add(candidate);
+  return candidate;
 }
 
 function buildAgentFiles(
@@ -419,8 +436,9 @@ function buildAgentFiles(
     );
   }
 
-  const referencePaths = referenceSources.map((source, index) => {
-    const path = `/references/${safeReferenceName(source.name, index)}`;
+  const usedReferenceNames = new Set<string>();
+  const referencePaths = referenceSources.map((source) => {
+    const path = `/references/${safeReferenceName(source.name, usedReferenceNames)}`;
     files[path] = fileData(source.text, "text/plain", timestamp);
     return path;
   });

@@ -251,7 +251,7 @@ describe("Deep Agent runtime", () => {
           {
             name: "read_file",
             args: {
-              file_path: "/references/1-profile.md.txt",
+              file_path: "/references/profile.md",
             },
             id: "read-reference-call",
           },
@@ -288,7 +288,7 @@ describe("Deep Agent runtime", () => {
           {
             name: "read_file",
             args: {
-              file_path: "/references/1-profile.pdf.txt",
+              file_path: "/references/我的简历 2026.pdf",
             },
             id: "read-cv-call",
           },
@@ -328,7 +328,7 @@ describe("Deep Agent runtime", () => {
         {
           id: "profile",
           type: "file",
-          name: "profile.pdf",
+          name: "我的简历 2026.pdf",
           text:
             "Imperial College London, MSc, Applied Computational Science and Engineering, London",
           createdAt: 1,
@@ -344,6 +344,57 @@ describe("Deep Agent runtime", () => {
         endDate: "2025/06",
       }),
     ]);
+  });
+
+  it("disambiguates duplicate reference names without changing their extensions", async () => {
+    modelState.current = new FakeToolCallingModel({
+      toolCalls: [
+        [
+          {
+            name: "read_file",
+            args: {
+              file_path: "/references/profile.pdf",
+            },
+            id: "read-first-reference-call",
+          },
+          {
+            name: "read_file",
+            args: {
+              file_path: "/references/profile (2).pdf",
+            },
+            id: "read-second-reference-call",
+          },
+        ],
+        [],
+      ],
+    });
+    let finalText = "";
+
+    await runAgentStream({
+      ...createParams(createResume(), () => undefined),
+      referenceSources: [
+        {
+          id: "first-profile",
+          type: "file",
+          name: "profile.pdf",
+          text: "FIRST_REFERENCE_FACT",
+          createdAt: 1,
+        },
+        {
+          id: "second-profile",
+          type: "file",
+          name: "profile.pdf",
+          text: "SECOND_REFERENCE_FACT",
+          createdAt: 2,
+        },
+      ],
+      onTextChunk: (text) => {
+        finalText += text;
+      },
+    });
+
+    expect(finalText).toContain("FIRST_REFERENCE_FACT");
+    expect(finalText).toContain("SECOND_REFERENCE_FACT");
   });
 
   it("reuses one Deep Agent runtime across conversation turns", async () => {
