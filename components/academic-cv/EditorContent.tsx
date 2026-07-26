@@ -72,7 +72,10 @@ export function AcademicEditorContent() {
           content={content}
           isAgentMode={isAgentMode}
           onSettingsChange={handleSettingsChange}
-          onImport={setStoredState}
+          onImport={(next) => {
+            setReviewChange(null);
+            setStoredState(next);
+          }}
           onModeToggle={toggleAgentMode}
         />
       }

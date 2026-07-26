@@ -29,6 +29,11 @@ describe("agent session state", () => {
         text: "Useful context",
         createdAt: 1,
       }],
+      contextUsage: {
+        inputTokens: 12_500,
+        maxInputTokens: 128_000,
+        model: "test-model",
+      },
     };
 
     writeAgentPanelSessionState("agent", nextState);
@@ -37,7 +42,28 @@ describe("agent session state", () => {
       messages: [{ role: "user", content: "Polish this" }],
       contextInstruction: "Keep it concise.",
       contextSources: [{ name: "notes.txt", text: "Useful context" }],
+      contextUsage: {
+        inputTokens: 12_500,
+        maxInputTokens: 128_000,
+        model: "test-model",
+      },
     });
+  });
+
+  it("drops invalid context usage from saved state", () => {
+    sessionStorage.setItem("agent", JSON.stringify({
+      contextUsage: {
+        inputTokens: "unknown",
+        maxInputTokens: 128_000,
+        model: "test-model",
+      },
+      contextUsageUnavailable: true,
+    }));
+
+    expect(readAgentPanelSessionState("agent").contextUsage).toBeNull();
+    expect(
+      readAgentPanelSessionState("agent").contextUsageUnavailable
+    ).toBe(true);
   });
 
   it("filters invalid context sources from saved state", () => {
@@ -51,6 +77,24 @@ describe("agent session state", () => {
     expect(readAgentPanelSessionState("agent").contextSources).toEqual([
       { id: "valid", type: "file", name: "notes.txt", text: "Useful context", createdAt: 1 },
     ]);
+  });
+
+  it("does not persist an in-memory clarification interrupt", () => {
+    const state = createInitialAgentPanelState();
+
+    writeAgentPanelSessionState("agent", {
+      ...state,
+      pendingClarification: {
+        id: "clarification",
+        resumeToken: "runtime",
+        request: {
+          question: "Which role should this target?",
+          reason: "The target is required.",
+        },
+      },
+    });
+
+    expect(readAgentPanelSessionState("agent").pendingClarification).toBeNull();
   });
 
   it("keeps separate agent sessions isolated by storage key", () => {
@@ -68,4 +112,5 @@ describe("agent session state", () => {
     expect(readAgentPanelSessionState("agent_resume").messages[0].content).toBe("Polish resume");
     expect(readAgentPanelSessionState("agent_cover_letter").messages[0].content).toBe("Polish letter");
   });
+
 });

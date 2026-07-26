@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
-import { Send, SlidersHorizontal, Loader2, AlertCircle, Settings, Eraser, Shrink, FilePenLine, Square, Paperclip, Trash2, Upload, Eye } from "lucide-react";
+import { Send, SlidersHorizontal, Loader2, AlertCircle, Settings, Eraser, FilePenLine, Square, Paperclip, Trash2, Upload, Eye, BrainCircuit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import FadeContent from "@/components/FadeContent";
 import SpotlightCard from "@/components/SpotlightCard";
@@ -15,8 +15,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  compactAgentHistory,
-  estimateAgentContextUsage,
+  createAgentSessionId,
+  discardAgentSession,
+  resumeAgentStream,
   runAgentStream,
   type AgentStatus,
   type Message,
@@ -27,8 +28,17 @@ import {
   type LLMConfig,
   writeLLMConfig,
 } from "@/lib/agent/config";
-import type { ClarificationRequest, DocType, DocumentLanguage } from "@/lib/agent/tools";
-import { buildAgentChange, contentSignature, type AgentChange } from "@/lib/agent/change-tracking";
+import { validateLLMConfig } from "@/lib/agent/model";
+import { resolveLLMProvider } from "@/lib/agent/providers";
+import type { DocType, DocumentLanguage } from "@/lib/agent/tools";
+import {
+  buildAgentChange,
+  canReviewAgentChange,
+  canUndoAgentChange,
+  contentSignature,
+  type AgentChange,
+} from "@/lib/agent/change-tracking";
+import { getReviewSnippets } from "@/lib/agent/review-highlighting";
 import {
   CONTEXT_DOCUMENT_ACCEPT,
   CONTEXT_MAX_FILE_BYTES,
@@ -45,20 +55,14 @@ import {
   AssistantMarkdown,
   AssistantMessageBubble,
   ChangeCard,
-  ContextSummaryMessage,
   ContextUsageIndicator,
   UserMessageBubble,
 } from "@/components/shared/agent-panel/AgentPanelUi";
 import { useUILanguage } from "@/lib/ui-language";
 import { t } from "@/lib/translations";
 
-const MAX_CLARIFICATION_ROUNDS = 2;
 const INPUT_MAX_VISIBLE_ROWS = 6;
 type AgentTranslations = typeof t.en.agent | typeof t.zh.agent;
-type ClarificationPatch<TContent> = {
-  content: TContent;
-  toolName: string;
-};
 
 function getContextReadErrorMessage(
   fileName: string,
@@ -99,6 +103,32 @@ function formatContextReadErrorDetails(error: unknown): string {
   }
 }
 
+function getAgentRequestError(
+  error: unknown,
+  fallback: string,
+  invalidConfig: string
+): { message: string; invalidConfig: boolean } {
+  const message = error instanceof Error ? error.message : fallback;
+  const status =
+    error &&
+    typeof error === "object" &&
+    "status" in error &&
+    typeof error.status === "number"
+      ? error.status
+      : undefined;
+  const authenticationFailure =
+    status === 401 ||
+    status === 403 ||
+    /\b(?:unauthorized|forbidden|authentication)\b|api[\s_-]*key/i.test(
+      message
+    );
+
+  return {
+    message: authenticationFailure ? invalidConfig : message,
+    invalidConfig: authenticationFailure,
+  };
+}
+
 interface ChatPanelProps<TContent> {
   docType: DocType;
   documentLanguage: DocumentLanguage;
@@ -108,30 +138,6 @@ interface ChatPanelProps<TContent> {
   onAgentRunningChange?: (running: boolean) => void;
   agentState: AgentPanelState;
   onAgentStateChange: Dispatch<SetStateAction<AgentPanelState>>;
-}
-
-async function validateLLMConfig(config: LLMConfig): Promise<void> {
-  const baseURL = config.baseURL.replace(/\/+$/, "");
-  const response = await fetch(`${baseURL}/chat/completions`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${config.apiKey}`,
-    },
-    body: JSON.stringify({
-      model: config.model,
-      messages: [{ role: "user", content: "ping" }],
-      max_tokens: 10,
-    }),
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    const errorMsg =
-      errorData.error?.message ||
-      `API Error: ${response.status} ${response.statusText}`;
-    throw new Error(errorMsg);
-  }
 }
 
 function localizeClarificationReason(reason: string | undefined, lang: "en" | "zh", agentTr: AgentTranslations): string {
@@ -147,115 +153,6 @@ function localizeClarificationReason(reason: string | undefined, lang: "en" | "z
   }
 
   return reason;
-}
-
-function formatClarificationMessage(request: ClarificationRequest, lang: "en" | "zh", agentTr: AgentTranslations): string {
-  const scope = request.field || request.section;
-  const localizedReason = localizeClarificationReason(request.reason, lang, agentTr);
-  if (lang === "zh") {
-    const reason = localizedReason ? `${agentTr.clarificationReasonLabel}: ${localizedReason}` : "";
-    const target = scope ? `\n\n${agentTr.clarificationRelatedFieldLabel}: ${scope}` : "";
-    return `${agentTr.clarificationMessageIntro}: ${request.question}\n\n${reason}${target}`.trim();
-  }
-
-  const reason = localizedReason ? `${agentTr.clarificationReasonLabel}: ${localizedReason}` : "";
-  const target = scope ? `\n\n${agentTr.clarificationRelatedFieldLabel}: ${scope}` : "";
-  return `${agentTr.clarificationMessageIntro}: ${request.question}\n\n${reason}${target}`.trim();
-}
-
-function normalizeClarificationLocation(answer: string, documentLanguage: DocumentLanguage): string {
-  const trimmed = answer.trim();
-  if (documentLanguage !== "zh") return trimmed;
-
-  const locationMap: Record<string, string> = {
-    "huddersfield, uk": "英国, 哈德斯菲尔德",
-    "huddersfield, united kingdom": "英国, 哈德斯菲尔德",
-    "london, uk": "英国, 伦敦",
-    "london, united kingdom": "英国, 伦敦",
-    "oxford, uk": "英国, 牛津",
-    "oxford, united kingdom": "英国, 牛津",
-  };
-
-  return locationMap[trimmed.toLowerCase()] ?? trimmed;
-}
-
-function findEducationIndexForClarification(education: Array<Record<string, unknown>>, pending: PendingClarification) {
-  const haystack = `${pending.request.question} ${pending.originalUserMessage}`.toLowerCase();
-  const normalizedHaystack = haystack.replace(/^university of\s+/, "");
-  const namedIndex = education.findIndex((item) => {
-    const institution = String(item.institution ?? "").toLowerCase();
-    if (!institution) return false;
-    const normalizedInstitution = institution.replace(/^university of\s+/, "");
-    return (
-      normalizedHaystack.includes(normalizedInstitution) ||
-      normalizedInstitution.includes("huddersfield") && normalizedHaystack.includes("huddersfield") ||
-      String(item.institution ?? "").includes("哈德斯菲尔德") && `${pending.request.question} ${pending.originalUserMessage}`.includes("哈德斯菲尔德")
-    );
-  });
-  if (namedIndex >= 0) return namedIndex;
-
-  const emptyLocationIndexes = education
-    .map((item, index) => ({ index, location: String(item.location ?? "").trim() }))
-    .filter((item) => !item.location)
-    .map((item) => item.index);
-  if (emptyLocationIndexes.length === 1) return emptyLocationIndexes[0];
-  if (education.length === 1) return 0;
-  return -1;
-}
-
-function applyEducationLocationClarification<TContent>(
-  content: TContent,
-  pending: PendingClarification,
-  answer: string,
-  documentLanguage: DocumentLanguage
-): ClarificationPatch<TContent> | null {
-  const scopeText = [
-    pending.request.field,
-    pending.request.section,
-    pending.request.question,
-    pending.request.reason,
-  ].filter(Boolean).join(" ").toLowerCase();
-  const isEducation = /education|school|university|college|学历|教育|学校|大学/.test(scopeText);
-  const isLocation = /location|address|city|country|where|地点|地址|城市|国家|位于|在哪/.test(scopeText);
-  if (!isEducation || !isLocation || !content || typeof content !== "object") return null;
-
-  const current = content as TContent & { education?: Array<Record<string, unknown>> };
-  if (!Array.isArray(current.education) || current.education.length === 0) return null;
-
-  const index = findEducationIndexForClarification(current.education, pending);
-  if (index < 0) return null;
-
-  const location = normalizeClarificationLocation(answer, documentLanguage);
-  const education = current.education.map((item, itemIndex) =>
-    itemIndex === index ? { ...item, location } : item
-  );
-
-  return {
-    content: {
-      ...current,
-      education,
-    },
-    toolName: "set_education",
-  } as ClarificationPatch<TContent>;
-}
-
-function isDocumentEditIntent(text: string): boolean {
-  return /\b(add|update|set|change|fill|insert|write|rewrite|polish|improve|optimi[sz]e|refine|edit|revise|replace)\b/i.test(text) ||
-    /添加|更新|修改|填写|填入|写入|润色|优化|改写|编辑|替换|补充/.test(text);
-}
-
-function shouldReplaceWithNoChangeNotice(params: {
-  before: unknown;
-  after: unknown;
-  toolNames: string[];
-  userMessage: string;
-  streamedText: string;
-  forceEditIntent?: boolean;
-}) {
-  if (params.toolNames.length > 0) return false;
-  if (!params.streamedText.trim()) return false;
-  if (contentSignature(params.before) !== contentSignature(params.after)) return false;
-  return params.forceEditIntent || isDocumentEditIntent(params.userMessage);
 }
 
 export function ChatPanel<TContent>({
@@ -280,13 +177,14 @@ export function ChatPanel<TContent>({
     lastChange,
     contextSources = [],
     contextInstruction = "",
+    contextUsage = null,
+    contextUsageUnavailable = false,
   } = agentState;
   const [streamingText, setStreamingText] = useState("");
   const [agentStatus, setAgentStatus] = useState<AgentStatus | null>(null);
   const [inputValue, setInputValue] = useState("");
   const [clarificationAnswer, setClarificationAnswer] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isCompacting, setIsCompacting] = useState(false);
   const [isSavingConfig, setIsSavingConfig] = useState(false);
   const [configOpen, setConfigOpen] = useState(false);
   const [contextOpen, setContextOpen] = useState(false);
@@ -303,7 +201,9 @@ export function ChatPanel<TContent>({
   const messagesRef = useRef(messages);
   const contentRef = useRef(content);
   const streamingTextRef = useRef("");
+  const reasoningTextRef = useRef("");
   const abortControllerRef = useRef<AbortController | null>(null);
+  const agentSessionIdRef = useRef(createAgentSessionId());
 
   useEffect(() => {
     messagesRef.current = messages;
@@ -314,11 +214,18 @@ export function ChatPanel<TContent>({
   }, [content]);
 
   useEffect(() => {
+    const agentSessionId = agentSessionIdRef.current;
     return () => {
       abortControllerRef.current?.abort();
+      discardAgentSession(agentSessionId);
+      onAgentStateChange((prev) =>
+        prev.pendingClarification
+          ? { ...prev, pendingClarification: null }
+          : prev
+      );
       onAgentRunningChange?.(false);
     };
-  }, [onAgentRunningChange]);
+  }, [onAgentRunningChange, onAgentStateChange]);
 
   useEffect(() => {
     onAgentRunningChange?.(isLoading);
@@ -432,24 +339,85 @@ export function ChatPanel<TContent>({
     }));
   };
 
+  const setContextUsage = (
+    usage: AgentPanelState["contextUsage"]
+  ) => {
+    onAgentStateChange((prev) => ({
+      ...prev,
+      contextUsage: usage,
+      contextUsageUnavailable: usage === null,
+    }));
+  };
+
+  const resetContextUsage = () => {
+    onAgentStateChange((prev) => ({
+      ...prev,
+      contextUsage: null,
+      contextUsageUnavailable: false,
+    }));
+  };
+
   const isConfigured = !!activeConfig;
-  const isBusy = isLoading || isCompacting;
+  const isBusy = isLoading;
   const hasPendingClarification = !!pendingClarification;
-  const isChatDisabled = !isConfigured || isBusy || hasPendingClarification;
+  const isChatDisabled =
+    !isConfigured ||
+    isBusy ||
+    isProcessingContext ||
+    hasPendingClarification;
   const hasChatContext = messages.length > 0 || streamingText !== "";
-  const contextUsage = activeConfig
-    ? estimateAgentContextUsage({
-        model: activeConfig.model,
-        docType,
-        documentLanguage,
-        content,
-        history: messages,
-        referenceSources: contextSources,
-        contextInstruction,
-      })
+  const providerProfile = activeConfig
+    ? resolveLLMProvider(activeConfig)
     : null;
+  const visibleContextUsage =
+    activeConfig && contextUsage?.model === activeConfig.model
+      ? contextUsage
+      : null;
+  const contextUsageLabel = visibleContextUsage
+    ? visibleContextUsage.maxInputTokens
+      ? agentTr.contextUsageKnown(
+          visibleContextUsage.inputTokens.toLocaleString(
+            lang === "zh" ? "zh-CN" : "en-US"
+          ),
+          visibleContextUsage.maxInputTokens.toLocaleString(
+            lang === "zh" ? "zh-CN" : "en-US"
+          ),
+          Math.round(
+            (visibleContextUsage.inputTokens /
+              visibleContextUsage.maxInputTokens) *
+              100
+          )
+        )
+      : agentTr.contextUsageLimitUnknown(
+          visibleContextUsage.inputTokens.toLocaleString(
+            lang === "zh" ? "zh-CN" : "en-US"
+          )
+        )
+    : contextUsageUnavailable
+      ? agentTr.contextUsageUnavailable
+      : agentTr.contextUsagePending;
+  const thinkingEnabled =
+    providerProfile?.thinkingControl === "always" ||
+    (providerProfile?.thinkingControl === "toggle" &&
+      !!activeConfig?.thinkingEnabled);
+  const thinkingButtonTitle =
+    providerProfile?.thinkingControl === "always"
+      ? agentTr.thinkingAlwaysOn
+      : !providerProfile || providerProfile.thinkingControl === "unavailable"
+        ? agentTr.thinkingUnavailable
+        : thinkingEnabled
+          ? agentTr.disableThinking
+          : agentTr.enableThinking;
+  const currentContentSignature = contentSignature(content);
+  const isChangeInteractionStable = !isBusy && !hasPendingClarification;
   const canUndoLastChange =
-    !!lastChange && contentSignature(content) === lastChange.afterSignature;
+    !!lastChange &&
+    canUndoAgentChange(
+      lastChange,
+      lastChange,
+      currentContentSignature,
+      isChangeInteractionStable,
+    );
   const agentDocLabel =
     docType === "cover-letter"
       ? agentTr.coverLetter
@@ -505,7 +473,16 @@ export function ChatPanel<TContent>({
   };
 
   const handleUndoChange = (change: AgentChange) => {
-    if (change.id !== lastChange?.id || contentSignature(contentRef.current) !== change.afterSignature) return;
+    if (
+      !canUndoAgentChange(
+        change,
+        lastChange,
+        contentSignature(contentRef.current),
+        !isLoading && !pendingClarification,
+      )
+    ) {
+      return;
+    }
 
     contentRef.current = change.before as TContent;
     onChange(change.before as TContent);
@@ -521,79 +498,40 @@ export function ChatPanel<TContent>({
   };
 
   const handleReviewChange = (change: AgentChange) => {
-    onReviewChange?.(null);
-    window.setTimeout(() => onReviewChange?.(change), 0);
+    if (
+      !canReviewAgentChange(
+        change,
+        contentSignature(contentRef.current),
+        !isLoading && !pendingClarification,
+      ) ||
+      getReviewSnippets(change).length === 0
+    ) {
+      return;
+    }
+
+    onReviewChange?.({ ...change });
   };
 
   const handleClearContext = () => {
     if (isBusy || !hasChatContext) return;
 
+    discardAgentSession(agentSessionIdRef.current);
     setMessages([]);
     setStreamingText("");
     streamingTextRef.current = "";
+    reasoningTextRef.current = "";
     setAgentStatus(null);
     setError(null);
     setPendingClarification(null);
     setClarificationAnswer("");
     setLastChange(null);
+    resetContextUsage();
     onReviewChange?.(null);
-  };
-
-  const handleCompactContext = async () => {
-    if (isBusy || hasPendingClarification || !activeConfig || !isLLMConfigComplete(activeConfig) || messages.length === 0) return;
-
-    setError(null);
-    setIsCompacting(true);
-    setAgentStatus("thinking");
-
-    try {
-      const summary = await compactAgentHistory({
-        config: activeConfig,
-        docType,
-        documentLanguage,
-        content: contentRef.current,
-        history: messages,
-      });
-
-      setMessages([
-        {
-          role: "assistant",
-          kind: "context-summary",
-          content: summary,
-        },
-      ]);
-      setStreamingText("");
-      streamingTextRef.current = "";
-      setAgentStatus(null);
-    } catch (err) {
-      let errorMsg: string = agentTr.compactFailed;
-
-      if (err instanceof Error) {
-        errorMsg = err.message;
-      }
-
-      if (
-        errorMsg.includes("401") ||
-        errorMsg.includes("403") ||
-        errorMsg.includes("unauthorized") ||
-        errorMsg.includes("invalid") ||
-        errorMsg.includes("api key") ||
-        errorMsg.includes("authentication")
-      ) {
-        errorMsg = agentTr.invalidConfig;
-        setActiveConfig(null);
-      }
-
-      setError(errorMsg);
-      setAgentStatus(null);
-    } finally {
-      setIsCompacting(false);
-    }
   };
 
   const handleSend = async () => {
     const userMsg = inputValue.trim();
-    if (!userMsg || isLoading) return;
+    if (!userMsg || isLoading || isProcessingContext) return;
 
     if (!activeConfig || !isLLMConfigComplete(activeConfig)) {
       setMessages((prev) => [
@@ -621,8 +559,10 @@ export function ChatPanel<TContent>({
       setMessages(nextMessages);
       setStreamingText("");
       streamingTextRef.current = "";
+      reasoningTextRef.current = "";
 
       await runAgentStream({
+        sessionId: agentSessionIdRef.current,
         config: activeConfig,
         docType,
         documentLanguage,
@@ -643,38 +583,33 @@ export function ChatPanel<TContent>({
           streamingTextRef.current += chunk;
           setStreamingText((prev) => prev + chunk);
         },
+        onReasoning: (reasoning) => {
+          if (thinkingEnabled) reasoningTextRef.current = reasoning;
+        },
         onStatusChange: setAgentStatus,
-        onClarification: (request) => {
+        onContextUsage: setContextUsage,
+        onClarification: (request, resumeToken) => {
           setPendingClarification({
             id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-            originalUserMessage: userMsg,
+            resumeToken,
             request,
-            history: nextMessages,
-            documentState: contentRef.current,
-            clarificationCount: 1,
           });
         },
         onDone: () => {
-          const finalText = shouldReplaceWithNoChangeNotice({
-            before: beforeContent,
-            after: latestContent,
-            toolNames: changedToolNames,
-            userMessage: userMsg,
-            streamedText: streamingTextRef.current,
-          })
-            ? agentTr.noDocumentChangeNotice
-            : streamingTextRef.current;
+          const finalText = streamingTextRef.current;
           if (finalText) {
             setMessages((prev) => [
               ...prev,
               {
                 role: "assistant",
                 content: finalText,
+                reasoning: reasoningTextRef.current || undefined,
               },
             ]);
           }
           setAgentStatus(null);
           streamingTextRef.current = "";
+          reasoningTextRef.current = "";
           setStreamingText("");
           recordAgentChange(beforeContent, latestContent, changedToolNames);
         },
@@ -689,40 +624,30 @@ export function ChatPanel<TContent>({
           },
         ]);
         streamingTextRef.current = "";
+        reasoningTextRef.current = "";
         setStreamingText("");
         setAgentStatus(null);
         recordAgentChange(beforeContent, latestContent, changedToolNames);
         return;
       }
 
-      let errorMsg: string = agentTr.requestFailed;
+      const requestError = getAgentRequestError(
+        err,
+        agentTr.requestFailed,
+        agentTr.invalidConfig
+      );
+      if (requestError.invalidConfig) setActiveConfig(null);
 
-      if (err instanceof Error) {
-        errorMsg = err.message;
-      }
-
-      // Check if it's a config-related error
-      if (
-        errorMsg.includes("401") ||
-        errorMsg.includes("403") ||
-        errorMsg.includes("unauthorized") ||
-        errorMsg.includes("invalid") ||
-        errorMsg.includes("api key") ||
-        errorMsg.includes("authentication")
-      ) {
-        errorMsg = agentTr.invalidConfig;
-        setActiveConfig(null);
-      }
-
-      setError(errorMsg);
+      setError(requestError.message);
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
-          content: errorMsg,
+          content: requestError.message,
         },
       ]);
       streamingTextRef.current = "";
+      reasoningTextRef.current = "";
       setStreamingText("");
       setAgentStatus(null);
     } finally {
@@ -744,32 +669,10 @@ export function ChatPanel<TContent>({
       return;
     }
 
-    const canAskAnotherClarification = pending.clarificationCount < MAX_CLARIFICATION_ROUNDS;
-    const continuationMessage = [
-      `User answered the clarification: ${answer}`,
-      `Clarification question: ${pending.request.question}`,
-      `Continue the original task: ${pending.originalUserMessage}`,
-      pending.request.section ? `Clarification section scope: ${pending.request.section}` : null,
-      pending.request.field ? `Clarification field scope: ${pending.request.field}` : null,
-      `Clarification round: ${pending.clarificationCount}`,
-      "Use the answer to resolve only the pending uncertainty.",
-      "If the original task now has enough required information, stop asking questions, call the document update tools, and reply with a normal completion message.",
-      "Stay within the same requested section scope for any further clarification. Do not ask about other sections unless the user's original task explicitly requested them.",
-      canAskAnotherClarification
-        ? "Only call ask_user again when another required detail from the same original task is still missing, cannot be inferred, and cannot be safely omitted. If you ask again, ask exactly one small question."
-        : "Do not call ask_user again. If a detail is still missing, make the safest partial update or ask in normal chat.",
-    ].filter(Boolean).join("\n");
     const visibleAnswer =
       lang === "zh"
         ? `补充确认: ${answer}`
         : `Clarification: ${answer}`;
-    const historyWithQuestion: Message[] = [
-      ...pending.history,
-      {
-        role: "assistant",
-        content: formatClarificationMessage(pending.request, lang, agentTr),
-      },
-    ];
 
     setError(null);
     setIsLoading(true);
@@ -779,81 +682,78 @@ export function ChatPanel<TContent>({
     setMessages((prev) => [...prev, { role: "user", content: visibleAnswer }]);
     setStreamingText("");
     streamingTextRef.current = "";
+    reasoningTextRef.current = "";
     const abortController = new AbortController();
     abortControllerRef.current = abortController;
     const beforeContent = contentRef.current;
     let latestContent = beforeContent;
     const changedToolNames: string[] = [];
-    const localPatch = applyEducationLocationClarification(contentRef.current, pending, answer, documentLanguage);
-    if (localPatch) {
-      contentRef.current = localPatch.content;
-      latestContent = localPatch.content;
-      changedToolNames.push(localPatch.toolName);
-      onChange(localPatch.content);
-    }
+
+    const continuationCallbacks = {
+      onContentUpdate: (updated, toolName) => {
+        contentRef.current = updated;
+        latestContent = updated;
+        changedToolNames.push(toolName);
+        onChange(updated);
+      },
+      signal: abortController.signal,
+      onTextChunk: (chunk) => {
+        setAgentStatus(null);
+        streamingTextRef.current += chunk;
+        setStreamingText((prev) => prev + chunk);
+      },
+      onReasoning: (reasoning) => {
+        if (thinkingEnabled) reasoningTextRef.current = reasoning;
+      },
+      onStatusChange: setAgentStatus,
+      onContextUsage: setContextUsage,
+      onClarification: (request, resumeToken) => {
+        setPendingClarification({
+          id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          resumeToken,
+          request,
+        });
+      },
+      onDone: () => {
+        const finalText = streamingTextRef.current;
+        if (finalText) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: "assistant",
+              content: finalText,
+              reasoning: reasoningTextRef.current || undefined,
+            },
+          ]);
+        }
+        setAgentStatus(null);
+        streamingTextRef.current = "";
+        reasoningTextRef.current = "";
+        setStreamingText("");
+        recordAgentChange(beforeContent, latestContent, changedToolNames);
+      },
+    } satisfies Pick<
+      Parameters<typeof runAgentStream<TContent>>[0],
+      | "onContentUpdate"
+      | "signal"
+      | "onTextChunk"
+      | "onReasoning"
+      | "onStatusChange"
+      | "onContextUsage"
+      | "onClarification"
+      | "onDone"
+    >;
 
     try {
-      await runAgentStream({
-        config: activeConfig,
-        docType,
-        documentLanguage,
-        getContent: () => contentRef.current,
-        onContentUpdate: (updated, toolName) => {
-          contentRef.current = updated;
-          latestContent = updated;
-          changedToolNames.push(toolName);
-          onChange(updated);
-        },
-        history: historyWithQuestion,
-        userMessage: continuationMessage,
-        referenceSources: contextSources,
-        contextInstruction,
-        signal: abortController.signal,
-        onTextChunk: (chunk) => {
-          setAgentStatus(null);
-          streamingTextRef.current += chunk;
-          setStreamingText((prev) => prev + chunk);
-        },
-        onStatusChange: setAgentStatus,
-        onClarification: (request) => {
-          setPendingClarification({
-            id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-            originalUserMessage: pending.originalUserMessage,
-            request,
-            history: [
-              ...historyWithQuestion,
-              { role: "user", content: continuationMessage },
-            ],
-            documentState: contentRef.current,
-            clarificationCount: pending.clarificationCount + 1,
-          });
-        },
-        onDone: () => {
-          const finalText = shouldReplaceWithNoChangeNotice({
-            before: beforeContent,
-            after: latestContent,
-            toolNames: changedToolNames,
-            userMessage: continuationMessage,
-            streamedText: streamingTextRef.current,
-            forceEditIntent: true,
-          })
-            ? agentTr.noDocumentChangeNotice
-            : streamingTextRef.current;
-          if (finalText) {
-            setMessages((prev) => [
-              ...prev,
-              {
-                role: "assistant",
-                content: finalText,
-              },
-            ]);
-          }
-          setAgentStatus(null);
-          streamingTextRef.current = "";
-          setStreamingText("");
-          recordAgentChange(beforeContent, latestContent, changedToolNames);
-        },
+      const resumed = await resumeAgentStream({
+        ...continuationCallbacks,
+        resumeToken: pending.resumeToken,
+        answer,
+        currentContent: contentRef.current,
       });
+      if (!resumed) {
+        throw new Error(agentTr.requestFailed);
+      }
     } catch (err) {
       if (isAbortError(err)) {
         setMessages((prev) => [
@@ -864,39 +764,30 @@ export function ChatPanel<TContent>({
           },
         ]);
         streamingTextRef.current = "";
+        reasoningTextRef.current = "";
         setStreamingText("");
         setAgentStatus(null);
         recordAgentChange(beforeContent, latestContent, changedToolNames);
         return;
       }
 
-      let errorMsg: string = agentTr.requestFailed;
+      const requestError = getAgentRequestError(
+        err,
+        agentTr.requestFailed,
+        agentTr.invalidConfig
+      );
+      if (requestError.invalidConfig) setActiveConfig(null);
 
-      if (err instanceof Error) {
-        errorMsg = err.message;
-      }
-
-      if (
-        errorMsg.includes("401") ||
-        errorMsg.includes("403") ||
-        errorMsg.includes("unauthorized") ||
-        errorMsg.includes("invalid") ||
-        errorMsg.includes("api key") ||
-        errorMsg.includes("authentication")
-      ) {
-        errorMsg = agentTr.invalidConfig;
-        setActiveConfig(null);
-      }
-
-      setError(errorMsg);
+      setError(requestError.message);
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
-          content: errorMsg,
+          content: requestError.message,
         },
       ]);
       streamingTextRef.current = "";
+      reasoningTextRef.current = "";
       setStreamingText("");
       setAgentStatus(null);
     } finally {
@@ -910,6 +801,7 @@ export function ChatPanel<TContent>({
   const handleCancelClarification = () => {
     if (!pendingClarification || isLoading) return;
 
+    discardAgentSession(pendingClarification.resumeToken);
     setPendingClarification(null);
     setClarificationAnswer("");
     setAgentStatus(null);
@@ -1010,10 +902,17 @@ export function ChatPanel<TContent>({
     setIsSavingConfig(true);
     setConfigError(null);
     try {
-      const nextConfig = {
+      const candidateConfig: LLMConfig = {
         baseURL: draftConfig.baseURL.trim().replace(/\/+$/, ""),
         apiKey: draftConfig.apiKey.trim(),
         model: draftConfig.model.trim(),
+        thinkingEnabled: draftConfig.thinkingEnabled,
+      };
+      const nextConfig: LLMConfig = {
+        ...candidateConfig,
+        thinkingEnabled:
+          resolveLLMProvider(candidateConfig).thinkingControl === "toggle" &&
+          candidateConfig.thinkingEnabled,
       };
 
       await validateLLMConfig(nextConfig);
@@ -1022,6 +921,8 @@ export function ChatPanel<TContent>({
         ...prev,
         draftConfig: nextConfig,
         activeConfig: nextConfig,
+        contextUsage: null,
+        contextUsageUnavailable: false,
       }));
       setConfigOpen(false);
       setConfigError(null);
@@ -1033,6 +934,31 @@ export function ChatPanel<TContent>({
     }
   };
 
+  const handleThinkingToggle = () => {
+    if (
+      !activeConfig ||
+      providerProfile?.thinkingControl !== "toggle" ||
+      isBusy ||
+      hasPendingClarification
+    ) {
+      return;
+    }
+
+    const nextConfig: LLMConfig = {
+      ...activeConfig,
+      thinkingEnabled: !thinkingEnabled,
+    };
+    writeLLMConfig(nextConfig);
+    onAgentStateChange((prev) => ({
+      ...prev,
+      activeConfig: nextConfig,
+      draftConfig: {
+        ...prev.draftConfig,
+        thinkingEnabled: nextConfig.thinkingEnabled,
+      },
+    }));
+  };
+
   return (
     <div className="flex h-full flex-col bg-[#fbfbfa]">
       {/* Top bar */}
@@ -1040,40 +966,30 @@ export function ChatPanel<TContent>({
         className="shrink-0 border-b border-black/10 bg-white"
         spotlightColor="rgba(0, 0, 0, 0.045)"
       >
-      <div className="flex items-center justify-between px-3 py-2.5">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <AgentAvatar active={isConfigured} />
-          <div className="min-w-0">
-            <h2 className="text-sm font-semibold leading-5 text-gray-950">{agentTr.agentMode}</h2>
+        <div className="flex items-center justify-between px-3 py-2.5">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <AgentAvatar active={isConfigured} />
+            <div className="min-w-0">
+              <h2 className="text-sm font-semibold leading-5 text-gray-950">
+                {agentTr.agentMode}
+              </h2>
+              {activeConfig && providerProfile && (
+                <p
+                  className="max-w-40 truncate text-[10px] leading-4 text-muted-foreground"
+                  title={`${providerProfile.label} · ${activeConfig.model}`}
+                >
+                  {providerProfile.label} · {activeConfig.model}
+                </p>
+              )}
+            </div>
           </div>
-        </div>
-        <div className="flex items-center gap-1">
-          <ContextUsageIndicator
-            usage={contextUsage}
-            title={
-              contextUsage
-                ? agentTr.contextUsageTitle(
-                    contextUsage.percent,
-                    contextUsage.usedTokens,
-                    contextUsage.maxTokens
-                  )
-                : agentTr.contextUsageUnavailableTitle
-            }
-          />
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={handleCompactContext}
-            disabled={!isConfigured || isBusy || hasPendingClarification || messages.length === 0}
-            className="text-muted-foreground hover:text-foreground disabled:pointer-events-none disabled:opacity-35"
-            title={isCompacting ? agentTr.compactingContextTitle : agentTr.compactContextTitle}
-          >
-            {isCompacting ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <Shrink className="size-4" />
-            )}
-          </Button>
+          <div className="flex items-center gap-1">
+          {isConfigured && (
+            <ContextUsageIndicator
+              usage={visibleContextUsage}
+              label={contextUsageLabel}
+            />
+          )}
           <Button
             variant="ghost"
             size="icon-sm"
@@ -1105,6 +1021,30 @@ export function ChatPanel<TContent>({
           <Button
             variant="ghost"
             size="icon-sm"
+            onClick={handleThinkingToggle}
+            disabled={
+              !isConfigured ||
+              isBusy ||
+              hasPendingClarification ||
+              providerProfile?.thinkingControl !== "toggle"
+            }
+            aria-pressed={thinkingEnabled}
+            aria-label={thinkingButtonTitle}
+            className={`relative hover:text-foreground disabled:pointer-events-none disabled:opacity-35 ${
+              thinkingEnabled
+                ? "bg-black/[0.07] text-gray-950"
+                : "text-muted-foreground"
+            }`}
+            title={thinkingButtonTitle}
+          >
+            <BrainCircuit className="size-4" />
+            {thinkingEnabled && (
+              <span className="absolute right-0.5 top-0.5 size-1.5 rounded-full bg-emerald-500" />
+            )}
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
             onClick={() => setConfigOpen(true)}
             disabled={hasPendingClarification}
             className="text-muted-foreground hover:text-foreground"
@@ -1112,8 +1052,8 @@ export function ChatPanel<TContent>({
           >
             <SlidersHorizontal className="size-4" />
           </Button>
+          </div>
         </div>
-      </div>
       </SpotlightCard>
 
       {/* Messages */}
@@ -1126,7 +1066,7 @@ export function ChatPanel<TContent>({
         onMouseEnter={() => isConfigured && setIsHoveringChat(true)}
         onMouseLeave={() => setIsHoveringChat(false)}
       >
-        {!isConfigured ? (
+        {!isConfigured && messages.length === 0 && streamingText === "" ? (
           <FadeContent duration={360} threshold={0} initialOpacity={0}>
             <SpotlightCard
               className="rounded-md border border-dashed border-black/12 bg-white px-3 py-3"
@@ -1155,26 +1095,25 @@ export function ChatPanel<TContent>({
             {messages.map((msg, idx) => {
               const isUser = msg.role === "user";
 
-              if (msg.kind === "context-summary") {
-                return (
-                  <ContextSummaryMessage
-                    key={idx}
-                    content={msg.content}
-                    label={agentTr.compactedContextNotice}
-                  />
-                );
-              }
-
               if (msg.kind === "change-card" && msg.change) {
+                const canReview =
+                  canReviewAgentChange(
+                    msg.change,
+                    currentContentSignature,
+                    isChangeInteractionStable,
+                  ) &&
+                  getReviewSnippets(msg.change).length > 0;
                 return (
                   <ChangeCard
                     key={idx}
                     change={msg.change}
                     latestChangeId={lastChange?.id}
                     canUndo={canUndoLastChange}
+                    canReview={canReview}
                     onUndo={handleUndoChange}
                     onReview={handleReviewChange}
                     reviewLabel={agentTr.reviewChange}
+                    reviewUnavailableTitle={agentTr.reviewChangeUnavailable}
                     undoLabel={agentTr.undoChange}
                     undoUnavailableTitle={agentTr.undoChangeUnavailable}
                   />
@@ -1188,7 +1127,12 @@ export function ChatPanel<TContent>({
               }
 
               return (
-                <AssistantMessageBubble key={idx} content={msg.content} />
+                <AssistantMessageBubble
+                  key={idx}
+                  content={msg.content}
+                  reasoning={msg.reasoning}
+                  reasoningLabel={agentTr.reasoningLabel}
+                />
               );
             })}
             {streamingText && (

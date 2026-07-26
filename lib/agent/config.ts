@@ -4,6 +4,7 @@ export interface LLMConfig {
   baseURL: string;
   apiKey: string;
   model: string;
+  thinkingEnabled: boolean;
 }
 
 export function isLLMConfigComplete(config: LLMConfig | null): config is LLMConfig {
@@ -19,7 +20,20 @@ export function readLLMConfig(): LLMConfig | null {
   const stored = localStorage.getItem(LLM_CONFIG_KEY);
   if (!stored) return null;
   try {
-    return JSON.parse(stored) as LLMConfig;
+    const parsed = JSON.parse(stored) as Partial<LLMConfig>;
+    if (
+      typeof parsed.baseURL !== "string" ||
+      typeof parsed.apiKey !== "string" ||
+      typeof parsed.model !== "string"
+    ) {
+      return null;
+    }
+    return {
+      baseURL: parsed.baseURL,
+      apiKey: parsed.apiKey,
+      model: parsed.model,
+      thinkingEnabled: parsed.thinkingEnabled === true,
+    };
   } catch {
     return null;
   }

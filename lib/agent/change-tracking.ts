@@ -73,6 +73,26 @@ export function contentSignature(value: unknown): string {
   return stableStringify(value);
 }
 
+export function canReviewAgentChange(
+  change: AgentChange,
+  currentSignature: string,
+  isStable: boolean,
+): boolean {
+  return isStable && currentSignature === change.afterSignature;
+}
+
+export function canUndoAgentChange(
+  change: AgentChange,
+  lastChange: AgentChange | null,
+  currentSignature: string,
+  isStable: boolean,
+): boolean {
+  return (
+    canReviewAgentChange(change, currentSignature, isStable) &&
+    change.id === lastChange?.id
+  );
+}
+
 export function buildAgentChange(before: unknown, after: unknown, toolNames: string[]): AgentChange | null {
   const beforeSignature = contentSignature(before);
   const afterSignature = contentSignature(after);

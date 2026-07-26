@@ -10,7 +10,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 CVForge is a stateless browser based document builder for resumes, academic CVs, and cover letters. It has no user accounts and no database. Users create a document from the landing page, edit it in the matching editor, and export it when finished.
 
-Document editing state, Agent Mode chat state, uploaded reference context, project instructions, clarification state, and recent agent changes are stored in `sessionStorage`. A page refresh keeps the current tab state, while closing the tab starts a clean session next time.
+Document editing state, Agent Mode chat state, uploaded reference context, project instructions, and recent agent changes are stored in `sessionStorage`. A page refresh keeps the current tab state, while closing the tab starts a clean session next time.
 
 LLM configuration and UI language preference are the only long lived user settings stored in `localStorage`.
 
@@ -26,9 +26,9 @@ Agent Mode helps users edit documents through structured tools. It supports clar
 | Styling | Tailwind CSS v4 with global CSS tokens |
 | UI primitives | shadcn/ui style components, Base UI, lucide-react icons |
 | Animation | GSAP, React Bits inspired local components, and CSS transitions |
-| Agent runtime | OpenAI SDK with LangChain DynamicStructuredTool wrappers |
-| Agent validation | Zod schemas for tool arguments |
-| Reference search | MiniSearch for browser side full text retrieval |
+| Agent runtime | LangChain Deep Agents with LangGraph and provider native chat models |
+| Agent validation | LangChain tools with Zod schemas and OpenAI function calling |
+| Reference search | Deep Agents StateBackend virtual filesystem |
 | PDF text extraction | PDF.js for selectable text PDF files |
 | Markdown rendering | react-markdown with remark-gfm |
 | Export | html-to-image and jsPDF for browser side PNG and PDF export |
@@ -80,6 +80,7 @@ lib/
 
 - Agent orchestration lives in `lib/agent/chat.ts`.
 - Tool definitions live in `lib/agent/tools.ts`.
+- OpenAI compatible model configuration lives in `lib/agent/model.ts`.
 - Pure document updates live in `lib/agent/executor.ts`.
 - Agent session state lives in `lib/agent/session-state.ts`.
 - Agent text and document language normalization lives in `lib/agent/text-normalization.ts`.

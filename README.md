@@ -51,8 +51,8 @@ Preview your document in A4 format, then export it as PDF, PNG, or JSON. JSON fi
 | Styling | Tailwind CSS v4 |
 | UI | shadcn style local components, Base UI, lucide-react |
 | Animation | GSAP and local React Bits style components |
-| Agent | OpenAI SDK, LangChain tools, Zod schemas |
-| Context search | MiniSearch and PDF.js |
+| Agent | LangChain Deep Agents, LangGraph, ChatOpenAI, Zod |
+| Context search | Deep Agents StateBackend and PDF.js |
 | Markdown | react-markdown with remark-gfm |
 | Export | html-to-image and jsPDF |
 | Deployment | Static export for GitHub Pages |
