@@ -1,4 +1,10 @@
-import { createElement, useState, type ReactNode } from "react";
+import {
+  createElement,
+  useState,
+  type ComponentProps,
+  type ComponentType,
+  type ReactNode,
+} from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { flushSync } from "react-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -13,6 +19,14 @@ import type { ResumeContent } from "@/lib/types/resume";
 vi.mock("@/components/FadeContent", () => ({
   default: ({ children }: { children: ReactNode }) => children,
 }));
+
+type TestPreviewPanelProps = Omit<
+  ComponentProps<typeof PaginatedPreviewPanel>,
+  "children"
+>;
+
+const TestPreviewPanel =
+  PaginatedPreviewPanel as ComponentType<TestPreviewPanelProps>;
 
 class ResizeObserverMock {
   observe() {}
@@ -51,8 +65,11 @@ function renderPreview(
   flushSync(() => {
     root.render(
       createElement(
-        PaginatedPreviewPanel,
-        { reviewChange, isStreaming },
+        TestPreviewPanel,
+        {
+          reviewChange,
+          isStreaming,
+        },
         createElement("p", null, text, createElement("span", null, "tail")),
       ),
     );
@@ -85,8 +102,10 @@ function renderResumePreview(
   flushSync(() => {
     root.render(
       createElement(
-        PaginatedPreviewPanel,
-        { reviewChange },
+        TestPreviewPanel,
+        {
+          reviewChange,
+        },
         createElement(GeneralTemplate, { content, language: "en" }),
       ),
     );
