@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.2.2] 2026.07.27
+
+1. Fixed live preview updates after review highlights and streaming animations.
+2. Prevented preview DOM errors while preserving pagination, export, and Agent Mode effects.
+
 ## [1.2.1] 2026.07.26
 
 1. Migrated Agent Mode to LangChain Deep Agents and LangGraph.
