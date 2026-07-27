@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import FadeContent from "@/components/FadeContent";
 import { PAGE_W, PAGE_H, TOP, BOTTOM, CONTENT_H } from "@/lib/page-constants";
 import { PageBreakProvider } from "@/components/shared/PageBreakAvoid";
@@ -11,13 +11,6 @@ interface PaginatedPreviewPanelProps {
   children: React.ReactNode;
   reviewChange?: AgentChange | null;
   isStreaming?: boolean;
-}
-
-function clearReviewMarks(root: HTMLElement): void {
-  root.querySelectorAll("mark[data-agent-review]").forEach((mark) => {
-    mark.replaceWith(document.createTextNode(mark.textContent ?? ""));
-  });
-  root.normalize();
 }
 
 function normalizeScopeText(value: string): string {
@@ -172,46 +165,6 @@ export function applyReviewHighlights(
   );
 }
 
-function ReviewHighlighter({
-  rootRef,
-  change,
-}: {
-  rootRef: React.RefObject<HTMLDivElement | null>;
-  change?: AgentChange | null;
-}) {
-  useLayoutEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
-
-    clearReviewMarks(root);
-    if (!change) return;
-
-    const snippets = getReviewSnippets(change);
-    if (snippets.length === 0) return;
-
-    const marks = applyReviewHighlights(root, snippets);
-    const firstMark =
-      marks.find(isMarkVisibleInPage) ??
-      marks[0];
-    firstMark?.scrollIntoView({ behavior: "smooth", block: "center" });
-
-    const handlePointerDown = (event: PointerEvent) => {
-      const target = event.target;
-      if (target instanceof Element && target.closest("mark[data-agent-review]")) return;
-      clearReviewMarks(root);
-    };
-
-    window.addEventListener("pointerdown", handlePointerDown);
-
-    return () => {
-      window.removeEventListener("pointerdown", handlePointerDown);
-      clearReviewMarks(root);
-    };
-  }, [change, rootRef]);
-
-  return null;
-}
-
 function collectPreviewTextParts(root: HTMLElement): string[] {
   const parts: string[] = [];
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
@@ -250,6 +203,17 @@ function getChangedPreviewSnippets(beforeParts: string[], afterParts: string[]):
     })
     .sort((a, b) => b.length - a.length)
     .slice(0, 36);
+}
+
+function syncPreviewReplicas(source: HTMLElement, root: HTMLElement): void {
+  // Effects decorate these unmanaged replicas without changing React owned nodes.
+  root.querySelectorAll<HTMLElement>("[data-preview-replica]").forEach((replica) => {
+    const fragment = document.createDocumentFragment();
+    source.childNodes.forEach((node) => {
+      fragment.appendChild(node.cloneNode(true));
+    });
+    replica.replaceChildren(fragment);
+  });
 }
 
 function clearStreamingPrint(root: HTMLElement): void {
@@ -297,30 +261,46 @@ function printTextNode(node: Text, snippets: string[]): boolean {
   return true;
 }
 
-function StreamingPrintEffect({
-  rootRef,
-  isStreaming,
-}: {
-  rootRef: React.RefObject<HTMLDivElement | null>;
-  isStreaming: boolean;
-}) {
+export function PaginatedPreviewPanel({ children, reviewChange, isStreaming = false }: PaginatedPreviewPanelProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const visiblePagesRef = useRef<HTMLDivElement>(null);
+  const measureRef = useRef<HTMLDivElement>(null);
   const previousTextPartsRef = useRef<string[]>([]);
   const cleanupTimerRef = useRef<number | null>(null);
+  const lastSyncedSourceHtmlRef = useRef("");
+  const [numPages, setNumPages] = useState(1);
+  const [scale, setScale] = useState(1);
+  const [dismissedReviewChange, setDismissedReviewChange] = useState<AgentChange | null>(null);
+  const activeReviewChange =
+    reviewChange && dismissedReviewChange !== reviewChange
+      ? reviewChange
+      : null;
 
-  useLayoutEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
+  const refreshPreviewReplicas = useCallback(() => {
+    const source = measureRef.current;
+    const root = visiblePagesRef.current;
+    if (!source || !root) return;
 
     if (cleanupTimerRef.current) {
       window.clearTimeout(cleanupTimerRef.current);
       cleanupTimerRef.current = null;
     }
 
-    clearStreamingPrint(root);
-
-    const currentParts = collectPreviewTextParts(root);
+    const currentParts = collectPreviewTextParts(source);
     const previousParts = previousTextPartsRef.current;
     previousTextPartsRef.current = currentParts;
+    lastSyncedSourceHtmlRef.current = source.innerHTML;
+
+    syncPreviewReplicas(source, root);
+
+    if (activeReviewChange) {
+      const snippets = getReviewSnippets(activeReviewChange);
+      if (snippets.length > 0) {
+        const marks = applyReviewHighlights(root, snippets);
+        const firstMark = marks.find(isMarkVisibleInPage) ?? marks[0];
+        firstMark?.scrollIntoView?.({ behavior: "smooth", block: "center" });
+      }
+    }
 
     if (!isStreaming || previousParts.length === 0) return;
 
@@ -342,33 +322,57 @@ function StreamingPrintEffect({
 
     const nodes: Text[] = [];
     while (walker.nextNode()) nodes.push(walker.currentNode as Text);
+    let didPrint = false;
     nodes.forEach((node) => {
-      printTextNode(node, snippets);
+      didPrint = printTextNode(node, snippets) || didPrint;
     });
+    if (!didPrint) return;
 
     cleanupTimerRef.current = window.setTimeout(() => {
       clearStreamingPrint(root);
       cleanupTimerRef.current = null;
     }, 2600);
+  }, [activeReviewChange, isStreaming]);
+
+  useLayoutEffect(() => {
+    refreshPreviewReplicas();
   });
 
   useLayoutEffect(() => {
-    const root = rootRef.current;
+    const source = measureRef.current;
+    if (!source) return;
+
+    const observer = new MutationObserver(() => {
+      if (source.innerHTML === lastSyncedSourceHtmlRef.current) return;
+      refreshPreviewReplicas();
+    });
+    observer.observe(source, {
+      childList: true,
+      characterData: true,
+      subtree: true,
+    });
+
+    return () => observer.disconnect();
+  }, [refreshPreviewReplicas]);
+
+  useLayoutEffect(() => {
+    if (!activeReviewChange) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (target instanceof Element && target.closest("mark[data-agent-review]")) return;
+      setDismissedReviewChange(activeReviewChange);
+    };
+
+    window.addEventListener("pointerdown", handlePointerDown);
+    return () => window.removeEventListener("pointerdown", handlePointerDown);
+  }, [activeReviewChange]);
+
+  useLayoutEffect(() => {
     return () => {
       if (cleanupTimerRef.current) window.clearTimeout(cleanupTimerRef.current);
-      if (root) clearStreamingPrint(root);
     };
-  }, [rootRef]);
-
-  return null;
-}
-
-export function PaginatedPreviewPanel({ children, reviewChange, isStreaming = false }: PaginatedPreviewPanelProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const visiblePagesRef = useRef<HTMLDivElement>(null);
-  const measureRef = useRef<HTMLDivElement>(null);
-  const [numPages, setNumPages] = useState(1);
-  const [scale, setScale] = useState(1);
+  }, []);
 
   useLayoutEffect(() => {
     const el = measureRef.current;
@@ -418,7 +422,7 @@ export function PaginatedPreviewPanel({ children, reviewChange, isStreaming = fa
       {/* Hidden export target — captured by lib/export.ts via .preview-a4 > div */}
       <div style={{ position: "fixed", left: "-9999px", top: 0, width: `${PAGE_W}px`, pointerEvents: "none" }}>
         <div className="preview-a4">
-          <div ref={measureRef}>
+          <div ref={measureRef} data-preview-source>
             {children}
           </div>
         </div>
@@ -427,8 +431,6 @@ export function PaginatedPreviewPanel({ children, reviewChange, isStreaming = fa
       {/* Visible paginated pages */}
       <FadeContent className="pb-4" duration={520} threshold={0} initialOpacity={0}>
       <div ref={visiblePagesRef} className="flex flex-col items-center gap-4">
-        <ReviewHighlighter rootRef={visiblePagesRef} change={reviewChange} />
-        <StreamingPrintEffect rootRef={visiblePagesRef} isStreaming={isStreaming} />
         {Array.from({ length: numPages }).map((_, i) => (
           <div
             key={i}
@@ -464,7 +466,7 @@ export function PaginatedPreviewPanel({ children, reviewChange, isStreaming = fa
                 }}
               >
                 <div style={{ transform: `translateY(${-(TOP + i * CONTENT_H)}px)` }}>
-                  {children}
+                  <div data-preview-replica />
                 </div>
               </div>
             </div>
