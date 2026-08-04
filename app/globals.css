@@ -645,6 +645,12 @@ button.editor-dialog-action:not(:disabled):hover {
     -webkit-text-fill-color: currentColor;
   }
 }
+
+/* Keep long user text within document boundaries. */
+[data-cv-root] {
+  overflow-wrap: anywhere;
+}
+
 /* Preview A4 area hover: border → black */
 .preview-a4 {
   transition: border-color 200ms ease-out, box-shadow 200ms ease-out;
