@@ -16,7 +16,7 @@ export function BulletItem({ children }: { children: React.ReactNode }) {
           }}
         />
       </span>
-      <span style={{ flex: 1, textAlign: "justify" }}>{children}</span>
+      <span style={{ flex: 1, minWidth: 0, textAlign: "justify" }}>{children}</span>
     </div>
   );
 }

@@ -4,6 +4,7 @@ import {
   buildReferenceContext,
   isSupportedDocumentFile,
   prepareContextSourceText,
+  truncateContextSourceName,
   truncateContextText,
   type AgentContextSource,
 } from "@/lib/agent/context-sources";
@@ -12,6 +13,16 @@ describe("agent context sources", () => {
   it("cleans and truncates uploaded text", () => {
     expect(prepareContextSourceText(" Hello\r\nworld\u0000 ")).toBe("Hello\nworld");
     expect(truncateContextText("abcdef", 3)).toContain("[Context source truncated]");
+  });
+
+  it("truncates long source names without losing the file extension", () => {
+    const name = "a-very-long-context-source-file-name-for-a-role.pdf";
+    const truncated = truncateContextSourceName(name, 24);
+
+    expect(Array.from(truncated)).toHaveLength(24);
+    expect(truncated).toBe("a-very-long-context….pdf");
+    expect(truncated.endsWith(".pdf")).toBe(true);
+    expect(truncateContextSourceName("notes.md", 24)).toBe("notes.md");
   });
 
   it("builds a reference manifest without injecting file contents", () => {

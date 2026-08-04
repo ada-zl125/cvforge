@@ -35,7 +35,7 @@ export const BULLET_ROW_STYLE: React.CSSProperties = {
   fontWeight: 500,
   color: "#000",
   lineHeight: "13pt",
-  marginTop: "0.15pt",
+  marginTop: "2.5pt",
   marginBottom: 0,
   display: "flex",
   alignItems: "baseline",
