@@ -12,6 +12,7 @@ export interface AgentContextSource {
 export const CONTEXT_SOURCE_MAX_CHARS = 50000;
 export const CONTEXT_MAX_FILE_SOURCES = 5;
 export const CONTEXT_MAX_FILE_BYTES = 6 * 1024 * 1024;
+export const CONTEXT_SOURCE_NAME_MAX_CHARS = 36;
 const PDF_PAGE_READ_WARNING = "[Warning: Some PDF pages could not be read and were omitted]";
 export const CONTEXT_DOCUMENT_ACCEPT = [
   ".txt",
@@ -27,6 +28,29 @@ const SUPPORTED_DOCUMENT_EXTENSIONS = [
   ".md",
   ".pdf",
 ];
+
+export function truncateContextSourceName(
+  name: string,
+  maxChars = CONTEXT_SOURCE_NAME_MAX_CHARS
+): string {
+  if (maxChars <= 0) return "";
+
+  const characters = Array.from(name);
+  if (characters.length <= maxChars) return name;
+  if (maxChars === 1) return "…";
+
+  const dotIndex = name.lastIndexOf(".");
+  if (dotIndex > 0) {
+    const extension = name.slice(dotIndex);
+    const extensionCharacters = Array.from(extension);
+    const stemLimit = maxChars - extensionCharacters.length - 1;
+    if (stemLimit > 0) {
+      return `${Array.from(name.slice(0, dotIndex)).slice(0, stemLimit).join("")}…${extension}`;
+    }
+  }
+
+  return `${characters.slice(0, maxChars - 1).join("")}…`;
+}
 
 export function truncateContextText(text: string, maxChars = CONTEXT_SOURCE_MAX_CHARS): string {
   const normalized = text.replace(/\u0000/g, "").replace(/\r\n/g, "\n").trim();

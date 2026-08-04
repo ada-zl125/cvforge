@@ -45,6 +45,7 @@ import {
   CONTEXT_MAX_FILE_SOURCES,
   extractContextSourceText,
   isSupportedDocumentFile,
+  truncateContextSourceName,
   type AgentContextSource,
 } from "@/lib/agent/context-sources";
 import type { AgentPanelState, PendingClarification } from "@/lib/agent/session-state";
@@ -69,17 +70,18 @@ function getContextReadErrorMessage(
   error: unknown,
   agentTr: AgentTranslations
 ): string {
+  const displayName = truncateContextSourceName(fileName);
   const errorName = error instanceof Error ? error.name : "";
   const errorMessage = error instanceof Error ? error.message : "";
   const details = `${errorName} ${errorMessage}`.toLowerCase();
 
-  if (/password/.test(details)) return agentTr.contextPasswordProtected(fileName);
-  if (/invalidpdf|invalid pdf|corrupt|damaged/.test(details)) return agentTr.contextInvalidPdf(fileName);
+  if (/password/.test(details)) return agentTr.contextPasswordProtected(displayName);
+  if (/invalidpdf|invalid pdf|corrupt|damaged/.test(details)) return agentTr.contextInvalidPdf(displayName);
   if (/worker|module/.test(details) && fileName.toLowerCase().endsWith(".pdf")) {
-    return agentTr.contextPdfWorkerFailed(fileName);
+    return agentTr.contextPdfWorkerFailed(displayName);
   }
 
-  return agentTr.contextReadFailed(fileName);
+  return agentTr.contextReadFailed(displayName);
 }
 
 function getContextReadErrorDetails(error: unknown): Record<string, unknown> {
@@ -843,18 +845,19 @@ export function ChatPanel<TContent>({
 
       for (const file of selectedFiles) {
         const fileKey = `${file.name}:${file.size}`;
+        const displayName = truncateContextSourceName(file.name);
         if (existingFileKeys.has(fileKey) || nextFileKeys.has(fileKey)) {
-          setContextError(agentTr.contextDuplicateFile(file.name));
+          setContextError(agentTr.contextDuplicateFile(displayName));
           continue;
         }
 
         if (!isSupportedDocumentFile(file)) {
-          setContextError(agentTr.contextUnsupportedFile(file.name));
+          setContextError(agentTr.contextUnsupportedFile(displayName));
           continue;
         }
 
         if (file.size > CONTEXT_MAX_FILE_BYTES) {
-          setContextError(agentTr.contextFileTooLarge(file.name));
+          setContextError(agentTr.contextFileTooLarge(displayName));
           continue;
         }
 
@@ -863,8 +866,8 @@ export function ChatPanel<TContent>({
           if (!text) {
             const lowerName = file.name.toLowerCase();
             setContextError(lowerName.endsWith(".pdf")
-              ? agentTr.contextNoExtractedText(file.name)
-              : agentTr.contextEmptyFile(file.name));
+              ? agentTr.contextNoExtractedText(displayName)
+              : agentTr.contextEmptyFile(displayName));
             continue;
           }
 
@@ -1275,9 +1278,9 @@ export function ChatPanel<TContent>({
           if (!open) setContextError(null);
         }}
       >
-        <DialogContent className="editor-dialog overflow-hidden p-0 sm:max-w-[460px]">
-          <DialogHeader className="editor-dialog-header place-items-start px-5 pb-4 pt-4">
-            <div className="flex items-center gap-3">
+        <DialogContent className="editor-dialog min-w-0 overflow-hidden p-0 sm:max-w-[460px]">
+          <DialogHeader className="editor-dialog-header min-w-0 place-items-start px-5 pb-4 pt-4">
+            <div className="flex w-full min-w-0 items-center gap-3 pr-10">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-black/40 bg-black/[0.035]">
                 <Paperclip className="h-4 w-4 text-foreground" />
               </div>
@@ -1292,11 +1295,11 @@ export function ChatPanel<TContent>({
             </div>
           </DialogHeader>
 
-          <div className="grid gap-4 px-5 pb-5 pt-3">
+          <div className="grid min-w-0 gap-4 px-5 pb-5 pt-3">
             {contextError && (
               <div className="flex items-start gap-2 rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive">
                 <AlertCircle className="size-3.5 shrink-0 mt-0.5" />
-                <span>{contextError}</span>
+                <span className="min-w-0 break-words">{contextError}</span>
               </div>
             )}
 
@@ -1350,7 +1353,7 @@ export function ChatPanel<TContent>({
               </label>
             </div>
 
-            <div className="grid gap-2">
+            <div className="grid min-w-0 gap-2">
               <div className="text-xs font-semibold uppercase tracking-[0.12em] text-gray-500">
                 {agentTr.contextSourcesTitle}
               </div>
@@ -1359,15 +1362,20 @@ export function ChatPanel<TContent>({
                   {agentTr.contextEmpty}
                 </div>
               ) : (
-                <div className="grid gap-2">
+                <div className="grid min-w-0 gap-2">
                   {contextSources.map((source) => (
                     <div
                       key={source.id}
-                      className="flex items-center gap-2 rounded-md border border-black/10 bg-[#fbfbfa] px-3 py-2"
+                      className="flex min-w-0 max-w-full items-center gap-2 rounded-md border border-black/10 bg-[#fbfbfa] px-3 py-2"
                     >
                       <FilePenLine className="size-4 shrink-0 text-gray-600" />
                       <div className="min-w-0 flex-1">
-                        <div className="truncate text-sm font-medium text-gray-950">{source.name}</div>
+                        <div
+                          className="truncate text-sm font-medium text-gray-950"
+                          title={source.name}
+                        >
+                          {truncateContextSourceName(source.name)}
+                        </div>
                         <div className="truncate text-xs text-muted-foreground">
                           {agentTr.contextSourceChars(source.text.length)}
                         </div>
@@ -1415,19 +1423,22 @@ export function ChatPanel<TContent>({
           if (!open) setPreviewContextSource(null);
         }}
       >
-        <DialogContent className="editor-dialog overflow-hidden p-0 sm:max-w-[640px]">
-          <DialogHeader className="editor-dialog-header place-items-start px-5 pb-4 pt-4">
-            <div className="flex items-center gap-3">
+        <DialogContent className="editor-dialog min-w-0 overflow-hidden p-0 sm:max-w-[640px]">
+          <DialogHeader className="editor-dialog-header min-w-0 place-items-start px-5 pb-4 pt-4">
+            <div className="flex w-full min-w-0 items-center gap-3 pr-10">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-black/40 bg-black/[0.035]">
                 <FilePenLine className="h-4 w-4 text-foreground" />
               </div>
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <DialogTitle className="truncate text-[15px] font-semibold">
                   {agentTr.contextPreviewTitle}
                 </DialogTitle>
                 {previewContextSource && (
-                  <div className="mt-0.5 truncate text-xs text-muted-foreground">
-                    {previewContextSource.name}
+                  <div
+                    className="mt-0.5 truncate text-xs text-muted-foreground"
+                    title={previewContextSource.name}
+                  >
+                    {truncateContextSourceName(previewContextSource.name)}
                   </div>
                 )}
               </div>
