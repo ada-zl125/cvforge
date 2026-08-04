@@ -1,6 +1,7 @@
 import { toCanvas } from "html-to-image";
 import jsPDF from "jspdf";
-import { PAGE_W, PAGE_H, TOP, BOTTOM, CONTENT_H } from "@/lib/page-constants";
+import { A4_H_MM, A4_W_MM, PAGE_W, PAGE_H, TOP, BOTTOM, CONTENT_H } from "@/lib/page-constants";
+import { addPdfLinksToPage, collectPdfLinkRects } from "@/lib/pdf-links";
 
 export type ExportFormat = "pdf" | "png";
 
@@ -14,11 +15,13 @@ export function exportJson(data: object, filename: string): void {
   URL.revokeObjectURL(url);
 }
 
-async function captureCanvas(): Promise<HTMLCanvasElement> {
-  // Target the inner resume div, not the wrapper (which has border/shadow)
+function getPreviewElement(): HTMLElement {
   const el = document.querySelector(".preview-a4 > div") as HTMLElement | null;
   if (!el) throw new Error("Resume preview element not found");
+  return el;
+}
 
+async function captureCanvas(el: HTMLElement): Promise<HTMLCanvasElement> {
   return toCanvas(el, {
     pixelRatio: 4,
     backgroundColor: "#ffffff",
@@ -61,7 +64,9 @@ export async function exportResume(
   format: ExportFormat,
   filename = "resume"
 ): Promise<void> {
-  const canvas = await captureCanvas();
+  const previewElement = getPreviewElement();
+  const pdfLinks = format === "pdf" ? collectPdfLinkRects(previewElement) : [];
+  const canvas = await captureCanvas(previewElement);
 
   if (format === "png") {
     const link = document.createElement("a");
@@ -71,8 +76,6 @@ export async function exportResume(
     return;
   }
 
-  const A4_W_MM = 210;
-  const A4_H_MM = 297;
   const scale = canvas.width / PAGE_W;
 
   // Match the preview's page window calculation exactly.
@@ -85,6 +88,7 @@ export async function exportResume(
     if (pageIndex > 0) pdf.addPage();
     const pageCanvas = createPdfPageCanvas(canvas, pageIndex);
     pdf.addImage(pageCanvas.toDataURL("image/jpeg", 0.98), "JPEG", 0, 0, A4_W_MM, A4_H_MM);
+    addPdfLinksToPage(pdf, pdfLinks, pageIndex);
   }
 
   pdf.save(`${filename}.pdf`);
