@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.2.3] 2026.08.04
+
+1. Increased bullet point spacing in resume and academic CV previews and exports.
+2. Added safe wrapping for long unbroken text across document templates.
+3. Truncated long reference filenames and stabilized Agent Mode context source dialogs.
+
 ## [1.2.2] 2026.07.27
 
 1. Fixed live preview updates after review highlights and streaming animations.
