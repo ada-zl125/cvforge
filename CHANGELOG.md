@@ -5,6 +5,7 @@
 1. Increased bullet point spacing in resume and academic CV previews and exports.
 2. Added safe wrapping for long unbroken text across document templates.
 3. Truncated long reference filenames and stabilized Agent Mode context source dialogs.
+4. Enabled clickable website and email links in PDF exports.
 
 ## [1.2.2] 2026.07.27
 
