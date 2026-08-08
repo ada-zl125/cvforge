@@ -77,9 +77,6 @@ export function Toolbar({ title, template, language, content, isAgentMode, onSet
       await exportDocument({
         format,
         filename: title || "academic-cv",
-        kind: "academic-cv",
-        content,
-        language,
       });
     } catch {
       setExportErrorOpen(true);

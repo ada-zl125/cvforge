@@ -77,9 +77,6 @@ export function Toolbar({ title, template, language, content, isAgentMode, onSet
       await exportDocument({
         format,
         filename: title || "resume",
-        kind: "resume",
-        content,
-        language,
       });
     } catch {
       setExportErrorOpen(true);

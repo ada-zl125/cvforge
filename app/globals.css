@@ -661,6 +661,68 @@ button.editor-dialog-action:not(:disabled):hover {
   box-shadow: 0 8px 24px color-mix(in srgb, var(--foreground) 10%, transparent);
 }
 
+.pdf-print-root {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 0;
+  }
+
+  html,
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+
+  body > *:not(.pdf-print-root) {
+    display: none !important;
+  }
+
+  .pdf-print-root {
+    display: block !important;
+    width: 210mm;
+    color: #000;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .pdf-print-page {
+    position: relative;
+    width: 210mm;
+    height: 297mm;
+    overflow: hidden;
+    background: #fff;
+    break-after: page;
+    page-break-after: always;
+  }
+
+  .pdf-print-page:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+
+  .pdf-print-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 794px;
+    height: 1123px;
+    transform: scale(0.9996234257);
+    transform-origin: top left;
+  }
+
+  .pdf-print-window {
+    position: absolute;
+    right: 0;
+    left: 0;
+    overflow: hidden;
+  }
+}
+
 .cv-streaming-print {
   display: inline;
   border-radius: 2px;

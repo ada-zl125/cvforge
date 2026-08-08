@@ -2,7 +2,14 @@
 
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import FadeContent from "@/components/FadeContent";
-import { PAGE_W, PAGE_H, TOP, BOTTOM, CONTENT_H } from "@/lib/page-constants";
+import {
+  PAGE_W,
+  PAGE_H,
+  TOP,
+  CONTENT_H,
+  getPageCount,
+  getPageTranslateY,
+} from "@/lib/page-constants";
 import { PageBreakProvider } from "@/components/shared/PageBreakAvoid";
 import type { AgentChange } from "@/lib/agent/change-tracking";
 import { getReviewSnippets, type ReviewSnippet } from "@/lib/agent/review-highlighting";
@@ -378,8 +385,7 @@ export function PaginatedPreviewPanel({ children, reviewChange, isStreaming = fa
     const el = measureRef.current;
     if (!el) return;
 
-    const calc = () =>
-      Math.max(1, Math.ceil((el.scrollHeight - TOP - BOTTOM - 8) / CONTENT_H));
+    const calc = () => getPageCount(el.scrollHeight);
 
     setNumPages(calc());
 
@@ -419,7 +425,7 @@ export function PaginatedPreviewPanel({ children, reviewChange, isStreaming = fa
   return (
     <PageBreakProvider>
     <div ref={containerRef} className="flex flex-1 items-start justify-center overflow-y-auto bg-transparent px-4 pt-4 pb-0">
-      {/* Hidden export target — captured by lib/export.ts via .preview-a4 > div */}
+      {/* Hidden source shared by preview pagination and document export. */}
       <div style={{ position: "fixed", left: "-9999px", top: 0, width: `${PAGE_W}px`, pointerEvents: "none" }}>
         <div className="preview-a4">
           <div ref={measureRef} data-preview-source>
@@ -465,7 +471,7 @@ export function PaginatedPreviewPanel({ children, reviewChange, isStreaming = fa
                   overflow: "hidden",
                 }}
               >
-                <div style={{ transform: `translateY(${-(TOP + i * CONTENT_H)}px)` }}>
+                <div style={{ transform: `translateY(${getPageTranslateY(i)}px)` }}>
                   <div data-preview-replica />
                 </div>
               </div>

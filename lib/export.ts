@@ -1,15 +1,15 @@
 import { toCanvas } from "html-to-image";
-import { PAGE_W, TOP, BOTTOM, CONTENT_H } from "@/lib/page-constants";
 import {
-  encodeCanvasWithinBudget,
-  EXPORT_CAPTURE_PIXEL_RATIO,
-  EXPORT_MAX_BYTES_PER_PAGE,
-  EXPORT_PREFERRED_BYTES_PER_PAGE,
-  PNG_ENCODING_PROFILES,
-} from "@/lib/export-compression";
+  TOP,
+  CONTENT_H,
+  getPageCount,
+  getPageTranslateY,
+} from "@/lib/page-constants";
 import type { DocumentExportRequest } from "@/lib/export-types";
 
 export type { DocumentExportRequest, ExportFormat } from "@/lib/export-types";
+
+export const PNG_CAPTURE_PIXEL_RATIO = 4;
 
 export function exportJson(data: object, filename: string): void {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
@@ -22,49 +22,115 @@ export function exportJson(data: object, filename: string): void {
 }
 
 function getPreviewElement(): HTMLElement {
-  const el = document.querySelector(".preview-a4 > div") as HTMLElement | null;
+  const el = document.querySelector("[data-preview-source]") as HTMLElement | null;
   if (!el) throw new Error("Resume preview element not found");
   return el;
 }
 
 async function captureCanvas(el: HTMLElement): Promise<HTMLCanvasElement> {
   return toCanvas(el, {
-    pixelRatio: EXPORT_CAPTURE_PIXEL_RATIO,
+    pixelRatio: PNG_CAPTURE_PIXEL_RATIO,
     backgroundColor: "#ffffff",
   });
 }
 
-function downloadBlob(blob: Blob, filename: string): void {
-  const url = URL.createObjectURL(blob);
+function downloadDataUrl(url: string, filename: string): void {
   const link = document.createElement("a");
   link.download = filename;
   link.href = url;
   link.click();
-  window.setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+export function getPreviewPageCount(previewElement: HTMLElement): number {
+  return getPageCount(previewElement.scrollHeight);
+}
+
+function createPrintPage(previewElement: HTMLElement, pageIndex: number): HTMLElement {
+  const page = document.createElement("div");
+  page.className = "pdf-print-page";
+
+  const canvas = document.createElement("div");
+  canvas.className = "pdf-print-canvas";
+
+  const pageWindow = document.createElement("div");
+  pageWindow.className = "pdf-print-window";
+  pageWindow.style.top = `${TOP}px`;
+  pageWindow.style.height = `${CONTENT_H}px`;
+
+  const translatedContent = document.createElement("div");
+  translatedContent.style.transform = `translateY(${getPageTranslateY(pageIndex)}px)`;
+
+  const clone = previewElement.cloneNode(true) as HTMLElement;
+  clone.removeAttribute("data-preview-source");
+
+  translatedContent.appendChild(clone);
+  pageWindow.appendChild(translatedContent);
+  canvas.appendChild(pageWindow);
+  page.appendChild(canvas);
+  return page;
+}
+
+export function createPrintRoot(previewElement: HTMLElement): HTMLElement {
+  const existing = document.querySelector(".pdf-print-root");
+  existing?.remove();
+
+  const root = document.createElement("div");
+  root.className = "pdf-print-root";
+  root.setAttribute("aria-hidden", "true");
+
+  const pageCount = getPreviewPageCount(previewElement);
+  for (let pageIndex = 0; pageIndex < pageCount; pageIndex++) {
+    root.appendChild(createPrintPage(previewElement, pageIndex));
+  }
+  return root;
+}
+
+async function waitForPrintAssets(root: HTMLElement): Promise<void> {
+  if (document.fonts) await document.fonts.ready;
+  await Promise.all(Array.from(root.querySelectorAll("img")).map(async (image) => {
+    if (image.complete) return;
+    try {
+      await image.decode();
+    } catch {
+      throw new Error("Unable to load an image for PDF export");
+    }
+  }));
+  await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+}
+
+async function printPreview(filename: string): Promise<void> {
+  const previewElement = getPreviewElement();
+  const printRoot = createPrintRoot(previewElement);
+  document.body.appendChild(printRoot);
+
+  const originalTitle = document.title;
+  let cleaned = false;
+  const cleanup = () => {
+    if (cleaned) return;
+    cleaned = true;
+    printRoot.remove();
+    document.title = originalTitle;
+    window.removeEventListener("afterprint", cleanup);
+  };
+
+  try {
+    await waitForPrintAssets(printRoot);
+    document.title = filename;
+    window.addEventListener("afterprint", cleanup, { once: true });
+    window.print();
+  } catch (error) {
+    cleanup();
+    throw error;
+  }
 }
 
 export async function exportDocument(request: DocumentExportRequest): Promise<void> {
   if (request.format === "pdf") {
-    const { renderPdfBlob } = await import("@/lib/pdf/render-pdf");
-    const blob = await renderPdfBlob(request);
-    downloadBlob(blob, `${request.filename}.pdf`);
+    await printPreview(request.filename);
     return;
   }
 
   const previewElement = getPreviewElement();
   const canvas = await captureCanvas(previewElement);
-  const scale = canvas.width / PAGE_W;
-
-  // Match the preview's page window calculation exactly.
-  const effectiveHeightPx = canvas.height - (TOP + BOTTOM + 8) * scale;
-  const pageCount = Math.max(1, Math.ceil(effectiveHeightPx / (CONTENT_H * scale)));
-
-  const encoded = await encodeCanvasWithinBudget(
-    canvas,
-    "image/png",
-    PNG_ENCODING_PROFILES,
-    EXPORT_PREFERRED_BYTES_PER_PAGE * pageCount,
-    EXPORT_MAX_BYTES_PER_PAGE * pageCount,
-  );
-  downloadBlob(encoded.value, `${request.filename}.png`);
+  downloadDataUrl(canvas.toDataURL("image/png"), `${request.filename}.png`);
 }

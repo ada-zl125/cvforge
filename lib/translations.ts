@@ -58,7 +58,7 @@ const t = {
     /* ---- Editor toolbar ---- */
     backToHome: "Back to home",
     exportLabel: "Export",
-    exportPdf: "Save as PDF",
+    exportPdf: "Print or save as PDF",
     exportPng: "Save as PNG",
     exportJson: "Save as JSON",
     importLabel: "Import",
@@ -314,7 +314,7 @@ const t = {
     /* ---- Editor toolbar ---- */
     backToHome: "返回首页",
     exportLabel: "导出",
-    exportPdf: "保存为 PDF",
+    exportPdf: "打印或保存为 PDF",
     exportPng: "保存为 PNG",
     exportJson: "保存为 JSON",
     importLabel: "导入",

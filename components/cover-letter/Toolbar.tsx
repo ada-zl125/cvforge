@@ -72,9 +72,6 @@ export function Toolbar({ title, content, template, isAgentMode, onTitleChange, 
       await exportDocument({
         format,
         filename: title || "cover-letter",
-        kind: "cover-letter",
-        content,
-        language: "en",
       });
     } catch {
       setExportErrorOpen(true);
