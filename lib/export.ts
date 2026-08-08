@@ -1,9 +1,19 @@
 import { toCanvas } from "html-to-image";
-import jsPDF from "jspdf";
-import { A4_H_MM, A4_W_MM, PAGE_W, PAGE_H, TOP, BOTTOM, CONTENT_H } from "@/lib/page-constants";
-import { addPdfLinksToPage, collectPdfLinkRects } from "@/lib/pdf-links";
+import {
+  TOP,
+  CONTENT_H,
+  getPageCount,
+  getPageTranslateY,
+} from "@/lib/page-constants";
 
 export type ExportFormat = "pdf" | "png";
+
+interface DocumentExportRequest {
+  format: ExportFormat;
+  filename: string;
+}
+
+const PNG_CAPTURE_PIXEL_RATIO = 4;
 
 export function exportJson(data: object, filename: string): void {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
@@ -16,80 +26,111 @@ export function exportJson(data: object, filename: string): void {
 }
 
 function getPreviewElement(): HTMLElement {
-  const el = document.querySelector(".preview-a4 > div") as HTMLElement | null;
+  const el = document.querySelector("[data-preview-source]") as HTMLElement | null;
   if (!el) throw new Error("Resume preview element not found");
   return el;
 }
 
 async function captureCanvas(el: HTMLElement): Promise<HTMLCanvasElement> {
   return toCanvas(el, {
-    pixelRatio: 4,
+    pixelRatio: PNG_CAPTURE_PIXEL_RATIO,
     backgroundColor: "#ffffff",
   });
 }
 
-function createPdfPageCanvas(source: HTMLCanvasElement, pageIndex: number): HTMLCanvasElement {
-  const scale = source.width / PAGE_W;
-  const page = document.createElement("canvas");
-  page.width = Math.round(PAGE_W * scale);
-  page.height = Math.round(PAGE_H * scale);
+function downloadDataUrl(url: string, filename: string): void {
+  const link = document.createElement("a");
+  link.download = filename;
+  link.href = url;
+  link.click();
+}
 
-  const ctx = page.getContext("2d");
-  if (!ctx) throw new Error("PDF page canvas context unavailable");
+function createPrintPage(previewElement: HTMLElement, pageIndex: number): HTMLElement {
+  const page = document.createElement("div");
+  page.className = "pdf-print-page";
 
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, page.width, page.height);
+  const canvas = document.createElement("div");
+  canvas.className = "pdf-print-canvas";
 
-  const sourceY = Math.round((TOP + pageIndex * CONTENT_H) * scale);
-  const sourceHeight = Math.max(0, Math.min(Math.round(CONTENT_H * scale), source.height - sourceY));
+  const pageWindow = document.createElement("div");
+  pageWindow.className = "pdf-print-window";
+  pageWindow.style.top = `${TOP}px`;
+  pageWindow.style.height = `${CONTENT_H}px`;
 
-  if (sourceHeight > 0) {
-    ctx.drawImage(
-      source,
-      0,
-      sourceY,
-      source.width,
-      sourceHeight,
-      0,
-      Math.round(TOP * scale),
-      page.width,
-      sourceHeight
-    );
-  }
+  const translatedContent = document.createElement("div");
+  translatedContent.style.transform = `translateY(${getPageTranslateY(pageIndex)}px)`;
 
+  const clone = previewElement.cloneNode(true) as HTMLElement;
+  clone.removeAttribute("data-preview-source");
+
+  translatedContent.appendChild(clone);
+  pageWindow.appendChild(translatedContent);
+  canvas.appendChild(pageWindow);
+  page.appendChild(canvas);
   return page;
 }
 
-export async function exportResume(
-  format: ExportFormat,
-  filename = "resume"
-): Promise<void> {
-  const previewElement = getPreviewElement();
-  const pdfLinks = format === "pdf" ? collectPdfLinkRects(previewElement) : [];
-  const canvas = await captureCanvas(previewElement);
+export function createPrintRoot(previewElement: HTMLElement): HTMLElement {
+  const existing = document.querySelector(".pdf-print-root");
+  existing?.remove();
 
-  if (format === "png") {
-    const link = document.createElement("a");
-    link.download = `${filename}.png`;
-    link.href = canvas.toDataURL("image/png");
-    link.click();
+  const root = document.createElement("div");
+  root.className = "pdf-print-root";
+  root.setAttribute("aria-hidden", "true");
+
+  const pageCount = getPageCount(previewElement.scrollHeight);
+  for (let pageIndex = 0; pageIndex < pageCount; pageIndex++) {
+    root.appendChild(createPrintPage(previewElement, pageIndex));
+  }
+  return root;
+}
+
+async function waitForPrintAssets(root: HTMLElement): Promise<void> {
+  if (document.fonts) await document.fonts.ready;
+  await Promise.all(Array.from(root.querySelectorAll("img")).map(async (image) => {
+    if (image.complete) return;
+    try {
+      await image.decode();
+    } catch {
+      throw new Error("Unable to load an image for PDF export");
+    }
+  }));
+  await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+}
+
+async function printPreview(filename: string): Promise<void> {
+  const previewElement = getPreviewElement();
+  const printRoot = createPrintRoot(previewElement);
+  document.body.appendChild(printRoot);
+
+  const originalTitle = document.title;
+  let cleaned = false;
+  const cleanup = () => {
+    if (cleaned) return;
+    cleaned = true;
+    printRoot.remove();
+    document.title = originalTitle;
+    window.removeEventListener("afterprint", cleanup);
+  };
+
+  try {
+    await waitForPrintAssets(printRoot);
+    document.title = filename;
+    window.addEventListener("afterprint", cleanup, { once: true });
+    window.print();
+  } catch (error) {
+    cleanup();
+    throw error;
+  }
+}
+
+export async function exportDocument(request: DocumentExportRequest): Promise<void> {
+  if (request.format === "pdf") {
+    await printPreview(request.filename);
     return;
   }
 
-  const scale = canvas.width / PAGE_W;
-
-  // Match the preview's page window calculation exactly.
-  const effectiveHeightPx = canvas.height - (TOP + BOTTOM + 8) * scale;
-  const pageCount = Math.max(1, Math.ceil(effectiveHeightPx / (CONTENT_H * scale)));
-
-  const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-
-  for (let pageIndex = 0; pageIndex < pageCount; pageIndex++) {
-    if (pageIndex > 0) pdf.addPage();
-    const pageCanvas = createPdfPageCanvas(canvas, pageIndex);
-    pdf.addImage(pageCanvas.toDataURL("image/jpeg", 0.98), "JPEG", 0, 0, A4_W_MM, A4_H_MM);
-    addPdfLinksToPage(pdf, pdfLinks, pageIndex);
-  }
-
-  pdf.save(`${filename}.pdf`);
+  const previewElement = getPreviewElement();
+  const canvas = await captureCanvas(previewElement);
+  downloadDataUrl(canvas.toDataURL("image/png"), `${request.filename}.png`);
 }

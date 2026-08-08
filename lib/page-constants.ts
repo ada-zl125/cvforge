@@ -5,5 +5,11 @@ export const PAGE_H = 1123;                   // 297 mm at 96 DPI
 export const TOP = 32;                         // top visible offset per page window
 export const BOTTOM = 48;                      // bottom margin (clipped by window)
 export const CONTENT_H = PAGE_H - TOP - BOTTOM; // 1043 — usable height per page
-export const A4_W_MM = 210;
-export const A4_H_MM = 297;
+
+export function getPageCount(scrollHeight: number): number {
+  return Math.max(1, Math.ceil((scrollHeight - TOP - BOTTOM - 8) / CONTENT_H));
+}
+
+export function getPageTranslateY(pageIndex: number): number {
+  return -(TOP + pageIndex * CONTENT_H);
+}

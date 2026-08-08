@@ -72,6 +72,8 @@ const t = {
     loadExampleDialogWarn: "Any unsaved changes will be lost.",
     loadExampleConfirm: "Load Example",
     exporting: "Exporting…",
+    exportErrorTitle: "Export Failed",
+    exportError: "The document could not be exported. Please try again.",
     editorResumeSettings: "Resume Settings",
 
     /* ---- Form panel ---- */
@@ -326,6 +328,8 @@ const t = {
     loadExampleDialogWarn: "加载后当前所有内容将丢失。",
     loadExampleConfirm: "加载示例",
     exporting: "导出中…",
+    exportErrorTitle: "导出失败",
+    exportError: "无法导出文档，请重试。",
     editorResumeSettings: "简历设置",
 
     /* ---- Form panel ---- */
