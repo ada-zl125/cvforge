@@ -19,7 +19,7 @@
 
 CVForge is a free and open source document builder for job seekers and academics. It combines structured editing, live preview, export tools, and Agent Mode in one focused workspace. No account is required.
 
-> **Status** &nbsp; Version 1.2.1 is available. Core editors and Agent Mode are stable. Feedback and contributions are welcome.
+> **Status** &nbsp; Version 1.2.3 is available. Core editors and Agent Mode are stable. Feedback and contributions are welcome.
 
 ## Features
 
@@ -39,7 +39,7 @@ Use Agent Mode as a writing partner inside the editor. It can understand the cur
 
 **Export and import**
 
-Preview your document in A4 format, then export it as PDF, PNG, or JSON. JSON files can be imported back into CVForge for later editing.
+Preview your document in A4 format, then export it as PDF, PNG, or JSON. PDF export opens the browser print dialog and preserves selectable text with the same layout as the live preview. PNG export produces a lossless high resolution image. JSON files can be imported back into CVForge for later editing.
 
 ## Tech Stack
 
