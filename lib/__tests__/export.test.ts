@@ -1,14 +1,13 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { toCanvas } from "html-to-image";
 import {
   CONTENT_H,
   TOP,
+  getPageCount,
 } from "@/lib/page-constants";
 import {
   createPrintRoot,
   exportDocument,
-  getPreviewPageCount,
-  PNG_CAPTURE_PIXEL_RATIO,
 } from "@/lib/export";
 
 vi.mock("html-to-image", () => ({
@@ -32,6 +31,17 @@ function createPreview(scrollHeight: number): HTMLElement {
   return preview;
 }
 
+function preparePrintAssets(): void {
+  Object.defineProperty(document, "fonts", {
+    configurable: true,
+    value: { ready: Promise.resolve() },
+  });
+  vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+    callback(0);
+    return 1;
+  });
+}
+
 describe("preview based export", () => {
   beforeEach(() => {
     document.body.replaceChildren();
@@ -39,13 +49,18 @@ describe("preview based export", () => {
     vi.clearAllMocks();
   });
 
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
   it("uses the same page count as the live preview", () => {
     const onePage = createPreview(TOP + CONTENT_H);
-    expect(getPreviewPageCount(onePage)).toBe(1);
+    expect(getPageCount(onePage.scrollHeight)).toBe(1);
 
     onePage.remove();
     const twoPages = createPreview(TOP + CONTENT_H * 2);
-    expect(getPreviewPageCount(twoPages)).toBe(2);
+    expect(getPageCount(twoPages.scrollHeight)).toBe(2);
   });
 
   it("clones the preview DOM into identical paginated print windows", () => {
@@ -73,15 +88,7 @@ describe("preview based export", () => {
 
   it("opens browser print only after fonts are ready and restores temporary state", async () => {
     createPreview(TOP + CONTENT_H);
-    const fontsReady = Promise.resolve();
-    Object.defineProperty(document, "fonts", {
-      configurable: true,
-      value: { ready: fontsReady },
-    });
-    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
-      callback(0);
-      return 1;
-    });
+    preparePrintAssets();
     const print = vi.spyOn(window, "print").mockImplementation(() => {
       expect(document.title).toBe("Ada Lovelace Resume");
       expect(document.querySelector(".pdf-print-root")).not.toBeNull();
@@ -93,22 +100,39 @@ describe("preview based export", () => {
     expect(print).toHaveBeenCalledOnce();
     expect(document.title).toBe("CVForge");
     expect(document.querySelector(".pdf-print-root")).toBeNull();
-    vi.unstubAllGlobals();
+  });
+
+  it("restores the page when browser printing fails", async () => {
+    createPreview(TOP + CONTENT_H);
+    preparePrintAssets();
+    vi.spyOn(window, "print").mockImplementation(() => {
+      throw new Error("Print is unavailable");
+    });
+
+    await expect(exportDocument({ format: "pdf", filename: "resume" }))
+      .rejects.toThrow("Print is unavailable");
+
+    expect(document.title).toBe("CVForge");
+    expect(document.querySelector(".pdf-print-root")).toBeNull();
   });
 
   it("restores the original four times lossless PNG export", async () => {
     const preview = createPreview(TOP + CONTENT_H);
     const toDataURL = vi.fn(() => "data:image/png;base64,cG5n");
     vi.mocked(toCanvas).mockResolvedValue({ toDataURL } as unknown as HTMLCanvasElement);
-    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
+    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      expect(this.download).toBe("resume.png");
+      expect(this.href).toBe("data:image/png;base64,cG5n");
+    });
 
     await exportDocument({ format: "png", filename: "resume" });
 
     expect(toCanvas).toHaveBeenCalledWith(preview, {
-      pixelRatio: PNG_CAPTURE_PIXEL_RATIO,
+      pixelRatio: 4,
       backgroundColor: "#ffffff",
     });
-    expect(PNG_CAPTURE_PIXEL_RATIO).toBe(4);
     expect(toDataURL).toHaveBeenCalledWith("image/png");
     expect(click).toHaveBeenCalledOnce();
   });

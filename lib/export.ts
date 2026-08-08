@@ -5,11 +5,15 @@ import {
   getPageCount,
   getPageTranslateY,
 } from "@/lib/page-constants";
-import type { DocumentExportRequest } from "@/lib/export-types";
 
-export type { DocumentExportRequest, ExportFormat } from "@/lib/export-types";
+export type ExportFormat = "pdf" | "png";
 
-export const PNG_CAPTURE_PIXEL_RATIO = 4;
+interface DocumentExportRequest {
+  format: ExportFormat;
+  filename: string;
+}
+
+const PNG_CAPTURE_PIXEL_RATIO = 4;
 
 export function exportJson(data: object, filename: string): void {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
@@ -39,10 +43,6 @@ function downloadDataUrl(url: string, filename: string): void {
   link.download = filename;
   link.href = url;
   link.click();
-}
-
-export function getPreviewPageCount(previewElement: HTMLElement): number {
-  return getPageCount(previewElement.scrollHeight);
 }
 
 function createPrintPage(previewElement: HTMLElement, pageIndex: number): HTMLElement {
@@ -78,7 +78,7 @@ export function createPrintRoot(previewElement: HTMLElement): HTMLElement {
   root.className = "pdf-print-root";
   root.setAttribute("aria-hidden", "true");
 
-  const pageCount = getPreviewPageCount(previewElement);
+  const pageCount = getPageCount(previewElement.scrollHeight);
   for (let pageIndex = 0; pageIndex < pageCount; pageIndex++) {
     root.appendChild(createPrintPage(previewElement, pageIndex));
   }

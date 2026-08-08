@@ -56,7 +56,7 @@ Preview your document in A4 format, then export it as PDF, PNG, or JSON. JSON fi
 | Validation | Zod |
 | Reference context | Deep Agents StateBackend and PDF.js |
 | Markdown | react-markdown with remark-gfm |
-| Export | html-to-image and jsPDF |
+| Export | html-to-image for PNG and browser print for PDF |
 | Deployment | Static export for GitHub Pages |
 
 The entire codebase was implemented using [Claude Code](https://claude.ai/code) and [OpenAI Codex](https://openai.com/index/openai-codex/).

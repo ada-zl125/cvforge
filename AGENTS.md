@@ -31,7 +31,7 @@ Agent Mode helps users edit documents through structured tools. It supports clar
 | Reference search | Deep Agents StateBackend virtual filesystem |
 | PDF text extraction | PDF.js for selectable text PDF files |
 | Markdown rendering | react-markdown with remark-gfm |
-| Export | html-to-image and jsPDF for browser side PNG and PDF export |
+| Export | html-to-image for PNG and browser print for selectable PDF export |
 | Testing | Vitest with jsdom for focused unit tests |
 | CI | GitHub Actions for code quality, unit tests, and build checks |
 | Deployment | Static export via `next.config.ts` with optional `NEXT_PUBLIC_BASE_PATH` |

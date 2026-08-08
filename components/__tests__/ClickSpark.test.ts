@@ -13,7 +13,10 @@ describe("ClickSpark", () => {
   });
 
   it("keeps the effect enabled for other clicks", () => {
-    expect(shouldCreateClickSpark(document.createElement("button"))).toBe(true);
+    const control = document.createElement("button");
+    control.dataset.clickSpark = "enabled";
+
+    expect(shouldCreateClickSpark(control)).toBe(true);
     expect(shouldCreateClickSpark(null)).toBe(true);
   });
 });
