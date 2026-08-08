@@ -8,7 +8,7 @@ import type { ResumeLanguage } from "./types/resume";
 /* ---- Fonts ---- */
 
 export const FONT_EN = "'Times New Roman', 'TeX Gyre Termes', serif";
-export const FONT_ZH = "'Noto Serif CJK SC', 'Songti SC', SimSun, serif";
+export const FONT_ZH = "'Times New Roman', 'TeX Gyre Termes', 'Songti SC', SimSun, serif";
 
 /* ---- Font sizes ---- */
 

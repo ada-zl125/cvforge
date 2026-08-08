@@ -30,25 +30,11 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const basePath = (process.env.NEXT_PUBLIC_BASE_PATH ?? "").replace(/\/+$/, "");
-  const chineseFontUrl = `${basePath}/fonts/noto-serif-cjk-sc-regular.otf`;
-
   return (
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <head>
-        <style>{`
-          @font-face {
-            font-family: "Noto Serif CJK SC";
-            src: url("${chineseFontUrl}") format("opentype");
-            font-weight: 400;
-            font-style: normal;
-            font-display: swap;
-          }
-        `}</style>
-      </head>
       <body className="min-h-full flex flex-col">
           <UILanguageProvider>
             <TooltipProvider>
