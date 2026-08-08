@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, FileDown, FileImage, FileJson, FileUp, Loader2, PenLine, RotateCcw, Settings, Sparkles, WandSparkles } from "lucide-react";
-import { exportResume, exportJson, type ExportFormat } from "@/lib/export";
+import { exportDocument, exportJson, type ExportFormat } from "@/lib/export";
 import { defaultAcademicCVContent, TITLE_MAX } from "@/lib/defaults";
 import { createAcademicCVExportPayload, normalizeAcademicCVContent } from "@/lib/document-normalizers";
 import academicCvExampleEn from "@/examples/academic-cv-example-en.json";
@@ -25,6 +25,7 @@ import {
   editorTopBarActionClass,
   editorTopBarPrimaryActionClass,
 } from "@/components/shared/EditorTopBar";
+import { ExportErrorDialog } from "@/components/shared/ExportErrorDialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
@@ -64,6 +65,7 @@ export function Toolbar({ title, template, language, content, isAgentMode, onSet
 
   /* ---- Export state ---- */
   const [exporting, setExporting] = useState(false);
+  const [exportErrorOpen, setExportErrorOpen] = useState(false);
   const [exampleDialogOpen, setExampleDialogOpen] = useState(false);
   const [importErrorOpen, setImportErrorOpen] = useState(false);
   const [resetOpen, setResetOpen] = useState(false);
@@ -72,7 +74,15 @@ export function Toolbar({ title, template, language, content, isAgentMode, onSet
   async function handleExport(format: ExportFormat) {
     setExporting(true);
     try {
-      await exportResume(format, title || "academic-cv");
+      await exportDocument({
+        format,
+        filename: title || "academic-cv",
+        kind: "academic-cv",
+        content,
+        language,
+      });
+    } catch {
+      setExportErrorOpen(true);
     } finally {
       setExporting(false);
     }
@@ -245,6 +255,8 @@ export function Toolbar({ title, template, language, content, isAgentMode, onSet
           </>
         }
       />
+
+      <ExportErrorDialog open={exportErrorOpen} onOpenChange={setExportErrorOpen} />
 
       {/* Import error dialog */}
       <Dialog open={importErrorOpen} onOpenChange={setImportErrorOpen}>

@@ -1,9 +1,15 @@
 import { toCanvas } from "html-to-image";
-import jsPDF from "jspdf";
-import { A4_H_MM, A4_W_MM, PAGE_W, PAGE_H, TOP, BOTTOM, CONTENT_H } from "@/lib/page-constants";
-import { addPdfLinksToPage, collectPdfLinkRects } from "@/lib/pdf-links";
+import { PAGE_W, TOP, BOTTOM, CONTENT_H } from "@/lib/page-constants";
+import {
+  encodeCanvasWithinBudget,
+  EXPORT_CAPTURE_PIXEL_RATIO,
+  EXPORT_MAX_BYTES_PER_PAGE,
+  EXPORT_PREFERRED_BYTES_PER_PAGE,
+  PNG_ENCODING_PROFILES,
+} from "@/lib/export-compression";
+import type { DocumentExportRequest } from "@/lib/export-types";
 
-export type ExportFormat = "pdf" | "png";
+export type { DocumentExportRequest, ExportFormat } from "@/lib/export-types";
 
 export function exportJson(data: object, filename: string): void {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
@@ -23,73 +29,42 @@ function getPreviewElement(): HTMLElement {
 
 async function captureCanvas(el: HTMLElement): Promise<HTMLCanvasElement> {
   return toCanvas(el, {
-    pixelRatio: 4,
+    pixelRatio: EXPORT_CAPTURE_PIXEL_RATIO,
     backgroundColor: "#ffffff",
   });
 }
 
-function createPdfPageCanvas(source: HTMLCanvasElement, pageIndex: number): HTMLCanvasElement {
-  const scale = source.width / PAGE_W;
-  const page = document.createElement("canvas");
-  page.width = Math.round(PAGE_W * scale);
-  page.height = Math.round(PAGE_H * scale);
-
-  const ctx = page.getContext("2d");
-  if (!ctx) throw new Error("PDF page canvas context unavailable");
-
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, page.width, page.height);
-
-  const sourceY = Math.round((TOP + pageIndex * CONTENT_H) * scale);
-  const sourceHeight = Math.max(0, Math.min(Math.round(CONTENT_H * scale), source.height - sourceY));
-
-  if (sourceHeight > 0) {
-    ctx.drawImage(
-      source,
-      0,
-      sourceY,
-      source.width,
-      sourceHeight,
-      0,
-      Math.round(TOP * scale),
-      page.width,
-      sourceHeight
-    );
-  }
-
-  return page;
+function downloadBlob(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.download = filename;
+  link.href = url;
+  link.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
-export async function exportResume(
-  format: ExportFormat,
-  filename = "resume"
-): Promise<void> {
-  const previewElement = getPreviewElement();
-  const pdfLinks = format === "pdf" ? collectPdfLinkRects(previewElement) : [];
-  const canvas = await captureCanvas(previewElement);
-
-  if (format === "png") {
-    const link = document.createElement("a");
-    link.download = `${filename}.png`;
-    link.href = canvas.toDataURL("image/png");
-    link.click();
+export async function exportDocument(request: DocumentExportRequest): Promise<void> {
+  if (request.format === "pdf") {
+    const { renderPdfBlob } = await import("@/lib/pdf/render-pdf");
+    const blob = await renderPdfBlob(request);
+    downloadBlob(blob, `${request.filename}.pdf`);
     return;
   }
 
+  const previewElement = getPreviewElement();
+  const canvas = await captureCanvas(previewElement);
   const scale = canvas.width / PAGE_W;
 
   // Match the preview's page window calculation exactly.
   const effectiveHeightPx = canvas.height - (TOP + BOTTOM + 8) * scale;
   const pageCount = Math.max(1, Math.ceil(effectiveHeightPx / (CONTENT_H * scale)));
 
-  const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-
-  for (let pageIndex = 0; pageIndex < pageCount; pageIndex++) {
-    if (pageIndex > 0) pdf.addPage();
-    const pageCanvas = createPdfPageCanvas(canvas, pageIndex);
-    pdf.addImage(pageCanvas.toDataURL("image/jpeg", 0.98), "JPEG", 0, 0, A4_W_MM, A4_H_MM);
-    addPdfLinksToPage(pdf, pdfLinks, pageIndex);
-  }
-
-  pdf.save(`${filename}.pdf`);
+  const encoded = await encodeCanvasWithinBudget(
+    canvas,
+    "image/png",
+    PNG_ENCODING_PROFILES,
+    EXPORT_PREFERRED_BYTES_PER_PAGE * pageCount,
+    EXPORT_MAX_BYTES_PER_PAGE * pageCount,
+  );
+  downloadBlob(encoded.value, `${request.filename}.png`);
 }

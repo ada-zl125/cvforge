@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, FileDown, FileImage, FileJson, FileUp, Loader2, PenLine, RotateCcw, Settings, Sparkles, WandSparkles } from "lucide-react";
-import { exportResume, exportJson, type ExportFormat } from "@/lib/export";
+import { exportDocument, exportJson, type ExportFormat } from "@/lib/export";
 import { defaultCoverLetterContent, TITLE_MAX } from "@/lib/defaults";
 import { createCoverLetterExportPayload, normalizeCoverLetterContent } from "@/lib/document-normalizers";
 import coverLetterExampleEn from "@/examples/cover-letter-example-en.json";
@@ -23,6 +23,7 @@ import {
   editorTopBarActionClass,
   editorTopBarPrimaryActionClass,
 } from "@/components/shared/EditorTopBar";
+import { ExportErrorDialog } from "@/components/shared/ExportErrorDialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LanguageSwitcher } from "@/components/ui/language-switcher";
@@ -59,6 +60,7 @@ export function Toolbar({ title, content, template, isAgentMode, onTitleChange, 
   const cl = tr.coverLetter;
 
   const [exporting, setExporting] = useState(false);
+  const [exportErrorOpen, setExportErrorOpen] = useState(false);
   const [exampleDialogOpen, setExampleDialogOpen] = useState(false);
   const [importErrorOpen, setImportErrorOpen] = useState(false);
   const [resetOpen, setResetOpen] = useState(false);
@@ -67,7 +69,15 @@ export function Toolbar({ title, content, template, isAgentMode, onTitleChange, 
   async function handleExport(format: ExportFormat) {
     setExporting(true);
     try {
-      await exportResume(format, title || "cover-letter");
+      await exportDocument({
+        format,
+        filename: title || "cover-letter",
+        kind: "cover-letter",
+        content,
+        language: "en",
+      });
+    } catch {
+      setExportErrorOpen(true);
     } finally {
       setExporting(false);
     }
@@ -234,6 +244,8 @@ export function Toolbar({ title, content, template, isAgentMode, onTitleChange, 
           </>
         }
       />
+
+      <ExportErrorDialog open={exportErrorOpen} onOpenChange={setExportErrorOpen} />
 
       {/* Import error dialog */}
       <Dialog open={importErrorOpen} onOpenChange={setImportErrorOpen}>
