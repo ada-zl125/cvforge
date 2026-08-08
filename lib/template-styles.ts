@@ -15,6 +15,8 @@ export const FONT_ZH = "'Times New Roman', 'TeX Gyre Termes', 'Songti SC', SimSu
 export const BODY_SIZE = "11pt";
 export const SECTION_TITLE_SIZE = "12pt";
 export const NAME_SIZE = "20pt";
+export const SKILL_ENTRY_GAP = "2px";
+export const AWARD_ENTRY_GAP = "1px";
 
 /* ---- Shared CSS style objects ---- */
 
@@ -58,6 +60,6 @@ export function getFontFamily(lang: ResumeLanguage): string {
 export function boldFontStyle(lang: ResumeLanguage, fontFamily: string): React.CSSProperties {
   return {
     fontFamily: lang === "zh" ? FONT_ZH : fontFamily,
-    fontWeight: lang === "zh" ? 900 : 700,
+    fontWeight: lang === "zh" ? 800 : 700,
   };
 }

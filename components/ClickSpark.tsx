@@ -20,6 +20,13 @@ interface Spark {
   startTime: number;
 }
 
+export function shouldCreateClickSpark(target: EventTarget | null): boolean {
+  return !(
+    target instanceof Element &&
+    target.closest('[data-click-spark="disabled"]')
+  );
+}
+
 const ClickSpark: React.FC<ClickSparkProps> = ({
   sparkColor = '#fff',
   sparkSize = 10,
@@ -135,6 +142,8 @@ const ClickSpark: React.FC<ClickSparkProps> = ({
   }, [sparkColor, sparkSize, sparkRadius, sparkCount, duration, easeFunc, extraScale]);
 
   const handleClick = (e: React.MouseEvent<HTMLDivElement>): void => {
+    if (!shouldCreateClickSpark(e.target)) return;
+
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();

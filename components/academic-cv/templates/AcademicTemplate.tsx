@@ -4,7 +4,7 @@ import { PageBreakAvoid } from "@/components/shared/PageBreakAvoid";
 import { BulletItem } from "@/components/shared/BulletItem";
 import {
   BODY_SIZE, SECTION_TITLE_SIZE, NAME_SIZE,
-  LINE_STYLE,
+  AWARD_ENTRY_GAP, SKILL_ENTRY_GAP, LINE_STYLE,
   getFontFamily, boldFontStyle,
 } from "@/lib/template-styles";
 import { useUILanguage } from "@/lib/ui-language";
@@ -322,7 +322,7 @@ function GrantsAwardsBlock({ items, lang, fontFamily }: { items: GrantAwardItem[
   return (
     <section className="mb-2">
       {items.map((item, index) => (
-        <PageBreakAvoid key={item.id} style={index > 0 ? { marginTop: "2px" } : undefined}>
+        <PageBreakAvoid key={item.id} style={index > 0 ? { marginTop: AWARD_ENTRY_GAP } : undefined}>
           {index === 0 && <SectionTitle type="grantsAndAwards" lang={lang} fontFamily={fontFamily} />}
           <div className="flex items-baseline justify-between gap-2" style={{ ...LINE_STYLE, paddingLeft: 0, fontFamily }}>
             <span>{item.title}</span>
@@ -359,7 +359,7 @@ function TechnicalSkillsBlock({ items, lang, fontFamily }: { items: SkillGroup[]
   return (
     <section className="mb-2">
       {items.map((group, index) => (
-        <PageBreakAvoid key={group.id}>
+        <PageBreakAvoid key={group.id} style={index > 0 ? { marginTop: SKILL_ENTRY_GAP } : undefined}>
           {index === 0 && <SectionTitle type="technicalSkills" lang={lang} fontFamily={fontFamily} />}
           <div style={{ ...LINE_STYLE, paddingLeft: 0 }}>
             {group.category && <><span style={boldFontStyle(lang, fontFamily)}>{group.category}:</span>{" "}</>}

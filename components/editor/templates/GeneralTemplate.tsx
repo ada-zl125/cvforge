@@ -6,7 +6,7 @@ import { PageBreakAvoid } from "@/components/shared/PageBreakAvoid";
 import { BulletItem } from "@/components/shared/BulletItem";
 import {
   BODY_SIZE, SECTION_TITLE_SIZE, NAME_SIZE,
-  LINE_STYLE,
+  AWARD_ENTRY_GAP, SKILL_ENTRY_GAP, LINE_STYLE,
   getFontFamily, boldFontStyle,
 } from "@/lib/template-styles";
 import { useUILanguage } from "@/lib/ui-language";
@@ -289,7 +289,7 @@ function SkillsBlock({ items, lang, fontFamily }: { items: SkillGroup[]; lang: R
   return (
     <section className="mb-2">
       {items.map((group, index) => (
-        <PageBreakAvoid key={group.id}>
+        <PageBreakAvoid key={group.id} style={index > 0 ? { marginTop: SKILL_ENTRY_GAP } : undefined}>
           {index === 0 && <SectionTitle type="skills" lang={lang} fontFamily={fontFamily} />}
           <div style={{ ...LINE_STYLE, paddingLeft: 0 }}>
             {group.category && <><span style={boldFontStyle(lang, fontFamily)}>{group.category}:</span>{" "}</>}
@@ -306,7 +306,7 @@ function AwardsBlock({ items, lang, fontFamily }: { items: AwardItem[]; lang: Re
   return (
     <section className="mb-2">
       {items.map((item, index) => (
-        <PageBreakAvoid key={item.id} style={index > 0 ? { marginTop: "2px" } : undefined}>
+        <PageBreakAvoid key={item.id} style={index > 0 ? { marginTop: AWARD_ENTRY_GAP } : undefined}>
           {index === 0 && <SectionTitle type="awards" lang={lang} fontFamily={fontFamily} />}
           <div className="flex items-baseline justify-between gap-2" style={{ ...LINE_STYLE, paddingLeft: 0, fontFamily }}>
             <span>{item.award}</span>

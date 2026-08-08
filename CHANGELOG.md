@@ -6,6 +6,10 @@
 2. Added safe wrapping for long unbroken text across document templates.
 3. Truncated long reference filenames and stabilized Agent Mode context source dialogs.
 4. Enabled clickable website and email links in PDF exports.
+5. Replaced rasterized PDF output with browser printing to preserve selectable text and match the live preview layout.
+6. Restored lossless high resolution PNG output and corrected PDF date alignment.
+7. Refined Chinese bold text and compact Skills and Awards spacing.
+8. Improved PDF export feedback and failure handling.
 
 ## [1.2.2] 2026.07.27
 
