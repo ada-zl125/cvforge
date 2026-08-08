@@ -224,7 +224,11 @@ export function Toolbar({ title, content, template, isAgentMode, onTitleChange, 
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="min-w-44">
-                <DropdownMenuItem className="cursor-pointer gap-2" onClick={() => handleExport("pdf")}>
+                <DropdownMenuItem
+                  className="cursor-pointer gap-2"
+                  data-click-spark="disabled"
+                  onClick={() => handleExport("pdf")}
+                >
                   <FileDown className="size-4 text-muted-foreground" />
                   {tr.exportPdf}
                 </DropdownMenuItem>
